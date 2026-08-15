@@ -88,3 +88,21 @@ Deno.test("paymob-checkout: returns 502 when upstream Paymob fails", async () =>
   } finally { fetchStub.restore(); }
 });
 
+Deno.test("paymob-checkout: returns 403 when user does not own video purchase payment", async () => {
+  const fake = new FakeClient(["payments", "video_purchases"]);
+  fake.seed("payments", [{ id: 30, video_id: 5, amount: 30, status: "CREATED" }]);
+  fake.seed("video_purchases", [{ id: 1, payment_id: 30, video_id: 5, user_id: "victim-123" }]);
+  const res = await handleRequest(new Request("https://x/functions/v1/paymob-checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer attacker-token" },
+    body: JSON.stringify({ payment_id: 30 }),
+  }), {
+    getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+    getUser: () => Promise.resolve({ data: { user: { id: "attacker-456" } as any }, error: null }),
+    fetch: () => Promise.resolve(jsonRes({})),
+    paymobApiKey: "sk", integrationId: 1, iframeId: 2, amountMultiplier: 100,
+  });
+  assertEquals(res.status, 403);
+});
+
+

@@ -51,8 +51,14 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
           if (b && b.user_id && b.user_id !== callerUser.id) {
             return new Response(JSON.stringify({ error: "FORBIDDEN" }), { status: 403, headers: cors });
           }
+        } else if (pay.video_id) {
+          const { data: vp } = await supabase.from("video_purchases").select("user_id").eq("payment_id", paymentId).maybeSingle();
+          if (vp && vp.user_id && vp.user_id !== callerUser.id) {
+            return new Response(JSON.stringify({ error: "FORBIDDEN" }), { status: 403, headers: cors });
+          }
         }
       }
+
 
       orderId = pay.id as number;
       amountCents = Math.round((pay.amount as number) * deps.amountMultiplier);
