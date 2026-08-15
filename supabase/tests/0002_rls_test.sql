@@ -38,7 +38,7 @@ begin;
      where t.schemaname = 'public'
        and t.tablename in ('users','roles_permissions','priests','services','service_slots',
                            'bookings','payments','waiting_list','videos','video_purchases',
-                           'complaints','announcements','audit_log','event_outbox',
+                           'complaints','announcements','audit_log','whatsapp_outbox',
                            'whatsapp_optins')
        and t.rowsecurity) = 15,
     'RLS must be enabled on all 15 tables');
