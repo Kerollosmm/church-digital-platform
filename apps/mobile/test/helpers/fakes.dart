@@ -71,7 +71,25 @@ class FakeBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<Map<String, dynamic>?> createCheckout(int bookingId) async => null;
+  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(int bookingId) async {
+    calls.add('retryCheckout');
+    final booking = bookings.firstWhere(
+      (b) => b.id == bookingId,
+      orElse: () => fakeBooking,
+    );
+    if (checkoutUrl == null) {
+      return Left(CheckoutFailure('No checkout URL configured', bookingId: bookingId));
+    }
+    return Right(
+      BookingCheckoutSession(
+        booking: booking,
+        checkoutUrl: checkoutUrl,
+        paymentId: 1001,
+        isConfirmed: false,
+      ),
+    );
+  }
+
   @override
   Future<void> cancelBooking(int bookingId) async {
     calls.add('cancelBooking');
