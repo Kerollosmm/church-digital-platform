@@ -22,15 +22,18 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const authHeader = req.headers.get("Authorization");
-    let callerUser: User | null = null;
-    if (authHeader && deps.getUser) {
-      const token = authHeader.replace(/^Bearer\s+/i, "");
-      const { data, error: authErr } = await deps.getUser(token);
-      if (authErr || !data?.user) {
-        return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), { status: 401, headers: cors });
-      }
-      callerUser = data.user;
+    if (!authHeader || !authHeader.startsWith("Bearer ") || !deps.getUser) {
+      return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), { status: 401, headers: cors });
     }
+    const userToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+    if (!userToken) {
+      return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), { status: 401, headers: cors });
+    }
+    const { data, error: authErr } = await deps.getUser(userToken);
+    if (authErr || !data?.user) {
+      return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), { status: 401, headers: cors });
+    }
+    const callerUser = data.user;
 
     const body = await req.json() as Record<string, unknown>;
     const paymentId = Number(body.payment_id ?? 0);
@@ -58,7 +61,6 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
           }
         }
       }
-
 
       orderId = pay.id as number;
       amountCents = Math.round((pay.amount as number) * deps.amountMultiplier);
@@ -97,7 +99,13 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
       if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
       return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
     }
-    const authJson = (await authRes.json()) as Record<string, unknown>;
+    let authJson: Record<string, unknown>;
+    try {
+      authJson = (await authRes.json()) as Record<string, unknown>;
+    } catch {
+      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
+      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
+    }
     const token = String(authJson.token ?? "");
     if (!token) {
       if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
@@ -117,7 +125,13 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
       if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
       return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
     }
-    const orderJson = (await orderRes.json()) as Record<string, unknown>;
+    let orderJson: Record<string, unknown>;
+    try {
+      orderJson = (await orderRes.json()) as Record<string, unknown>;
+    } catch {
+      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
+      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
+    }
     const paymobOrderId = Number(orderJson.id ?? 0);
     if (!paymobOrderId) {
       if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
@@ -138,7 +152,13 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
       if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
       return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
     }
-    const keyJson = (await keyRes.json()) as Record<string, unknown>;
+    let keyJson: Record<string, unknown>;
+    try {
+      keyJson = (await keyRes.json()) as Record<string, unknown>;
+    } catch {
+      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
+      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
+    }
     const paymentKey = String(keyJson.token ?? "");
     if (!paymentKey) {
       if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);

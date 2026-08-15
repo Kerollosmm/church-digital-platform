@@ -7,9 +7,20 @@ function jsonRes(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
 }
 
+Deno.test("paymob-checkout: missing or invalid Authorization header returns 401", async () => {
+  const fake = new FakeClient(["bookings", "payments"]);
+  const res = await handleRequest(new Request("https://x/functions/v1/paymob-checkout", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ booking_id: 7 }),
+  }), {
+    getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+    fetch: () => Promise.resolve(new Response("{}")), paymobApiKey: "sk", integrationId: 1, iframeId: 2, amountMultiplier: 100,
+  });
+  assertEquals(res.status, 401);
+});
+
 Deno.test("paymob-checkout: booking_id creates CREATED payment and returns iframe URL", async () => {
   const fake = new FakeClient(["bookings", "payments"]);
-  fake.seed("bookings", [{ id: 7, paid_amount: 50, status: "PENDING_PAYMENT" }]);
+  fake.seed("bookings", [{ id: 7, user_id: "user-123", paid_amount: 50, status: "PENDING_PAYMENT" }]);
   const seenUrls: string[] = [];
   const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL) => {
     seenUrls.push(String(url));
@@ -20,9 +31,12 @@ Deno.test("paymob-checkout: booking_id creates CREATED payment and returns ifram
   });
   try {
     const res = await handleRequest(new Request("https://x/functions/v1/paymob-checkout", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ booking_id: 7 }),
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer valid-token" },
+      body: JSON.stringify({ booking_id: 7 }),
     }), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      getUser: () => Promise.resolve({ data: { user: { id: "user-123" } as any }, error: null }),
       fetch: fetchStub, paymobApiKey: "sk", integrationId: 1, iframeId: 2, amountMultiplier: 100,
     });
     assertEquals(res.status, 200);
@@ -33,8 +47,9 @@ Deno.test("paymob-checkout: booking_id creates CREATED payment and returns ifram
 });
 
 Deno.test("paymob-checkout: payment_id uses existing CREATED payment and returns iframe URL", async () => {
-  const fake = new FakeClient(["payments"]);
+  const fake = new FakeClient(["payments", "video_purchases"]);
   fake.seed("payments", [{ id: 30, video_id: 5, amount: 30, status: "CREATED" }]);
+  fake.seed("video_purchases", [{ id: 1, payment_id: 30, video_id: 5, user_id: "user-123" }]);
   const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL) => {
     if (String(url).endsWith("/api/auth/tokens")) return Promise.resolve(jsonRes({ token: "t1" }));
     if (String(url).endsWith("/api/ecommerce/orders")) return Promise.resolve(jsonRes({ id: 99 }));
@@ -43,9 +58,12 @@ Deno.test("paymob-checkout: payment_id uses existing CREATED payment and returns
   });
   try {
     const res = await handleRequest(new Request("https://x/functions/v1/paymob-checkout", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ payment_id: 30 }),
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer valid-token" },
+      body: JSON.stringify({ payment_id: 30 }),
     }), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      getUser: () => Promise.resolve({ data: { user: { id: "user-123" } as any }, error: null }),
       fetch: fetchStub, paymobApiKey: "sk", integrationId: 1, iframeId: 2, amountMultiplier: 100,
     });
     assertEquals(res.status, 200);
@@ -73,18 +91,43 @@ Deno.test("paymob-checkout: returns 403 when user does not own booking", async (
 
 Deno.test("paymob-checkout: returns 502 when upstream Paymob fails", async () => {
   const fake = new FakeClient(["bookings", "payments"]);
-  fake.seed("bookings", [{ id: 7, paid_amount: 50, status: "PENDING_PAYMENT" }]);
+  fake.seed("bookings", [{ id: 7, user_id: "user-123", paid_amount: 50, status: "PENDING_PAYMENT" }]);
   const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(new Response("Gateway Timeout", { status: 504 })));
   try {
     const res = await handleRequest(new Request("https://x/functions/v1/paymob-checkout", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ booking_id: 7 }),
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer valid-token" },
+      body: JSON.stringify({ booking_id: 7 }),
     }), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      getUser: () => Promise.resolve({ data: { user: { id: "user-123" } as any }, error: null }),
       fetch: fetchStub, paymobApiKey: "sk", integrationId: 1, iframeId: 2, amountMultiplier: 100,
     });
     assertEquals(res.status, 502);
     const body = await res.json() as Record<string, unknown>;
     assertEquals(body.error, "PAYMOB_UPSTREAM_ERROR");
+  } finally { fetchStub.restore(); }
+});
+
+Deno.test("paymob-checkout: malformed upstream JSON marks created payment as FAILED and returns 502", async () => {
+  const fake = new FakeClient(["bookings", "payments"]);
+  fake.seed("bookings", [{ id: 7, user_id: "user-123", paid_amount: 50, status: "PENDING_PAYMENT" }]);
+  const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(new Response("<html>Bad Gateway</html>", { status: 200, headers: { "Content-Type": "text/html" } })));
+  try {
+    const res = await handleRequest(new Request("https://x/functions/v1/paymob-checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer valid-token" },
+      body: JSON.stringify({ booking_id: 7 }),
+    }), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      getUser: () => Promise.resolve({ data: { user: { id: "user-123" } as any }, error: null }),
+      fetch: fetchStub, paymobApiKey: "sk", integrationId: 1, iframeId: 2, amountMultiplier: 100,
+    });
+    assertEquals(res.status, 502);
+    const body = await res.json() as Record<string, unknown>;
+    assertEquals(body.error, "PAYMOB_UPSTREAM_ERROR");
+    const pay = fake.tableRows("payments")[0];
+    assertEquals(pay.status, "FAILED");
   } finally { fetchStub.restore(); }
 });
 
@@ -104,5 +147,6 @@ Deno.test("paymob-checkout: returns 403 when user does not own video purchase pa
   });
   assertEquals(res.status, 403);
 });
+
 
 
