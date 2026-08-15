@@ -6,7 +6,9 @@ import 'package:mobile/features/booking/booking_detail_screen.dart';
 import 'package:mobile/features/booking/slot_grid_screen.dart';
 import 'package:mobile/services/app_strings.dart';
 import '../../helpers/fakes.dart';
+import '../../helpers/mock_auth_gateway.dart';
 import '../../helpers/pump_with_router.dart';
+
 
 void main() {
   testWidgets(

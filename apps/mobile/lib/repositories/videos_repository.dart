@@ -25,6 +25,16 @@ class SupabaseVideosRepository implements VideosRepository {
       'purchase_video',
       params: {'p_video_id': videoId},
     );
-    return data == null ? null : Map<String, dynamic>.from(data as Map);
+    if (data == null) return null;
+    if (data is num) return {'id': data.toInt()};
+    if (data is String) {
+      final parsed = int.tryParse(data);
+      return parsed != null ? {'id': parsed} : null;
+    }
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+    return {'id': int.tryParse(data.toString())};
   }
+
 }

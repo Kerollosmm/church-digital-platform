@@ -48,7 +48,8 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> _verify() async {
     if (_verifying) return;
     final code = _controllers.map((c) => c.text).join();
-    if (code.isEmpty) return;
+    if (code.length < 6) return;
+
 
     setState(() => _verifying = true);
     try {

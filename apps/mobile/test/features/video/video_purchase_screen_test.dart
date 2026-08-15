@@ -104,9 +104,11 @@ void main() {
             'price': 80,
             'event_date': '2024-12-25T00:00:00Z',
             'privacy': 'UNLISTED',
+            'is_purchased': true,
           },
         ],
       );
+
       await tester.pumpWidget(
         MaterialApp(home: VideoPurchaseScreen(repository: fake)),
       );

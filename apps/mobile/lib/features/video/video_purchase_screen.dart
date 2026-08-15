@@ -196,8 +196,11 @@ class _VideoPurchaseScreenState extends State<VideoPurchaseScreen> {
                     itemCount: remaining.length,
                     itemBuilder: (context, index) {
                       final v = remaining[index];
-                      final isPurchased = v['privacy'] == 'UNLISTED';
+                      final isPurchased = v['is_purchased'] == true ||
+                          v['purchased'] == true ||
+                          v['access_granted_at'] != null;
                       final priceStr = '${v['price']} ${AppStrings.egp}';
+
 
                       return Container(
                         decoration: BoxDecoration(

@@ -241,11 +241,10 @@ class _BookingTicketScreenState extends State<BookingTicketScreen> {
                                   ),
                                 ),
                               ),
-                              child: const Icon(
-                                Icons.qr_code_2,
-                                size: 128,
-                                color: AppColors.onSurfaceVariant,
+                              child: BookingQrView(
+                                payload: 'CHURCH-TICKET-V1:$bookingId:${widget.booking['service_name'] ?? ''}',
                               ),
+
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             Text(
@@ -258,6 +257,7 @@ class _BookingTicketScreenState extends State<BookingTicketScreen> {
                           ],
                         ),
                       ),
+
                     ],
                   ),
                 ),
@@ -368,3 +368,109 @@ class _BookingTicketScreenState extends State<BookingTicketScreen> {
     );
   }
 }
+
+class BookingQrView extends StatelessWidget {
+  const BookingQrView({super.key, required this.payload});
+  final String payload;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: const Size(128, 128),
+      painter: _QrMatrixPainter(payload),
+      child: const SizedBox(
+        width: 128,
+        height: 128,
+        child: Center(
+          child: Icon(
+            Icons.qr_code_2,
+            size: 128,
+            color: Colors.transparent,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QrMatrixPainter extends CustomPainter {
+  _QrMatrixPainter(this.data);
+  final String data;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF1E293B)
+      ..style = PaintingStyle.fill;
+
+    const gridSize = 21;
+    final cellSize = size.width / gridSize;
+
+    void drawFinder(double x, double y) {
+      canvas.drawRect(Rect.fromLTWH(x, y, cellSize * 7, cellSize * 7), paint);
+      final whitePaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.fill;
+      canvas.drawRect(
+        Rect.fromLTWH(x + cellSize, y + cellSize, cellSize * 5, cellSize * 5),
+        whitePaint,
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(
+          x + cellSize * 2,
+          y + cellSize * 2,
+          cellSize * 3,
+          cellSize * 3,
+        ),
+        paint,
+      );
+    }
+
+    drawFinder(0, 0);
+    drawFinder((gridSize - 7) * cellSize, 0);
+    drawFinder(0, (gridSize - 7) * cellSize);
+
+    for (var i = 8; i < gridSize - 8; i += 2) {
+      canvas.drawRect(
+        Rect.fromLTWH(i * cellSize, 6 * cellSize, cellSize, cellSize),
+        paint,
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(6 * cellSize, i * cellSize, cellSize, cellSize),
+        paint,
+      );
+    }
+
+    final bytes = data.codeUnits;
+    var bitIndex = 0;
+    for (var r = 0; r < gridSize; r++) {
+      for (var c = 0; c < gridSize; c++) {
+        final inTopLeft = r < 8 && c < 8;
+        final inTopRight = r < 8 && c >= gridSize - 8;
+        final inBottomLeft = r >= gridSize - 8 && c < 8;
+        final inTiming = r == 6 || c == 6;
+        if (inTopLeft || inTopRight || inBottomLeft || inTiming) continue;
+
+        final byte = bytes.isNotEmpty ? bytes[bitIndex % bytes.length] : 0;
+        final bit = (byte >> (bitIndex % 8)) & 1;
+        if (bit == 1) {
+          canvas.drawRect(
+            Rect.fromLTWH(
+              c * cellSize,
+              r * cellSize,
+              cellSize * 0.92,
+              cellSize * 0.92,
+            ),
+            paint,
+          );
+        }
+        bitIndex++;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _QrMatrixPainter oldDelegate) =>
+      oldDelegate.data != data;
+}
+

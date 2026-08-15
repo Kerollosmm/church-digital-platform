@@ -18,11 +18,8 @@ String get resolvedSupabaseUrl {
   return envUrl.isNotEmpty ? envUrl : defaultSupabaseUrl;
 }
 
-const _supabasePublishableKey = String.fromEnvironment(
-  'SUPABASE_ANON_KEY',
-  defaultValue:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrc2dwaHJ5ZW1yZHJrd2FxbnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NTA2MjgsImV4cCI6MjEwMTUyNjYyOH0.ebxE042EdeYMHbkJnst8aq5K6RtlYgUXEpoeHuYNHvA',
-);
+const _supabasePublishableKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
