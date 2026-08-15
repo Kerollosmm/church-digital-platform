@@ -10,14 +10,21 @@ class SupabaseVideosRepository implements VideosRepository {
   final SupabaseClient _client;
 
   @override
-  Future<List<Map<String, dynamic>>> fetchVideos() async =>
-      ((await _client
-                  .from('videos')
-                  .select('id, title_ar, price, event_date, privacy')
-                  .order('event_date', ascending: false))
-              as List)
-          .map((r) => Map<String, dynamic>.from(r as Map))
-          .toList();
+  Future<List<Map<String, dynamic>>> fetchVideos() async {
+    final res = await _client
+        .from('videos')
+        .select('id, title_ar, price, event_date, privacy, video_purchases(id, access_granted_at)')
+        .order('event_date', ascending: false);
+    return (res as List).map((r) {
+      final map = Map<String, dynamic>.from(r as Map);
+      final purchases = map['video_purchases'] as List?;
+      final hasAccess = purchases != null &&
+          purchases.isNotEmpty &&
+          purchases.any((p) => p is Map && p['access_granted_at'] != null);
+      map['is_purchased'] = hasAccess;
+      return map;
+    }).toList();
+  }
 
   @override
   Future<Map<String, dynamic>?> purchaseVideo(int videoId) async {
@@ -32,9 +39,12 @@ class SupabaseVideosRepository implements VideosRepository {
       return parsed != null ? {'id': parsed} : null;
     }
     if (data is Map) {
-      return Map<String, dynamic>.from(data);
+      final id = data['id'];
+      if (id != null) return Map<String, dynamic>.from(data);
+      return null;
     }
-    return {'id': int.tryParse(data.toString())};
+    final parsed = int.tryParse(data.toString());
+    return parsed != null ? {'id': parsed} : null;
   }
 
 }

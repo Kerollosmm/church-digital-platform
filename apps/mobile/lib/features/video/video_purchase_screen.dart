@@ -48,9 +48,16 @@ class _VideoPurchaseScreenState extends State<VideoPurchaseScreen> {
           () async {
             final payment = await widget.repository.purchaseVideo(videoId);
             if (!mounted) return;
+            final paymentId = payment?['id'];
+            if (paymentId == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Failed to initiate payment')),
+              );
+              return;
+            }
             context.pushNamed(
               AppRoutes.paymentRedirect,
-              extra: {'video': true, 'payment_id': payment?['id']},
+              extra: {'video': true, 'payment_id': paymentId},
             );
           },
           onError: (message) {

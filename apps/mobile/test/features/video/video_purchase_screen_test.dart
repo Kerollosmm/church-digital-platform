@@ -120,6 +120,78 @@ void main() {
     },
   );
 
+  testWidgets(
+    'purchased row with is_purchased or access_granted_at renders purchasedLabel and no buy button',
+    (tester) async {
+      final fake = FakeVideosRepository(
+        videos: [
+          {
+            'id': 10,
+            'title_ar': 'فيديو مميز',
+            'price': 50,
+            'event_date': '2024-12-26T00:00:00Z',
+          },
+          {
+            'id': 11,
+            'title_ar': 'فيديو مشتري 1',
+            'price': 80,
+            'event_date': '2024-12-25T00:00:00Z',
+            'is_purchased': true,
+          },
+          {
+            'id': 12,
+            'title_ar': 'فيديو مشتري 2',
+            'price': 60,
+            'event_date': '2024-12-24T00:00:00Z',
+            'access_granted_at': '2024-12-25T10:00:00Z',
+          },
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(home: VideoPurchaseScreen(repository: fake)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('فيديو مشتري 1'), findsOneWidget);
+      expect(find.text('فيديو مشتري 2'), findsOneWidget);
+      expect(find.text(AppStrings.purchasedLabel), findsNWidgets(2));
+    },
+  );
+
+  testWidgets('video purchase: null payment id shows error SnackBar and does not navigate', (
+    tester,
+  ) async {
+    final fake = FakeVideosRepository(
+      videos: [
+        {
+          'id': 1,
+          'title_ar': 'قداس رئيسي',
+          'price': 100,
+          'event_date': '2024-12-26T00:00:00Z',
+        },
+        {
+          'id': 5,
+          'title_ar': 'عظة المولد',
+          'price': 30,
+          'event_date': '2024-12-25T00:00:00Z',
+        },
+      ],
+      payment: null,
+    );
+    final fakeDb = TestAppSupabase({});
+    await pumpWithRouter(
+      tester,
+      home: VideoPurchaseScreen(repository: fake),
+      db: fakeDb,
+    );
+    final buyBtn = find.text(AppStrings.buyVideo);
+    await tester.ensureVisible(buyBtn);
+    await tester.tap(buyBtn);
+    await tester.pumpAndSettle();
+    expect(find.byType(PaymentRedirectScreen), findsNothing);
+  });
+
   testWidgets('empty videos shows AppStrings.videosEmpty', (tester) async {
     final fake = FakeVideosRepository(videos: []);
     await tester.pumpWidget(
