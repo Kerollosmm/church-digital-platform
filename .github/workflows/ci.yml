@@ -67,10 +67,12 @@ jobs:
           fi
 
   deploy-staging:
-    needs: [flutter-mobile, flutter-admin, sql-tests]
+    needs: [flutter-mobile, flutter-admin, sql-tests, deno-tests]
     if: github.ref == 'refs/heads/main'
     environment: staging
     runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
@@ -83,5 +85,4 @@ jobs:
           if find supabase/functions -name '*.ts' -not -name '*_test.ts' | grep -q .; then
             supabase functions deploy --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
           fi
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
