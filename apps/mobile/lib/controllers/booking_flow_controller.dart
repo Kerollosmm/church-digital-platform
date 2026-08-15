@@ -29,9 +29,9 @@ class BookingFlowController {
     if (msg.contains('ALREADY_BOOKED')) return AppStrings.alreadyBooked;
     if (msg.contains('TOO_MANY')) return AppStrings.tooManyActive;
     if (failure is AuthFailure || msg.contains('AUTH_REQUIRED')) {
-      return AppStrings.authRequiredPrompt;
+      return AppStrings.authExpired;
     }
-    if (failure is CheckoutFailure) return AppStrings.paymentFailed;
+    if (failure is CheckoutFailure) return AppStrings.paymentOpenFailed;
     return AppStrings.bookingFailed;
   }
 }
