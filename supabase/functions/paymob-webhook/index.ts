@@ -53,7 +53,15 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
 
     const orderObj = (txn.order ?? {}) as Record<string, unknown>;
     const rawOrderId = orderObj.merchant_order_id;
-    if (rawOrderId == null || rawOrderId === "" || rawOrderId === "undefined" || rawOrderId === "null") {
+    const numOrderId = Number(rawOrderId);
+    if (
+      rawOrderId == null ||
+      rawOrderId === "" ||
+      rawOrderId === "undefined" ||
+      rawOrderId === "null" ||
+      !Number.isInteger(numOrderId) ||
+      numOrderId <= 0
+    ) {
       return new Response(JSON.stringify({ error: "BAD_MERCHANT_ORDER_ID" }), { status: 400, headers: jsonHeaders });
     }
     const merchantOrderId = String(rawOrderId);
@@ -63,8 +71,8 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
       .select("id, gateway_ref, status, video_id").eq("merchant_order_id", merchantOrderId).maybeSingle();
     let pay: { id: number; status: string; video_id?: number | null };
     if (existing) {
-      // Idempotency: if already processed as PAID, acknowledge without re-invoking state transitions
-      if (existing.status === "PAID" && paid) {
+      // Idempotency: if already processed as PAID, acknowledge without re-invoking state transitions or overwriting with FAILED
+      if (existing.status === "PAID") {
         return new Response(JSON.stringify({ ok: true, already_processed: true }), { status: 200, headers: jsonHeaders });
       }
       const { data: updated, error: uErr } = await supabase.from("payments")

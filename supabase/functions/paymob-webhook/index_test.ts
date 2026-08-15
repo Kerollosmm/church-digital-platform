@@ -85,3 +85,47 @@ Deno.test("paymob-webhook: already PAID payment is acknowledged without re-apply
   assertEquals(appliedCalls, 0);
 });
 
+Deno.test("paymob-webhook: non-positive or non-numeric merchant_order_id returns 400", async () => {
+  const fake = new FakeClient(["payments"]);
+  for (const badId of ["0", "-5", "abc", "12.34"]) {
+    const badTxn = { ...TXN, order: { id: 501, merchant_order_id: badId } };
+    const hmacPayload = buildHmacPayload(badTxn);
+    const secret = "hmac_secret_123";
+    const signature = await hmacSha512Hex(secret, hmacPayload);
+    const req = new Request(`https://x/functions/v1/paymob-webhook?hmac=${signature}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(badTxn),
+    });
+    const res = await handleRequest(req, {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      hmacKey: secret, applyPayment: async () => {}, applyVideoPayment: async () => {},
+    });
+    assertEquals(res.status, 400);
+  }
+});
+
+Deno.test("paymob-webhook: failure webhook on already PAID payment returns already_processed without modifying status to FAILED", async () => {
+  const fake = new FakeClient(["payments"]);
+  fake.seed("payments", [{ id: 17, status: "PAID", merchant_order_id: "17" }]);
+  const failedTxn = { ...TXN, success: false };
+  const hmacPayload = buildHmacPayload(failedTxn);
+  const secret = "hmac_secret_123";
+  const signature = await hmacSha512Hex(secret, hmacPayload);
+  const req = new Request(`https://x/functions/v1/paymob-webhook?hmac=${signature}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(failedTxn),
+  });
+  const res = await handleRequest(req, {
+    getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+    hmacKey: secret,
+    applyPayment: async () => {},
+    applyVideoPayment: async () => {},
+  });
+  assertEquals(res.status, 200);
+  const body = await res.json() as Record<string, unknown>;
+  assertEquals(body.already_processed, true);
+  const pay = fake.tableRows("payments")[0];
+  assertEquals(pay.status, "PAID");
+});
+
+
