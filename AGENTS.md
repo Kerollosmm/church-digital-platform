@@ -24,6 +24,11 @@ Planning workspace (docs only, no app code) for Egyptian Coptic church digital p
 - **Slot lock**: `SELECT ... FOR UPDATE` on `service_slots` + active-booking count vs `capacity` inside `book_slot()`. No unique partial index for slot capacity. `v_available_slots` returns `AVAILABLE|BOOKED|CLOSED`.
 - **State RPCs & Outbox**: State transitions in `SECURITY DEFINER` RPCs. Secrets in edge functions/vault. `whatsapp_outbox` drain: 100 rows/run, batches of 10, cron 1 min.
 - **Payment race**: `apply_payment` on stale/cancelled booking sets `REFUND_PENDING` + enqueues `refund_requests` (no seat granted).
+- **Migration Upgrade Path**: Never modify past applied migrations in place without creating a corresponding new forward migration (`00XX_*.sql`) so `supabase db push` applies changes on existing environments.
+- **Edge Function Defense**: Validate Bearer auth token on all checkout/protected endpoints. Wrap external upstream JSON parsing in try/catch to set payment status `FAILED` and return 502 `UPSTREAM_ERROR`. Webhook positive integer validation and `PAID` status idempotency mandatory.
+- **Admin UI Role Guard**: Admin routes must strictly require non-null `role` from `ADMIN|PRIEST|SUPER_ADMIN`.
+- **Direct Repository Testing**: Unit tests must instantiate and invoke the real repository/service class with fake/mock clients—never test duplicate private parsing helpers in isolation.
+- **Startup Fail-Fast**: `main.dart` in mobile and admin apps must validate `SUPABASE_ANON_KEY` and throw `StateError` if empty.
 
 ## Commands
 
