@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/booking/booking_ticket_screen.dart';
 import 'package:mobile/features/booking/services_list_screen.dart';
 import 'package:mobile/services/app_strings.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../helpers/fakes.dart';
 
 void main() {
@@ -31,9 +32,15 @@ void main() {
       expect(find.text('مؤكد'), findsOneWidget);
       expect(find.text('قداس الأحد'), findsWidgets);
       expect(find.textContaining('150'), findsOneWidget);
-      expect(find.byType(BookingQrView), findsOneWidget);
-      expect(find.text(AppStrings.showQrNotice), findsOneWidget);
+      final qrViewFinder = find.byType(BookingQrView);
+      expect(qrViewFinder, findsOneWidget);
+      final qrViewWidget = tester.widget<BookingQrView>(qrViewFinder);
+      expect(qrViewWidget.payload, equals('CHURCH-TICKET-V1:123:قداس الأحد'));
 
+      final qrImageViewFinder = find.byType(QrImageView);
+      expect(qrImageViewFinder, findsOneWidget);
+      final qrWidget = tester.widget<QrImageView>(qrImageViewFinder);
+      expect(qrWidget.errorCorrectionLevel, equals(QrErrorCorrectLevel.M));
     },
   );
 
