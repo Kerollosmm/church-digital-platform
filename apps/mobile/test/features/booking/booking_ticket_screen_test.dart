@@ -31,8 +31,9 @@ void main() {
       expect(find.text('مؤكد'), findsOneWidget);
       expect(find.text('قداس الأحد'), findsWidgets);
       expect(find.textContaining('150'), findsOneWidget);
-      expect(find.byIcon(Icons.qr_code_2), findsOneWidget);
+      expect(find.byType(BookingQrView), findsOneWidget);
       expect(find.text(AppStrings.showQrNotice), findsOneWidget);
+
     },
   );
 
