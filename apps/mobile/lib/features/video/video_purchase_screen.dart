@@ -93,8 +93,9 @@ class _VideoPurchaseScreenState extends State<VideoPurchaseScreen> {
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _videos,
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final rows = snapshot.data!;
           if (rows.isEmpty) {
             return Center(
@@ -203,11 +204,11 @@ class _VideoPurchaseScreenState extends State<VideoPurchaseScreen> {
                     itemCount: remaining.length,
                     itemBuilder: (context, index) {
                       final v = remaining[index];
-                      final isPurchased = v['is_purchased'] == true ||
+                      final isPurchased =
+                          v['is_purchased'] == true ||
                           v['purchased'] == true ||
                           v['access_granted_at'] != null;
                       final priceStr = '${v['price']} ${AppStrings.egp}';
-
 
                       return Container(
                         decoration: BoxDecoration(

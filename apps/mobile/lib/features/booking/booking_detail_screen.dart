@@ -4,7 +4,6 @@ import 'package:mobile/controllers/booking_flow_controller.dart';
 import 'package:mobile/controllers/run_guarded.dart';
 import 'package:mobile/core/auth/auth_gateway.dart';
 import 'package:mobile/core/auth/phone_verify_gate.dart';
-import 'package:mobile/models/book_slot_result.dart';
 import 'package:mobile/repositories/booking_repository.dart';
 import 'package:mobile/services/app_routes.dart';
 import 'package:mobile/services/app_strings.dart';
@@ -59,7 +58,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             result.fold(
               (failure) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(_controller.localizedMessage(failure))),
+                  SnackBar(
+                    content: Text(_controller.localizedMessage(failure)),
+                  ),
                 );
               },
               (session) {

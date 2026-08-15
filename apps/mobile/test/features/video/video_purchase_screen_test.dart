@@ -159,38 +159,39 @@ void main() {
     },
   );
 
-  testWidgets('video purchase: null payment id shows error SnackBar and does not navigate', (
-    tester,
-  ) async {
-    final fake = FakeVideosRepository(
-      videos: [
-        {
-          'id': 1,
-          'title_ar': 'قداس رئيسي',
-          'price': 100,
-          'event_date': '2024-12-26T00:00:00Z',
-        },
-        {
-          'id': 5,
-          'title_ar': 'عظة المولد',
-          'price': 30,
-          'event_date': '2024-12-25T00:00:00Z',
-        },
-      ],
-      payment: null,
-    );
-    final fakeDb = TestAppSupabase({});
-    await pumpWithRouter(
-      tester,
-      home: VideoPurchaseScreen(repository: fake),
-      db: fakeDb,
-    );
-    final buyBtn = find.text(AppStrings.buyVideo);
-    await tester.ensureVisible(buyBtn);
-    await tester.tap(buyBtn);
-    await tester.pumpAndSettle();
-    expect(find.byType(PaymentRedirectScreen), findsNothing);
-  });
+  testWidgets(
+    'video purchase: null payment id shows error SnackBar and does not navigate',
+    (tester) async {
+      final fake = FakeVideosRepository(
+        videos: [
+          {
+            'id': 1,
+            'title_ar': 'قداس رئيسي',
+            'price': 100,
+            'event_date': '2024-12-26T00:00:00Z',
+          },
+          {
+            'id': 5,
+            'title_ar': 'عظة المولد',
+            'price': 30,
+            'event_date': '2024-12-25T00:00:00Z',
+          },
+        ],
+        payment: null,
+      );
+      final fakeDb = TestAppSupabase({});
+      await pumpWithRouter(
+        tester,
+        home: VideoPurchaseScreen(repository: fake),
+        db: fakeDb,
+      );
+      final buyBtn = find.text(AppStrings.buyVideo);
+      await tester.ensureVisible(buyBtn);
+      await tester.tap(buyBtn);
+      await tester.pumpAndSettle();
+      expect(find.byType(PaymentRedirectScreen), findsNothing);
+    },
+  );
 
   testWidgets('empty videos shows AppStrings.videosEmpty', (tester) async {
     final fake = FakeVideosRepository(videos: []);

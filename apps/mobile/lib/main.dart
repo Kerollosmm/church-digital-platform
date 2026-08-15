@@ -8,8 +8,9 @@ import 'theme/app_theme.dart';
 
 String get defaultSupabaseUrl {
   if (kIsWeb) return 'http://localhost:54321';
-  if (defaultTargetPlatform == TargetPlatform.android)
+  if (defaultTargetPlatform == TargetPlatform.android) {
     return 'http://10.0.2.2:54321';
+  }
   return 'http://127.0.0.1:54321';
 }
 

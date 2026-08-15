@@ -58,13 +58,20 @@ class SupabaseBookingRepository implements BookingRepository {
       });
       booking = Booking.fromJson(Map<String, dynamic>.from(data as Map));
     } on PostgrestException catch (e) {
-      developer.log('book_slot RPC failed: ${e.message}', name: 'BookingRepository');
-      if (e.code == '28000' || e.message.toUpperCase().contains('AUTH_REQUIRED')) {
+      developer.log(
+        'book_slot RPC failed: ${e.message}',
+        name: 'BookingRepository',
+      );
+      if (e.code == '28000' ||
+          e.message.toUpperCase().contains('AUTH_REQUIRED')) {
         return Left(AuthFailure(e.message, code: e.code, originalError: e));
       }
       return Left(BookingFailure(e.message, code: e.code, originalError: e));
     } catch (e) {
-      developer.log('book_slot unexpected error: $e', name: 'BookingRepository');
+      developer.log(
+        'book_slot unexpected error: $e',
+        name: 'BookingRepository',
+      );
       return Left(BookingFailure(e.toString(), originalError: e));
     }
 
@@ -119,7 +126,9 @@ class SupabaseBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(int bookingId) async {
+  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(
+    int bookingId,
+  ) async {
     try {
       final checkout = await _createCheckout(bookingId);
       final checkoutUrl = checkout?['checkout_url'] as String?;

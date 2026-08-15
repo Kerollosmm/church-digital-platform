@@ -18,8 +18,9 @@ void main() {
           (call) async {
             launches.add(call);
             if (call.method == 'canLaunch') return true;
-            if (call.method == 'launch' || call.method == 'launchUrl')
+            if (call.method == 'launch' || call.method == 'launchUrl') {
               return launchResult;
+            }
             return true;
           },
         );

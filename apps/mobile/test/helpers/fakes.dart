@@ -2,7 +2,6 @@ import 'package:mobile/core/either.dart';
 import 'package:mobile/core/failure.dart';
 import 'package:mobile/models/available_slot.dart';
 import 'package:mobile/models/booking.dart';
-import 'package:mobile/models/book_slot_result.dart';
 import 'package:mobile/models/booking_checkout_session.dart';
 import 'package:mobile/repositories/booking_repository.dart';
 import 'package:mobile/repositories/videos_repository.dart';
@@ -49,7 +48,8 @@ class FakeBookingRepository implements BookingRepository {
       orElse: () => null,
     );
 
-    final isFree = (slot?['price'] as num?)?.toInt() == 0 ||
+    final isFree =
+        (slot?['price'] as num?)?.toInt() == 0 ||
         (slot == null && checkoutUrl == null);
 
     final booking = bookings.isNotEmpty
@@ -71,14 +71,18 @@ class FakeBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(int bookingId) async {
+  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(
+    int bookingId,
+  ) async {
     calls.add('retryCheckout');
     final booking = bookings.firstWhere(
       (b) => b.id == bookingId,
       orElse: () => fakeBooking,
     );
     if (checkoutUrl == null) {
-      return Left(CheckoutFailure('No checkout URL configured', bookingId: bookingId));
+      return Left(
+        CheckoutFailure('No checkout URL configured', bookingId: bookingId),
+      );
     }
     return Right(
       BookingCheckoutSession(

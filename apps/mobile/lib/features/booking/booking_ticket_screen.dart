@@ -10,7 +10,6 @@ import 'package:mobile/theme/app_theme.dart';
 import 'package:mobile/theme/app_typography.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-
 class BookingTicketScreen extends StatefulWidget {
   const BookingTicketScreen({
     super.key,
@@ -244,9 +243,9 @@ class _BookingTicketScreenState extends State<BookingTicketScreen> {
                                 ),
                               ),
                               child: BookingQrView(
-                                payload: 'CHURCH-TICKET-V1:$bookingId:${widget.booking['service_name'] ?? ''}',
+                                payload:
+                                    'CHURCH-TICKET-V1:$bookingId:${widget.booking['service_name'] ?? ''}',
                               ),
-
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             Text(
@@ -259,7 +258,6 @@ class _BookingTicketScreenState extends State<BookingTicketScreen> {
                           ],
                         ),
                       ),
-
                     ],
                   ),
                 ),
@@ -394,5 +392,3 @@ class BookingQrView extends StatelessWidget {
     );
   }
 }
-
-

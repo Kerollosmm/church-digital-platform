@@ -23,23 +23,23 @@ GoRoute paymentRedirectRoute(AppSupabase db) {
           bookingId: extra,
           fetchCheckoutUrl: (id) async {
             final res = await bookings.retryCheckout(id);
-            return res.fold(
-              (failure) => throw StateError(failure.message),
-              (session) {
-                final url = session.checkoutUrl;
-                if (url == null || url.isEmpty) {
-                  throw StateError('checkout_url missing');
-                }
-                return url;
-              },
-            );
+            return res.fold((failure) => throw StateError(failure.message), (
+              session,
+            ) {
+              final url = session.checkoutUrl;
+              if (url == null || url.isEmpty) {
+                throw StateError('checkout_url missing');
+              }
+              return url;
+            });
           },
         );
       }
       if (extra is Map && extra['video'] == true) {
         final paymentId = extra['payment_id'];
-        if (paymentId is! int)
+        if (paymentId is! int) {
           throw StateError('payment_id missing or not int');
+        }
         return PaymentRedirectScreen(
           bookingId: paymentId,
           fetchCheckoutUrl: (_) async {
@@ -48,8 +48,9 @@ GoRoute paymentRedirectRoute(AppSupabase db) {
               body: {'payment_id': paymentId},
             );
             final url = data['checkout_url'] as String?;
-            if (url == null || url.isEmpty)
+            if (url == null || url.isEmpty) {
               throw StateError('checkout_url missing');
+            }
             return url;
           },
         );

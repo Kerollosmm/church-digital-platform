@@ -50,7 +50,6 @@ class _OtpScreenState extends State<OtpScreen> {
     final code = _controllers.map((c) => c.text).join();
     if (code.length < 6) return;
 
-
     setState(() => _verifying = true);
     try {
       final ok = await widget.gateway.verifyOtp(widget.phone, code);

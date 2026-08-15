@@ -1,4 +1,3 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract interface class VideosRepository {
   Future<List<Map<String, dynamic>>> fetchVideos();
@@ -13,12 +12,15 @@ class SupabaseVideosRepository implements VideosRepository {
   Future<List<Map<String, dynamic>>> fetchVideos() async {
     final res = await _client
         .from('videos')
-        .select('id, title_ar, price, event_date, privacy, video_purchases(id, access_granted_at)')
+        .select(
+          'id, title_ar, price, event_date, privacy, video_purchases(id, access_granted_at)',
+        )
         .order('event_date', ascending: false);
     return (res as List).map((r) {
       final map = Map<String, dynamic>.from(r as Map);
       final purchases = map['video_purchases'] as List?;
-      final hasAccess = purchases != null &&
+      final hasAccess =
+          purchases != null &&
           purchases.isNotEmpty &&
           purchases.any((p) => p is Map && p['access_granted_at'] != null);
       map['is_purchased'] = hasAccess;
@@ -46,5 +48,4 @@ class SupabaseVideosRepository implements VideosRepository {
     final parsed = int.tryParse(data.toString());
     return parsed != null ? {'id': parsed} : null;
   }
-
 }

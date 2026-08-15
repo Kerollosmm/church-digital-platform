@@ -21,7 +21,8 @@ BookSlotStatus bookSlotErrorCode(String messagePrefix) {
   if (m.contains('SLOT_UNAVAILABLE')) return BookSlotStatus.slotUnavailable;
   if (m.contains('SLOT_FULL')) return BookSlotStatus.slotFull;
   if (m.contains('ALREADY_BOOKED_SLOT')) return BookSlotStatus.alreadyBooked;
-  if (m.contains('TOO_MANY_ACTIVE_BOOKINGS'))
+  if (m.contains('TOO_MANY_ACTIVE_BOOKINGS')) {
     return BookSlotStatus.tooManyActive;
+  }
   return BookSlotStatus.unknown;
 }

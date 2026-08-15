@@ -15,7 +15,6 @@ String normalizeEgyptPhone(String rawPhone) {
   return '+20$digits';
 }
 
-
 abstract class AuthGateway {
   Future<void> sendOtp(String phone);
   Future<bool> verifyOtp(String phone, String token);
@@ -67,4 +66,3 @@ class UnimplementedAuthGateway implements AuthGateway {
   @override
   bool get isAuthenticated => false;
 }
-
