@@ -154,17 +154,36 @@ class FakeSupabase {
   final FakeFunctions functions = FakeFunctions();
   Map<String, dynamic>? currentUser = {'id': 'u1'};
   FakeTable from(String table) => FakeTable(data[table] ?? []);
-  Future<dynamic> rpc(String fn, [Map<String, Object?> args = const {}]) async {
+  Future<dynamic> rpc(String fn, [dynamic positionalArgs, Object? unused]) async {
+    return _handleRpc(fn, positionalArgs);
+  }
+
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #rpc) {
+      final fn = invocation.positionalArguments[0] as String;
+      Map<String, Object?> args = const {};
+      if (invocation.namedArguments.containsKey(#params)) {
+        args = Map<String, Object?>.from(invocation.namedArguments[#params] as Map);
+      } else if (invocation.positionalArguments.length > 1 && invocation.positionalArguments[1] is Map) {
+        args = Map<String, Object?>.from(invocation.positionalArguments[1] as Map);
+      }
+      return _handleRpc(fn, args);
+    }
+    return super.noSuchMethod(invocation);
+  }
+
+  Future<dynamic> _handleRpc(String fn, dynamic args) async {
+    final Map<String, Object?> mapArgs = args is Map ? Map<String, Object?>.from(args) : const {};
     rpcCalls.add(fn);
-    rpcArgs[fn] = args;
+    rpcArgs[fn] = mapArgs;
     if (rpcResults.containsKey(fn)) {
       final res = rpcResults[fn];
       if (res is Function) {
-        return res(args);
+        return res(mapArgs);
       }
       return res;
     }
-    return {'id': 42, 'rpc': fn, 'args': args};
+    return {'id': 42, 'rpc': fn, 'args': mapArgs};
   }
   FakeRealtimeChannel channel(String name) {
     final ch = FakeRealtimeChannel(name);

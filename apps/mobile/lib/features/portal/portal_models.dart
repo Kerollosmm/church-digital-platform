@@ -33,7 +33,7 @@ class TodayScheduleItem {
   factory TodayScheduleItem.fromJson(
     Map<String, dynamic> json,
   ) => TodayScheduleItem(
-    id: json['id'] as int? ?? 0,
+    id: ((json['slot_id'] ?? json['id']) as num?)?.toInt() ?? 0,
     titleAr: json['title_ar'] as String? ?? '',
     startsAt:
         DateTime.tryParse(json['starts_at'] as String? ?? '') ?? DateTime.now(),

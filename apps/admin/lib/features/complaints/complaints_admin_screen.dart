@@ -50,7 +50,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
 
   Future<void> _decryptComplaint(int complaintId) async {
     try {
-      final res = await _db.rpc('decrypt_complaint', {'p_complaint_id': complaintId});
+      final res = await _db.rpc('decrypt_complaint', params: {'p_complaint_id': complaintId});
       final decryptedText = res is Map ? (res['decrypted'] ?? res.toString()) : res.toString();
       if (mounted) {
         showDialog<void>(

@@ -27,7 +27,8 @@ Planning workspace (docs only, no app code) for Egyptian Coptic church digital p
 - **Migration Upgrade Path**: Never modify past applied migrations in place without creating a corresponding new forward migration (`00XX_*.sql`) so `supabase db push` applies changes on existing environments.
 - **Edge Function Defense**: Validate Bearer auth token on all checkout/protected endpoints. Wrap external upstream JSON parsing in try/catch to set payment status `FAILED` and return 502 `UPSTREAM_ERROR`. Webhook positive integer validation and `PAID` status idempotency mandatory.
 - **Admin UI Role Guard**: Admin routes must strictly require non-null `role` from `ADMIN|PRIEST|SUPER_ADMIN`.
-- **Direct Repository Testing**: Unit tests must instantiate and invoke the real repository/service class with fake/mock clients—never test duplicate private parsing helpers in isolation.
+- **Direct Repository Testing**: Unit tests must instantiate and invoke the real repository/service class with fake/mock clients—never test duplicate private parsing helpers in isolation. Test fakes must be slot-aware.
+- **Repository Seams & Errors**: Single unified write seam per flow (`reserveAndPay`). Hide internal pipeline steps (`createCheckout`). Return `Either<Failure, Success>` with zero raw `PostgrestException` or `UnimplementedError` leaks. No dead parameters. Free checks must strictly verify `paidAmount == 0`.
 - **Startup Fail-Fast**: `main.dart` in mobile and admin apps must validate `SUPABASE_ANON_KEY` and throw `StateError` if empty.
 
 ## Commands

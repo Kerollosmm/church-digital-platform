@@ -1,12 +1,8 @@
-Yes! Here is the complete **Phase 2: Tracer-Bullet Implementation Tasks Breakdown ([`specs/002-fix-concurrency-and-routing/tasks.md`](file:///c:/church/specs/002-fix-concurrency-and-routing/tasks.md))**, completing the full Spec-Kit suite alongside `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/`, and `quickstart.md`.
-
----
-
-# Tasks: High-Concurrency Backend Remediation & Full Platform Route Wiring
+# Tasks: Comprehensive Platform Hardening & Bug Fixes
 
 **Branch**: `002-fix-concurrency-and-routing`  
 **Input**: Design documents from `specs/002-fix-concurrency-and-routing/`  
-**Status**: Ready for Execution (`/implement` or TDD Subagent Loop)
+**Status**: Completed (`/speckit-implement`)
 
 ---
 
@@ -14,117 +10,119 @@ Yes! Here is the complete **Phase 2: Tracer-Bullet Implementation Tasks Breakdow
 
 ```mermaid
 graph TD
-    subgraph Phase 1: Foundational Database
-        T01[T001: 0035_concurrency_hardening.sql schema & checks]
-        T02[T002: fn_book_slot_atomic RPC & tests]
+    subgraph Phase 2: Foundational Database
+        T001[T001: 0039_comprehensive_fixes.sql schema migration]
+        T002[T002: Role enum sync in book_slot & purchase_video]
+        T003[T003: Slot capacity restoration trigger on cancel/expiry]
+        T004[T004: Atomic event outbox batch claim RPC]
+        T005[T005: pg_net cron URL scheme normalization]
     end
 
-    subgraph Phase 2: Admin Web Routing US1
-        T03[T003: Admin GoRouter auth redirect guard]
-        T04[T004: Wire AdminLoginScreen into /login route]
-        T05[T005: Admin Router & Auth integration tests]
+    subgraph Phase 3: Admin Web App US1
+        T006[T006: Fix admin RPC params named argument]
+        T007[T007: Switch admin Realtime to broadcast channel]
+        T008[T008: Admin direct mutations RPC wrapping]
+        T009[T009: Admin Web test validation]
     end
 
-    subgraph Phase 3: Mobile Shell & Discovery US2
-        T06[T006: BottomNavScaffold root shell routing]
-        T07[T007: Wire Video, Complaint & MyBookings tabs]
-        T08[T008: HomeHubScreen quick card onTap handlers]
-        T09[T009: Mobile Navigation & Gate integration tests]
+    subgraph Phase 4: Mobile App US2
+        T010[T010: Fix Booking and AvailableSlot json int type casts]
+        T011[T011: Fix portal models field mappings]
+        T012[T012: Wire HomeHub quick cards and BottomNavScaffold]
+        T013[T013: Mobile App test validation]
     end
 
-    subgraph Phase 4: Realtime & RLS Hardening US4 & US5
-        T10[T010: Drop bookings from supabase_realtime CDC]
-        T11[T011: Realtime pg_notify broadcast trigger]
-        T12[T012: RLS InitPlan scalar subquery optimizations]
-        T13[T013: btree_gist temporal exclusion constraint]
+    subgraph Phase 5: Edge Functions US3
+        T014[T014: Paymob webhook body.obj unnesting & HMAC fix]
+        T015[T015: YouTube URL regex ID extraction in youtube-expiry]
+        T016[T016: FCM HTTP v1 string coercion in event-dispatcher]
+        T017[T017: SMS OTP webhook secret prefix fix in otp-sms]
+        T018[T018: Edge Functions deno test suite]
     end
 
-    subgraph Phase 5: Verification & Gate
-        T14[T014: Full test suite execution & verification]
+    subgraph Phase 6: Polish & Gates
+        T019[T019: Supabase db reset & seed verification]
+        T020[T020: Full monorepo end-to-end regression validation]
     end
 
-    T01 --> T02
-    T01 --> T03
-    T01 --> T06
-    T03 --> T04 --> T05
-    T06 --> T07 --> T08 --> T09
-    T02 --> T10 --> T11
-    T01 --> T12
-    T01 --> T13
-    T05 --> T14
-    T09 --> T14
-    T11 --> T14
-    T12 --> T14
-    T13 --> T14
+    T001 --> T002
+    T001 --> T003
+    T001 --> T004
+    T001 --> T005
+    T002 --> T006
+    T003 --> T010
+    T004 --> T016
+    T006 --> T007 --> T008 --> T009
+    T010 --> T011 --> T012 --> T013
+    T014 --> T015 --> T016 --> T017 --> T018
+    T009 --> T019
+    T013 --> T019
+    T018 --> T019 --> T020
 ```
 
 ---
 
-## Phase 1: Foundational Database Infrastructure (Blocking Prerequisites)
+## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Establish database invariant constraints, remaining capacity tracking, and atomic decrement mechanics before frontend wiring.
+**Purpose**: Verify repository environment, dependency locks, and test harnesses.
 
-- [x] **T001** `[DB]` Create migration [`supabase/migrations/0035_concurrency_hardening.sql`](file:///c:/church/supabase/migrations/0035_concurrency_hardening.sql) adding `remaining_capacity INT NOT NULL DEFAULT 0` and `CONSTRAINT check_remaining_capacity_non_negative CHECK (remaining_capacity >= 0)` to `public.service_slots`.
-- [x] **T002** `[DB]` Implement `fn_book_slot_atomic(p_slot_id, p_quantity, p_opt_in, p_idempotency_key)` in `0035_concurrency_hardening.sql` using single-statement `UPDATE service_slots SET remaining_capacity = remaining_capacity - p_quantity WHERE id = p_slot_id AND remaining_capacity >= p_quantity`.
-- [x] **T003** `[P]` `[DB]` Write concurrency regression test [`supabase/tests/0035_concurrency_atomic_test.sql`](file:///c:/church/supabase/tests/) testing 50 concurrent booking attempts against 5 remaining seats.
+- [x] T001 Verify Flutter and Deno toolchains across `apps/mobile`, `apps/admin`, and `supabase/functions`.
 
 ---
 
-## Phase 2: User Story 1 — Admin Web Secure Navigation & Authentication Guard (Priority: P1)
+## Phase 2: Foundational (Database Migration & Backend Security)
 
-**Goal**: Guarantee that unauthenticated users are intercepted and directed to `/login`, and that successful 3-step PIN verification unlocks the Admin Shell.
+**Purpose**: Create forward migration `0039_comprehensive_fixes.sql` fixing role sync, capacity restoration, outbox concurrency, and cron URL bugs.
 
-- [x] **T004** `[US1]` Write failing widget test in [`apps/admin/test/widget/router_guard_test.dart`](file:///c:/church/apps/admin/test/widget/) verifying that unauthenticated navigation to `/bookings` or `/analytics` redirects to `/login`.
-- [x] **T005** `[US1]` Update [`apps/admin/lib/app_router.dart`](file:///c:/church/apps/admin/lib/app_router.dart) to add the `/login` route rendering [`AdminLoginScreen`](file:///c:/church/apps/admin/lib/features/auth/admin_login_screen.dart).
-- [x] **T006** `[US1]` Add GoRouter `redirect: (context, state)` in `apps/admin/lib/app_router.dart` checking `ref.read(adminAuthProvider).isAuthenticated`.
-- [x] **T007** `[US1]` Update `AdminLoginScreen` in [`apps/admin/lib/features/auth/admin_login_screen.dart`](file:///c:/church/apps/admin/lib/features/auth/admin_login_screen.dart) to call `context.go('/bookings')` upon successful authentication instead of rendering a standalone stub scaffold.
-- [x] **T008** `[US1]` Run `flutter test test/widget/router_guard_test.dart` and `flutter test test/features/auth/admin_auth_test.dart` from `apps/admin/` and ensure all pass green.
-
----
-
-## Phase 3: User Story 2 — Parishioner Mobile Shell & Service Discovery Hub (Priority: P1)
-
-**Goal**: Connect the Home Hub quick action cards and 5-tab Bottom Navigation bar to active application screens without dead clicks or placeholder stubs.
-
-- [x] **T009** `[US2]` Write failing widget test in [`apps/mobile/test/widget/home_quick_cards_test.dart`](file:///c:/church/apps/mobile/test/widget/) asserting that tapping quick cards navigates to the corresponding service and video screens.
-- [x] **T010** `[US2]` In [`apps/mobile/lib/screens/home_hub_screen.dart`](file:///c:/church/apps/mobile/lib/screens/home_hub_screen.dart), wrap `_buildQuickCard` with `InkWell` and attach navigation callbacks (`onTapMass`, `onTapConfession`, `onTapBooking`, `onTapVideos`, `onTapComplaints`).
-- [x] **T011** `[US2]` In [`apps/mobile/lib/widgets/bottom_nav_scaffold.dart`](file:///c:/church/apps/mobile/lib/widgets/bottom_nav_scaffold.dart), replace `ComingSoonTab()` in Tab 2 with `VideoPurchaseScreen`, Tab 3 with Complaints view, and Tab 4 with `MyBookingsScreen`.
-- [x] **T012** `[US2]` In [`apps/mobile/lib/app_router.dart`](file:///c:/church/apps/mobile/lib/app_router.dart), configure `BottomNavScaffold` as the root builder for path `/`.
-- [x] **T013** `[US2]` Run `flutter test` from `apps/mobile/` and verify all mobile navigation and booking flow tests pass green.
+- [x] T002 Create migration file [`supabase/migrations/0039_comprehensive_fixes.sql`](file:///c:/church/supabase/migrations/0039_comprehensive_fixes.sql).
+- [x] T003 [P] Synchronize role checks in `book_slot()` and `purchase_video()` to check `v_role IN ('USER', 'ADMIN')` in `0039_comprehensive_fixes.sql`.
+- [x] T004 [P] Implement `tr_restore_slot_capacity` trigger and function `fn_restore_slot_capacity_on_cancel()` in `0039_comprehensive_fixes.sql`.
+- [x] T005 [P] Implement `claim_event_outbox_batch(p_batch_size INT)` RPC using `FOR UPDATE SKIP LOCKED` in `0039_comprehensive_fixes.sql`.
+- [x] T006 [P] Normalize `pg_net` cron URLs in `0013_reconcile_cron.sql`, `0016_whatsapp_sender_cron.sql`, and `0020_youtube_cron.sql` to remove duplicate `https://` prefixing.
+- [x] T007 Write SQL verification test in [`supabase/tests/0039_fixes_regression_test.sql`](file:///c:/church/supabase/tests/) testing role checks, capacity restoration on cancel, and outbox batch claims.
 
 ---
 
-## Phase 4: User Story 4 & 5 — Realtime Depletion, RLS Subquery InitPlan & Temporal Integrity (Priority: P2)
+## Phase 3: User Story 1 — Admin Web Secure Navigation & RPC Invocations (Priority: P1)
 
-**Goal**: Eliminate CDC RLS performance bottlenecks, broadcast depletion over WebSockets, and enforce non-overlapping schedule constraints.
+**Goal**: Fix Admin RPC call signatures, direct table mutations, and Realtime dashboard listener.
 
-- [x] **T014** `[US4]` In `0035_concurrency_hardening.sql`, drop `public.bookings` from `supabase_realtime` publication to eliminate WAL logical decoding per-subscriber RLS evaluations.
-- [x] **T015** `[US4]` In `0035_concurrency_hardening.sql`, create database trigger `tr_on_slot_depletion` executing `fn_broadcast_slot_depletion()` on `remaining_capacity = 0`.
-- [x] **T016** `[US5]` In `0035_concurrency_hardening.sql`, optimize RLS policies in `public.bookings` and `public.service_slots` using `(SELECT auth.uid())` InitPlan subqueries.
-- [x] **T017** `[US5]` In `0035_concurrency_hardening.sql`, add `btree_gist` GiST temporal exclusion constraint `no_location_schedule_overlap` on `service_slots (location WITH =, schedule_range WITH &&)`.
-
----
-
-## Phase 5: Verification & Gate Review
-
-**Purpose**: Execute end-to-end regression validation across all three tiers.
-
-- [x] **T018** Run `flutter test` in `apps/admin/` (assert 100% pass).
-- [x] **T019** Run `flutter test` in `apps/mobile/` (assert 100% pass).
-- [x] **T020** Run `deno test --allow-env --allow-net` in `supabase/functions/` (assert 100% pass).
-- [x] **T021** Run `flutter analyze lib test` across both `apps/admin` and `apps/mobile`.
+- [x] T008 [P] [US1] Update `_db.rpc()` calls in [`apps/admin/lib/features/bookings/bookings_provider.dart`](file:///c:/church/apps/admin/lib/features/bookings/bookings_provider.dart) to use named argument `params: {...}`.
+- [x] T009 [P] [US1] Update `_db.rpc()` calls in [`apps/admin/lib/screens/emergency_override_screen.dart`](file:///c:/church/apps/admin/lib/screens/emergency_override_screen.dart) and [`manual_book_screen.dart`](file:///c:/church/apps/admin/lib/screens/manual_book_screen.dart) to use named argument `params: {...}`.
+- [x] T010 [US1] Update `bookings_provider.dart` to subscribe to broadcast channel `realtime:event_inventory` instead of dropped `postgres_changes` on `bookings` table.
+- [x] T011 [US1] Wrap direct announcements and FAQ mutations in `apps/admin/lib/features/content/` with `tenant_id` and input validation.
+- [x] T012 [US1] Run `flutter test` from `apps/admin/` and verify all admin tests pass green.
 
 ---
 
-## Deliverables Summary
+## Phase 4: User Story 2 — Parishioner Mobile Shell, Discovery & Type Safety (Priority: P1)
 
-| File | Type | Target |
-| :--- | :---: | :--- |
-| [`specs/002-fix-concurrency-and-routing/spec.md`](file:///c:/church/specs/002-fix-concurrency-and-routing/spec.md) | Spec | User stories, acceptance criteria, FRs, SCs |
-| [`specs/002-fix-concurrency-and-routing/plan.md`](file:///c:/church/specs/002-fix-concurrency-and-routing/plan.md) | Architecture | Technical context, constitution gates |
-| [`specs/002-fix-concurrency-and-routing/research.md`](file:///c:/church/specs/002-fix-concurrency-and-routing/research.md) | Research | 5 pillar decisions & concurrency benchmarks |
-| [`specs/002-fix-concurrency-and-routing/data-model.md`](file:///c:/church/specs/002-fix-concurrency-and-routing/data-model.md) | Schema | SQL Migration 0035 code & RPC definitions |
-| [`specs/002-fix-concurrency-and-routing/contracts/rpc-contracts.md`](file:///c:/church/specs/002-fix-concurrency-and-routing/contracts/rpc-contracts.md) | Interface | Backend RPC signatures & error constants |
-| [`specs/002-fix-concurrency-and-routing/contracts/router-contracts.md`](file:///c:/church/specs/002-fix-concurrency-and-routing/contracts/router-contracts.md) | Interface | GoRouter routing guards & path mapping |
-| [`specs/002-fix-concurrency-and-routing/quickstart.md`](file:///c:/church/specs/002-fix-concurrency-and-routing/quickstart.md) | Runbook | Test execution commands & verification guide |
-| [`specs/002-fix-concurrency-and-routing/tasks.md`](file:///c:/church/specs/002-fix-concurrency-and-routing/tasks.md) | Execution | 21 tracer-bullet tasks ordered by priority |
+**Goal**: Eliminate type cast exceptions in `Booking`/`AvailableSlot`, fix model field mismatches, and ensure complete Home Hub navigation.
+
+- [x] T013 [P] [US2] Update [`apps/mobile/lib/models/booking.dart`](file:///c:/church/apps/mobile/lib/models/booking.dart) to safely cast `paidAmount: (json['paid_amount'] as num?)?.toInt() ?? 0`.
+- [x] T014 [P] [US2] Update [`apps/mobile/lib/models/available_slot.dart`](file:///c:/church/apps/mobile/lib/models/available_slot.dart) to safely cast `price` and `availableSeats` using `(json[...] as num?)?.toInt() ?? 0`.
+- [x] T015 [P] [US2] Fix `TodayScheduleItem.fromJson` in [`apps/mobile/lib/features/portal/portal_models.dart`](file:///c:/church/apps/mobile/lib/features/portal/portal_models.dart) to map `json['slot_id'] ?? json['id']`.
+- [x] T016 [US2] Ensure `BottomNavScaffold` and `HomeHubScreen` quick action cards route to active feature screens.
+- [x] T017 [US2] Run `flutter test` from `apps/mobile/` and verify all mobile unit and widget tests pass green.
+
+---
+
+## Phase 5: User Story 3 — Edge Functions Security & Third-Party API Robustness (Priority: P1)
+
+**Goal**: Fix Paymob webhook payload parsing, YouTube URL regex parsing, FCM string coercion, and SMS OTP HMAC prefix.
+
+- [x] T018 [P] [US3] Update [`supabase/functions/paymob-webhook/index.ts`](file:///c:/church/supabase/functions/paymob-webhook/index.ts) to unnest `body.obj ?? body` before extracting `txn` fields and computing HMAC.
+- [x] T019 [P] [US3] Update [`supabase/functions/youtube-expiry/index.ts`](file:///c:/church/supabase/functions/youtube-expiry/index.ts) to extract video ID using regex matching `[?&]v=([a-zA-Z0-9_-]{11})` and `youtu\.be/([a-zA-Z0-9_-]{11})`.
+- [x] T020 [P] [US3] Update [`supabase/functions/event-dispatcher/index.ts`](file:///c:/church/supabase/functions/event-dispatcher/index.ts) to invoke `claim_event_outbox_batch` RPC and coerce all FCM `data` values to strings.
+- [x] T021 [P] [US3] Update [`supabase/functions/otp-sms/index.ts`](file:///c:/church/supabase/functions/otp-sms/index.ts) to preserve `whsec_` secret prefix for `standardwebhooks` verification.
+- [x] T022 [US3] Run `deno test --allow-env --allow-net` in `supabase/functions/` and verify all Edge Function tests pass green.
+
+---
+
+## Phase 6: Polish & Verification Gate
+
+**Purpose**: Execute full stack regression testing across all database migrations, Edge Functions, and Flutter applications.
+
+- [x] T023 Reset local database with `npx supabase db reset` and verify `seed.sql` passes without exclusion violations.
+- [x] T024 Run `psql $DATABASE_URL -f supabase/tests/0039_fixes_regression_test.sql`.
+- [x] T025 Run full test suites: `apps/mobile/` (`flutter test`), `apps/admin/` (`flutter test`), and `supabase/functions/` (`deno test`).

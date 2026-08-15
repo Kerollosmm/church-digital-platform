@@ -1,8 +1,5 @@
-# Data Model & Schema Migration: Comprehensive Platform Hardening & Bug Fixes
+-- 0039: Comprehensive platform hardening and bug fixes
 
-## 1. Migration `0039_comprehensive_fixes.sql`
-
-```sql
 -- 1. Synchronize Role checks in RPCs to 'USER' and 'ADMIN'
 CREATE OR REPLACE FUNCTION public.book_slot(
     p_slot_id BIGINT,
@@ -18,9 +15,6 @@ AS $$
 DECLARE
     v_user UUID := auth.uid();
     v_role TEXT;
-    v_slot RECORD;
-    v_booking_id BIGINT;
-    v_phone TEXT;
 BEGIN
     IF v_user IS NULL THEN RAISE EXCEPTION 'AUTH_REQUIRED' USING ERRCODE = '28000'; END IF;
     SELECT role INTO v_role FROM public.users WHERE id = v_user;
@@ -30,6 +24,8 @@ BEGIN
     RETURN public.fn_book_slot_atomic(p_slot_id, p_quantity, p_opt_in, p_idempotency_key);
 END;
 $$;
+
+GRANT EXECUTE ON FUNCTION public.book_slot(BIGINT, INT, BOOLEAN, UUID) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.purchase_video(
     p_video_id BIGINT,
@@ -61,6 +57,8 @@ BEGIN
     RETURN jsonb_build_object('success', true, 'purchase_id', coalesce(v_purchase_id, 0));
 END;
 $$;
+
+GRANT EXECUTE ON FUNCTION public.purchase_video(BIGINT, UUID) TO authenticated;
 
 -- 2. Automatic Capacity Restoration on Booking Cancellation/Expiry
 CREATE OR REPLACE FUNCTION public.fn_restore_slot_capacity_on_cancel()
@@ -122,5 +120,4 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.claim_event_outbox_batch(INT) TO service_role;
-```
+GRANT EXECUTE ON FUNCTION public.claim_event_outbox_batch(INT) TO service_role, authenticated, anon;

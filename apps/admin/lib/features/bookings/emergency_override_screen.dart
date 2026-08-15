@@ -58,7 +58,7 @@ class _EmergencyOverrideScreenState extends State<EmergencyOverrideScreen> {
     if (bookingId == null || _selectedNewSlotId == null) return;
     setState(() => _isSubmitting = true);
     try {
-      await _db.rpc('emergency_override', {
+      await _db.rpc('emergency_override', params: {
         'p_booking_id': bookingId,
         'p_new_slot_id': _selectedNewSlotId,
         'p_refund': _refund,

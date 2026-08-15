@@ -45,9 +45,18 @@ export async function sendWhatsApp(row: Row, deps: Deps): Promise<Result> {
   if (!tmpl) return { ok: false, retryable: false };
   const { data: optin } = await client.from("whatsapp_optins").select("phone").eq("phone", phone).maybeSingle();
   if (!optin) return { ok: false, retryable: false };
-  const bodyParams = Array.from({ length: tmpl.paramCount }, (_, idx) => ({
-    type: "text", text: String(Object.values(params ?? {})[idx] ?? ""),
-  }));
+  const bodyParams = Array.from({ length: tmpl.paramCount }, (_, idx) => {
+    let val = "";
+    if (params) {
+      if (Array.isArray(params)) {
+        val = String(params[idx] ?? "");
+      } else {
+        const key = `param${idx + 1}` in params ? `param${idx + 1}` : (String(idx + 1) in params ? String(idx + 1) : Object.keys(params)[idx]);
+        val = String(params[key] ?? Object.values(params)[idx] ?? "");
+      }
+    }
+    return { type: "text", text: val };
+  });
   const token = deps.whatsappToken ?? (typeof Deno !== "undefined" ? Deno.env.get("WHATSAPP_TOKEN") : "") ?? "";
   const res = await deps.fetch(`https://graph.facebook.com/v20.0/${deps.phoneId}/messages`, {
     method: "POST",
@@ -142,11 +151,18 @@ export async function sendFcmPush(row: Row, deps: Deps): Promise<Result> {
   if (title) notification.title = title;
   if (body) notification.body = body;
 
+  const stringData: Record<string, string> = {};
+  if (data) {
+    for (const [k, v] of Object.entries(data)) {
+      stringData[k] = v == null ? "" : String(v);
+    }
+  }
+
   const fcmPayload: Record<string, unknown> = {
     message: {
       token: fcm_token,
       ...(Object.keys(notification).length > 0 ? { notification } : {}),
-      ...(data ? { data } : {}),
+      ...(Object.keys(stringData).length > 0 ? { data: stringData } : {}),
     },
   };
 

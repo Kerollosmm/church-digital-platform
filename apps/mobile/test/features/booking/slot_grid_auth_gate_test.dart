@@ -72,7 +72,7 @@ void main() {
 
       // 5. User is now authenticated and booking execution completes
       expect(mockGateway.isAuthenticated, isTrue);
-      expect(repo.calls, contains('bookSlot'));
+      expect(repo.calls, contains('reserveAndPay'));
     },
   );
 }

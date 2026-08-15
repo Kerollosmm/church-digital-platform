@@ -59,7 +59,7 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
     if (_selectedSlotId == null) return;
     setState(() => _isSubmitting = true);
     try {
-      await _db.rpc('manual_book', {
+      await _db.rpc('manual_book', params: {
         'p_slot_id': _selectedSlotId,
         'p_phone': _phoneController.text,
         'p_opt_in': _optIn,

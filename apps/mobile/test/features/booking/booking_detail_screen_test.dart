@@ -38,7 +38,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(repo.calls, contains('bookSlot'));
+      expect(repo.calls, contains('reserveAndPay'));
       expect(find.byType(PaymentRedirectScreen), findsOneWidget);
       expect(find.text('#5'), findsOneWidget);
     },

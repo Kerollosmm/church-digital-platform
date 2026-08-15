@@ -22,10 +22,10 @@ GoRoute paymentRedirectRoute(AppSupabase db) {
         return PaymentRedirectScreen(
           bookingId: extra,
           fetchCheckoutUrl: (id) async {
-            final row = await bookings.createCheckout(id);
-            final url = row?['checkout_url'] as String?;
-            if (url == null || url.isEmpty)
+            final url = await bookings.fetchCheckoutUrl(id);
+            if (url == null || url.isEmpty) {
               throw StateError('checkout_url missing');
+            }
             return url;
           },
         );

@@ -120,7 +120,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
   }
 
   Future<void> executeRpc(String fn, int bookingId) async {
-    await _db.rpc(fn, {'p_booking_id': bookingId});
+    await _db.rpc(fn, params: {'p_booking_id': bookingId});
     await _loadBookings(state.filter);
   }
 }

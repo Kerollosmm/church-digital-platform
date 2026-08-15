@@ -47,7 +47,9 @@ C:\church
 - **Localization**: Arabic-first (RTL mandatory).
 - **API**: PostgREST views (`v_available_slots`, `v_my_bookings`) + `POST /rpc/<func>`.
 - **Reliability**: Fail fast on missing `SUPABASE_ANON_KEY` in `main.dart`. Guard null payment IDs in purchase flows.
-- **Testing**: Test production repository classes directly with mocks/fakes—no duplicate test-only parser helpers.
+- **Repository Seams**: Single unified entry point for multi-step flows (`reserveAndPay`). Hide internal pipeline steps (`createCheckout`). Return `Either<Failure, Success>` with zero raw `PostgrestException` or `UnimplementedError` leaks.
+- **No Dead Params**: Only declare parameters accepted by live RPCs. Free-tier bypass must check strictly `paidAmount == 0`.
+- **Testing**: Test production repository classes directly with mocks/fakes. Test fakes must be slot-aware and deterministic.
 - **Tests**: `flutter test apps/mobile/test/...`.
 
 ### 3. Admin Web (`apps/admin/`)

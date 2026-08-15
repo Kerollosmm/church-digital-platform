@@ -46,7 +46,8 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: jsonHeaders });
   try {
     const raw = await req.text();
-    const txn = JSON.parse(raw) as Record<string, unknown>;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const txn = (parsed.obj ? parsed.obj : parsed) as Record<string, unknown>;
     const received = new URL(req.url).searchParams.get("hmac") ?? "";
     const expected = await hmacSha512Hex(deps.hmacKey, buildHmacPayload(txn));
     if (!safeEqual(expected, received)) return new Response(JSON.stringify({ error: "BAD_HMAC" }), { status: 401, headers: jsonHeaders });
