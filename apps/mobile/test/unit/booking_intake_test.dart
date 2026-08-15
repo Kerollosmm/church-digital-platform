@@ -1,11 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mobile/controllers/booking_flow_controller.dart';
 import 'package:mobile/core/either.dart';
 import 'package:mobile/core/failure.dart';
 import 'package:mobile/models/booking.dart';
 import 'package:mobile/models/booking_checkout_session.dart';
 import 'package:mobile/repositories/booking_repository.dart';
 import 'package:mobile/repositories/supabase_booking_repository.dart';
+import 'package:mobile/services/app_strings.dart';
 import 'package:mobile/services/app_supabase.dart';
 import '../helpers/fakes.dart';
 
@@ -49,7 +51,7 @@ class MockAppSupabase implements AppSupabase {
 }
 
 void main() {
-  group('Deep Booking Intake Seam — reserveAndPay', () {
+  group('Deep Booking Intake Seam — reserveAndPay & retryCheckout', () {
     late MockAppSupabase mockSupabase;
     late SupabaseBookingRepository repository;
 
@@ -163,14 +165,59 @@ void main() {
       expect(mockSupabase.functionCalls, contains('paymob-checkout'));
     });
 
-    test('5. Unauthenticated call returns Left(AuthFailure)', () async {
+    test('5. Paid reservation + empty/missing checkout_url in payload => Left(CheckoutFailure) with bookingId', () async {
+      mockSupabase.rpcResponse = {
+        'id': 104,
+        'slot_id': 9,
+        'user_id': 'aaaaaaaa-0000-0000-0000-000000000002',
+        'status': 'PENDING_PAYMENT',
+        'paid_amount': 100,
+      };
+      // Paymob returns 200 with empty body / missing checkout_url
+      mockSupabase.functionResponse = {};
+
+      final result = await repository.reserveAndPay(
+        slotId: 9,
+        whatsappOptIn: false,
+      );
+
+      expect(result.isLeft, isTrue);
+      final failure = result.leftOrNull!;
+      expect(failure, isA<CheckoutFailure>());
+      expect((failure as CheckoutFailure).bookingId, equals(104));
+      expect(failure.message, contains('Missing checkout URL'));
+    });
+
+    test('6. retryCheckout returns Either<Failure, BookingCheckoutSession> on success and failure', () async {
+      // Success case
+      mockSupabase.functionResponse = {
+        'checkout_url': 'https://accept.paymob.com/standalone?payment_token=token456',
+        'payment_id': 9902,
+      };
+
+      final okResult = await repository.retryCheckout(201);
+      expect(okResult.isRight, isTrue);
+      final session = okResult.rightOrNull!;
+      expect(session.booking.id, equals(201));
+      expect(session.checkoutUrl, equals('https://accept.paymob.com/standalone?payment_token=token456'));
+
+      // Error case
+      mockSupabase.functionError = Exception('Network Timeout');
+      final errResult = await repository.retryCheckout(202);
+      expect(errResult.isLeft, isTrue);
+      final failure = errResult.leftOrNull!;
+      expect(failure, isA<CheckoutFailure>());
+      expect((failure as CheckoutFailure).bookingId, equals(202));
+    });
+
+    test('7. Unauthenticated call returns Left(AuthFailure)', () async {
       mockSupabase.rpcError = const PostgrestException(
         message: 'AUTH_REQUIRED',
         code: '28000',
       );
 
       final result = await repository.reserveAndPay(
-        slotId: 9,
+        slotId: 10,
         whatsappOptIn: false,
       );
 
@@ -180,28 +227,56 @@ void main() {
       expect(failure.code, equals('28000'));
     });
 
-    test('6. Fake adapter reserveAndPay is slot-aware and deterministic without network', () async {
+    test('8. BookingFlowController drives reserveAndPay and provides localized Arabic error messages', () async {
+      final controller = BookingFlowController(repository);
+      mockSupabase.rpcError = const PostgrestException(
+        message: 'SLOT_FULL',
+        code: 'P0001',
+      );
+
+      final result = await controller.reserveAndPay(slotId: 11);
+      expect(result.isLeft, isTrue);
+      final failure = result.leftOrNull!;
+      final localized = controller.localizedMessage(failure);
+      expect(localized, equals(AppStrings.slotFull));
+    });
+
+    test('9. EmptyBookingRepository provides safe no-op implementations without throwing', () async {
+      final empty = EmptyBookingRepository();
+      expect((await empty.reserveAndPay(slotId: 1)).isLeft, isTrue);
+      expect((await empty.retryCheckout(1)).isLeft, isTrue);
+      await expectLater(empty.cancelBooking(1), completes);
+      await expectLater(empty.confirmBooking(1), completes);
+      await expectLater(empty.completeBooking(1), completes);
+    });
+
+    test('10. Fake adapter reserveAndPay and retryCheckout are slot-aware and deterministic', () async {
       final fake = FakeBookingRepository(
         slots: [
-          {'id': 10, 'title_ar': 'قداس الأحد', 'price': 0},
-          {'id': 11, 'title_ar': 'رحلة دير الأنبا بولا', 'price': 150},
+          {'id': 12, 'title_ar': 'قداس الأحد', 'price': 0},
+          {'id': 13, 'title_ar': 'رحلة دير الأنبا بولا', 'price': 150},
         ],
         checkoutUrl: 'https://accept.paymob.com/checkout?token=abc',
       );
 
-      // Slot 10 is free
-      final resFree = await fake.reserveAndPay(slotId: 10);
+      // Slot 12 is free
+      final resFree = await fake.reserveAndPay(slotId: 12);
       expect(resFree.isRight, isTrue);
-      expect(resFree.rightOrNull!.booking.id, equals(10));
+      expect(resFree.rightOrNull!.booking.id, equals(12));
       expect(resFree.rightOrNull!.isConfirmed, isTrue);
       expect(resFree.rightOrNull!.checkoutUrl, isNull);
 
-      // Slot 11 is paid
-      final resPaid = await fake.reserveAndPay(slotId: 11);
+      // Slot 13 is paid
+      final resPaid = await fake.reserveAndPay(slotId: 13);
       expect(resPaid.isRight, isTrue);
-      expect(resPaid.rightOrNull!.booking.id, equals(11));
+      expect(resPaid.rightOrNull!.booking.id, equals(13));
       expect(resPaid.rightOrNull!.isConfirmed, isFalse);
       expect(resPaid.rightOrNull!.checkoutUrl, equals('https://accept.paymob.com/checkout?token=abc'));
+
+      // retryCheckout on fake
+      final resRetry = await fake.retryCheckout(13);
+      expect(resRetry.isRight, isTrue);
+      expect(resRetry.rightOrNull!.checkoutUrl, equals('https://accept.paymob.com/checkout?token=abc'));
     });
   });
 }

@@ -16,6 +16,9 @@ abstract interface class BookingRepository {
     bool whatsappOptIn = false,
   });
 
+  /// Explicit retry method to re-initialize Paymob checkout for a pending booking.
+  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(int bookingId);
+
   Future<void> cancelBooking(int bookingId);
   Future<void> confirmBooking(int bookingId);
   Future<void> completeBooking(int bookingId);

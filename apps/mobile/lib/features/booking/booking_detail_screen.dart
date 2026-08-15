@@ -51,22 +51,24 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         await runGuarded(
           () async {
             final slotId = widget.slot['slot_id'] as int;
-            final result = await _controller.book(
+            final result = await _controller.reserveAndPay(
               slotId: slotId,
-              optIn: _optIn,
+              whatsappOptIn: _optIn,
             );
             if (!mounted) return;
-            if (result.status == BookSlotStatus.success &&
-                result.booking != null) {
-              context.pushNamed(
-                AppRoutes.paymentRedirect,
-                extra: result.booking!.id,
-              );
-            } else {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(result.message)));
-            }
+            result.fold(
+              (failure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(_controller.localizedMessage(failure))),
+                );
+              },
+              (session) {
+                context.pushNamed(
+                  AppRoutes.paymentRedirect,
+                  extra: session.booking.id,
+                );
+              },
+            );
           },
           onError: (message) {
             if (!mounted) return;

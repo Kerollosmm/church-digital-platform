@@ -86,6 +86,15 @@ class SupabaseBookingRepository implements BookingRepository {
       final checkoutUrl = checkout?['checkout_url'] as String?;
       final paymentId = checkout?['payment_id'] as int?;
 
+      if (checkoutUrl == null || checkoutUrl.isEmpty) {
+        return Left(
+          CheckoutFailure(
+            'Missing checkout URL in Paymob response',
+            bookingId: booking.id,
+          ),
+        );
+      }
+
       return Right(
         BookingCheckoutSession(
           booking: booking,
@@ -109,6 +118,45 @@ class SupabaseBookingRepository implements BookingRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(int bookingId) async {
+    try {
+      final checkout = await _createCheckout(bookingId);
+      final checkoutUrl = checkout?['checkout_url'] as String?;
+      final paymentId = checkout?['payment_id'] as int?;
+
+      if (checkoutUrl == null || checkoutUrl.isEmpty) {
+        return Left(
+          CheckoutFailure(
+            'Missing checkout URL in Paymob response',
+            bookingId: bookingId,
+          ),
+        );
+      }
+
+      return Right(
+        BookingCheckoutSession(
+          booking: Booking(id: bookingId, status: 'PENDING_PAYMENT'),
+          checkoutUrl: checkoutUrl,
+          paymentId: paymentId,
+          isConfirmed: false,
+        ),
+      );
+    } catch (e) {
+      developer.log(
+        'retryCheckout failed for booking #$bookingId: $e',
+        name: 'BookingRepository',
+      );
+      return Left(
+        CheckoutFailure(
+          'Failed to retry payment checkout: $e',
+          bookingId: bookingId,
+          originalError: e,
+        ),
+      );
+    }
+  }
+
   /// Internal checkout creation helper (hidden from presentation interface)
   Future<Map<String, dynamic>?> _createCheckout(int bookingId) async {
     final data = await _supabase.invokeFunction(
@@ -116,12 +164,6 @@ class SupabaseBookingRepository implements BookingRepository {
       body: {'booking_id': bookingId},
     );
     return data;
-  }
-
-  /// Fetch checkout URL for an existing pending booking (used by payment redirect)
-  Future<String?> fetchCheckoutUrl(int bookingId) async {
-    final data = await _createCheckout(bookingId);
-    return data?['checkout_url'] as String?;
   }
 
   @override
@@ -154,11 +196,13 @@ class EmptyBookingRepository implements BookingRepository {
     bool whatsappOptIn = false,
   }) async => const Left(BookingFailure('Empty booking repository'));
   @override
-  Future<void> cancelBooking(int bookingId) async => throw UnimplementedError();
+  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(
+    int bookingId,
+  ) async => const Left(BookingFailure('Empty booking repository'));
   @override
-  Future<void> confirmBooking(int bookingId) async =>
-      throw UnimplementedError();
+  Future<void> cancelBooking(int bookingId) async => Future.value();
   @override
-  Future<void> completeBooking(int bookingId) async =>
-      throw UnimplementedError();
+  Future<void> confirmBooking(int bookingId) async => Future.value();
+  @override
+  Future<void> completeBooking(int bookingId) async => Future.value();
 }
