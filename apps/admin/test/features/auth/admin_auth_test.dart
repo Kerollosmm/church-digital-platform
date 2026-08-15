@@ -149,6 +149,26 @@ void main() {
       expect(supabaseClient.auth.currentUser, isNull);
     });
 
+    testWidgets('Deprecated role PRIEST receives "Access Denied / غير مصرح" and is signed out', (tester) async {
+      final supabaseClient = createMockSupabaseClient('PRIEST');
+
+      await tester.pumpWidget(createTestApp(supabaseClient));
+      await tester.pumpAndSettle();
+
+      final phoneField = find.byType(TextFormField).first;
+      await tester.enterText(phoneField, '01234567890');
+      await tester.tap(find.text('إرسال الرمز'));
+      await tester.pumpAndSettle();
+
+      final otpField = find.byType(TextFormField).last;
+      await tester.enterText(otpField, '123456');
+      await tester.tap(find.text('تأكيد الرمز'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Access Denied / غير مصرح'), findsOneWidget);
+      expect(supabaseClient.auth.currentUser, isNull);
+    });
+
     testWidgets('ADMIN user with SET pin enters 3-step login successfully', (tester) async {
       final supabaseClient = createMockSupabaseClient('ADMIN', pinStatus: 'SET', pinValid: true);
 

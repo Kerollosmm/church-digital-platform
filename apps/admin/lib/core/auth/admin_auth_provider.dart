@@ -128,7 +128,7 @@ class AdminAuthNotifier extends Notifier<AdminAuthState> {
           .single();
 
       final role = response['role'] as String?;
-      const allowedRoles = {'ADMIN', 'PRIEST', 'SUPER_ADMIN'};
+      const allowedRoles = {'ADMIN'};
 
 
       if (isAllowed || (role != null && allowedRoles.contains(role))) {

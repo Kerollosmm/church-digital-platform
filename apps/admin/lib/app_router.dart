@@ -116,7 +116,7 @@ class AdminShell extends StatelessWidget {
   }
 }
 
-const allowedAdminRoles = {'ADMIN', 'PRIEST', 'SUPER_ADMIN'};
+const allowedAdminRoles = {'ADMIN'};
 
 GoRouter createAdminRouter({
   bool Function()? isAuthenticated,

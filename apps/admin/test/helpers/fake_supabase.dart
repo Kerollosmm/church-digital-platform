@@ -158,6 +158,7 @@ class FakeSupabase {
     return _handleRpc(fn, positionalArgs);
   }
 
+  @override
   dynamic noSuchMethod(Invocation invocation) {
     if (invocation.memberName == #rpc) {
       final fn = invocation.positionalArguments[0] as String;
