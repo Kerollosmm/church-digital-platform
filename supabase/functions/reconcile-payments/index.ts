@@ -49,7 +49,7 @@ export async function handleRequest(_req: Request, deps: Deps): Promise<Response
   }
 }
 
-if (typeof Deno !== "undefined" && Deno.serve) {
+if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
   Deno.serve((req) => handleRequest(req, {
     getClient: () => makeServiceClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")),
     fetch, paymobApiKey: Deno.env.get("PAYMOB_API_KEY")!,
