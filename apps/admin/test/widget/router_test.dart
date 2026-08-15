@@ -37,6 +37,7 @@ void main() {
       child: MaterialApp.router(
         routerConfig: createAdminRouter(
           isAuthenticated: () => true,
+          getUserRole: () => 'ADMIN',
           db: fake,
         ),
         locale: const Locale('ar'),

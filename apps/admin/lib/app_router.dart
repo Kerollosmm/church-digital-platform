@@ -138,9 +138,13 @@ GoRouter createAdminRouter({
     initialLocation: initialLocation,
     refreshListenable: refreshListenable,
     redirect: (context, state) {
-      final isAuthed = isAuthenticated != null ? isAuthenticated() : false;
+      final isAuthed = isAuthenticated != null
+          ? isAuthenticated()
+          : (resolveDb() is SupabaseClient
+              ? (resolveDb() as SupabaseClient).auth.currentUser != null
+              : false);
       final role = getUserRole != null ? getUserRole() : null;
-      final hasAllowedRole = role == null || allowedAdminRoles.contains(role);
+      final hasAllowedRole = role != null && allowedAdminRoles.contains(role);
       final isAllowed = isAuthed && hasAllowedRole;
       final loggingIn = state.uri.path == '/login';
       if (!isAllowed) {

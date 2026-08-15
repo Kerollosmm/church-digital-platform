@@ -92,9 +92,34 @@ void main() {
     expect(find.byType(AdminLoginScreen), findsOneWidget);
   });
 
+  testWidgets('Authenticated user with null or unallowed role is redirected to /login', (tester) async {
+    final router = createAdminRouter(
+      isAuthenticated: () => true,
+      getUserRole: () => null,
+      db: createFakeDb(),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('ar'),
+          supportedLocales: const [Locale('ar')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AdminLoginScreen), findsOneWidget);
+  });
+
   testWidgets('Authenticated admin with AdminAuthStatus.authenticated is granted access to /bookings', (tester) async {
     final router = createAdminRouter(
       isAuthenticated: () => true,
+      getUserRole: () => 'ADMIN',
       initialLocation: '/bookings',
       db: createFakeDb(),
     );
