@@ -7,7 +7,7 @@ abstract interface class VideosRepository {
 
 class SupabaseVideosRepository implements VideosRepository {
   SupabaseVideosRepository(this._client);
-  final SupabaseClient _client;
+  final dynamic _client;
 
   @override
   Future<List<Map<String, dynamic>>> fetchVideos() async {

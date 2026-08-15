@@ -1,37 +1,77 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/repositories/videos_repository.dart';
 
-Map<String, dynamic>? parsePurchaseRpcResult(dynamic data) {
-  if (data == null) return null;
-  if (data is num) return {'id': data.toInt()};
-  if (data is String) {
-    final parsed = int.tryParse(data);
-    return parsed != null ? {'id': parsed} : null;
+class MockRpcSupabaseClient {
+  MockRpcSupabaseClient(this.rpcResult);
+  final dynamic rpcResult;
+  String? lastFunction;
+  Map<String, dynamic>? lastParams;
+
+  dynamic rpc(String fn, {Map<String, dynamic>? params}) {
+    lastFunction = fn;
+    lastParams = params;
+    return Future.value(rpcResult);
   }
-  if (data is Map) {
-    final id = data['id'];
-    if (id != null) return Map<String, dynamic>.from(data);
-    return null;
-  }
-  final parsed = int.tryParse(data.toString());
-  return parsed != null ? {'id': parsed} : null;
 }
 
 void main() {
-  test('parsePurchaseRpcResult handles num', () {
-    expect(parsePurchaseRpcResult(42), equals({'id': 42}));
-  });
+  group('SupabaseVideosRepository.purchaseVideo RPC result parsing', () {
+    test('parses numeric ID returned from RPC', () async {
+      final client = MockRpcSupabaseClient(42);
+      final repo = SupabaseVideosRepository(client);
 
-  test('parsePurchaseRpcResult handles numeric string', () {
-    expect(parsePurchaseRpcResult('123'), equals({'id': 123}));
-  });
+      final result = await repo.purchaseVideo(10);
+      expect(result, equals({'id': 42}));
+      expect(client.lastFunction, equals('purchase_video'));
+      expect(client.lastParams, equals({'p_video_id': 10}));
+    });
 
-  test('parsePurchaseRpcResult handles map with valid id', () {
-    expect(parsePurchaseRpcResult({'id': 50}), equals({'id': 50}));
-  });
+    test('parses numeric string ID returned from RPC', () async {
+      final client = MockRpcSupabaseClient('123');
+      final repo = SupabaseVideosRepository(client);
 
-  test('parsePurchaseRpcResult returns null on unparsable input or invalid map', () {
-    expect(parsePurchaseRpcResult('not-a-number'), isNull);
-    expect(parsePurchaseRpcResult({'id': null}), isNull);
-    expect(parsePurchaseRpcResult(null), isNull);
+      final result = await repo.purchaseVideo(10);
+      expect(result, equals({'id': 123}));
+    });
+
+    test('parses Map containing valid numeric ID from RPC', () async {
+      final client = MockRpcSupabaseClient({'id': 50, 'status': 'CREATED'});
+      final repo = SupabaseVideosRepository(client);
+
+      final result = await repo.purchaseVideo(10);
+      expect(result, equals({'id': 50, 'status': 'CREATED'}));
+    });
+
+    test('returns null when Map contains null id', () async {
+      final client = MockRpcSupabaseClient({'id': null});
+      final repo = SupabaseVideosRepository(client);
+
+      final result = await repo.purchaseVideo(10);
+      expect(result, isNull);
+    });
+
+    test('returns null when RPC returns unparsable string', () async {
+      final client = MockRpcSupabaseClient('not-a-valid-number');
+      final repo = SupabaseVideosRepository(client);
+
+      final result = await repo.purchaseVideo(10);
+      expect(result, isNull);
+    });
+
+    test('returns null when RPC returns null', () async {
+      final client = MockRpcSupabaseClient(null);
+      final repo = SupabaseVideosRepository(client);
+
+      final result = await repo.purchaseVideo(10);
+      expect(result, isNull);
+    });
+
+    test('returns null when RPC returns arbitrary unparsable object', () async {
+      final client = MockRpcSupabaseClient(Object());
+      final repo = SupabaseVideosRepository(client);
+
+      final result = await repo.purchaseVideo(10);
+      expect(result, isNull);
+    });
   });
 }
