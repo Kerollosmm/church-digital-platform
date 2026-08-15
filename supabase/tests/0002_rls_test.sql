@@ -76,4 +76,14 @@ begin;
   perform tests.expect((select count(*) from public.bookings) = 1,
                        'admin must see all bookings');
   reset role;
+
+  -- Verify public.users.tenant_id takes precedence over JWT tenant claim
+  set local role authenticated;
+  set_config('request.jwt.claims',
+             json_build_object('sub','11111111-1111-1111-1111-111111111111',
+                               'role','authenticated',
+                               'tenant_id','999'), true);
+  perform tests.expect(public.tenant_id() = 1,
+                       'public.tenant_id() must prioritize public.users.tenant_id over JWT claim');
+  reset role;
 rollback;
