@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -58,7 +59,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
 
     _subscribeRealtime();
     ref.onDispose(() {
-      _unsubscribeRealtime();
+      unawaited(_unsubscribeRealtime());
     });
 
     _loadBookings(filter);
@@ -88,10 +89,10 @@ class BookingsNotifier extends Notifier<BookingsState> {
     }
   }
 
-  void _unsubscribeRealtime() {
+  Future<void> _unsubscribeRealtime() async {
     if (_channel != null) {
       try {
-        _channel.unsubscribe();
+        await _channel.unsubscribe();
       } catch (e, st) {
         debugPrint('Realtime unsubscribe error: $e\n$st');
       }
