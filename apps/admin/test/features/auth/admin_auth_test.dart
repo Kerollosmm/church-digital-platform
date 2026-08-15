@@ -250,5 +250,60 @@ void main() {
 
       expect(find.textContaining('الحساب مغلق'), findsOneWidget);
     });
+
+    test('AdminAuthNotifier state transitions require PIN before AdminAuthStatus.authenticated', () async {
+      final supabaseClient = createMockSupabaseClient('ADMIN', pinStatus: 'SET', pinValid: true);
+      final container = ProviderContainer(
+        overrides: [
+          supabaseClientProvider.overrideWithValue(supabaseClient),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(adminAuthProvider.notifier);
+      expect(container.read(adminAuthProvider).status, AdminAuthStatus.unauthenticated);
+      expect(container.read(adminAuthProvider).isAuthenticated, isFalse);
+
+      // Verify OTP
+      await notifier.sendOtp('01234567890');
+      final otpSuccess = await notifier.verifyOtp('01234567890', '123456');
+      expect(otpSuccess, isTrue);
+
+      // Supabase user session exists, but status is pinRequired (NOT authenticated)
+      expect(supabaseClient.auth.currentUser, isNotNull);
+      expect(container.read(adminAuthProvider).status, AdminAuthStatus.pinRequired);
+      expect(container.read(adminAuthProvider).isAuthenticated, isFalse);
+
+      // Verify PIN succeeds
+      final pinSuccess = await notifier.verifyPin('1234');
+      expect(pinSuccess, isTrue);
+      expect(container.read(adminAuthProvider).status, AdminAuthStatus.authenticated);
+      expect(container.read(adminAuthProvider).isAuthenticated, isTrue);
+    });
+
+    test('AdminAuthNotifier keeps pinRequired status on wrong PIN', () async {
+      final supabaseClient = createMockSupabaseClient('ADMIN', pinStatus: 'SET', pinValid: false);
+      final container = ProviderContainer(
+        overrides: [
+          supabaseClientProvider.overrideWithValue(supabaseClient),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(adminAuthProvider.notifier);
+      await notifier.sendOtp('01234567890');
+      await notifier.verifyOtp('01234567890', '123456');
+
+      expect(container.read(adminAuthProvider).status, AdminAuthStatus.pinRequired);
+      expect(container.read(adminAuthProvider).isAuthenticated, isFalse);
+
+      // Wrong PIN
+      final pinSuccess = await notifier.verifyPin('0000');
+      expect(pinSuccess, isFalse);
+      expect(container.read(adminAuthProvider).status, AdminAuthStatus.pinRequired);
+      expect(container.read(adminAuthProvider).isAuthenticated, isFalse);
+      expect(container.read(adminAuthProvider).errorMessage, 'رمز PIN غير صحيح');
+    });
   });
 }
+

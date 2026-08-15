@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:admin/app_router.dart';
+import 'package:admin/core/auth/admin_auth_provider.dart';
 import 'package:admin/features/auth/admin_login_screen.dart';
+import '../helpers/fake_supabase.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -24,10 +26,23 @@ void main() {
     }
   });
 
+  FakeSupabase createFakeDb() {
+    return FakeSupabase({
+      'bookings': [],
+      'service_slots': [],
+      'complaints': [],
+      'announcements': [],
+      'faq': [],
+      'payments': [],
+      'videos': [],
+    });
+  }
+
   testWidgets('Unauthenticated user navigating to /bookings or /analytics is redirected to /login', (tester) async {
     final router = createAdminRouter(
       isAuthenticated: () => false,
       initialLocation: '/bookings',
+      db: createFakeDb(),
     );
 
     await tester.pumpWidget(
@@ -50,4 +65,139 @@ void main() {
     expect(find.byType(AdminLoginScreen), findsOneWidget);
     expect(find.text('تسجيل دخول المشرفين'), findsOneWidget);
   });
+
+  testWidgets('Default createAdminRouter without isAuthenticated callback denies privileged access', (tester) async {
+    final router = createAdminRouter(
+      initialLocation: '/bookings',
+      db: createFakeDb(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('ar'),
+          supportedLocales: const [Locale('ar')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Must be redirected to /login even if Supabase client instance exists
+    expect(find.byType(AdminLoginScreen), findsOneWidget);
+  });
+
+  testWidgets('Authenticated admin with AdminAuthStatus.authenticated is granted access to /bookings', (tester) async {
+    final router = createAdminRouter(
+      isAuthenticated: () => true,
+      initialLocation: '/bookings',
+      db: createFakeDb(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('ar'),
+          supportedLocales: const [Locale('ar')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Should NOT be on login screen
+    expect(find.byType(AdminLoginScreen), findsNothing);
+    expect(find.text('لوحة الإدارة'), findsOneWidget);
+  });
+
+  testWidgets('adminRouterProvider blocks privileged access when status is pinRequired', (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        adminAuthProvider.overrideWith(() => _StubAuthNotifier(
+          const AdminAuthState(
+            status: AdminAuthStatus.pinRequired,
+            role: 'ADMIN',
+          ),
+        )),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final router = container.read(adminRouterProvider);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('ar'),
+          supportedLocales: const [Locale('ar')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AdminLoginScreen), findsOneWidget);
+  });
+
+  testWidgets('adminRouterProvider blocks privileged access when status is pinSetupRequired', (tester) async {
+    final container = ProviderContainer(
+      overrides: [
+        adminAuthProvider.overrideWith(() => _StubAuthNotifier(
+          const AdminAuthState(
+            status: AdminAuthStatus.pinSetupRequired,
+            role: 'ADMIN',
+          ),
+        )),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final router = container.read(adminRouterProvider);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('ar'),
+          supportedLocales: const [Locale('ar')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AdminLoginScreen), findsOneWidget);
+  });
+
 }
+
+class _StubAuthNotifier extends AdminAuthNotifier {
+  _StubAuthNotifier(this._initialState);
+  final AdminAuthState _initialState;
+
+  @override
+  AdminAuthState build() => _initialState;
+}
+
+

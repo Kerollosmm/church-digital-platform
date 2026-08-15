@@ -70,13 +70,15 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
           ),
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('Complaint decryption failure: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('فشل فك التشفير: $e')),
+          const SnackBar(content: Text('فشل فك التشفير. يرجى المحاولة لاحقاً.')),
         );
       }
     }
+
   }
 
   @override

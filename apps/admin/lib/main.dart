@@ -8,11 +8,8 @@ const _supabaseUrl = String.fromEnvironment(
   'SUPABASE_URL',
   defaultValue: 'http://127.0.0.1:54321',
 );
-const _supabasePublishableKey = String.fromEnvironment(
-  'SUPABASE_ANON_KEY',
-  defaultValue:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrc2dwaHJ5ZW1yZHJrd2FxbnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NTA2MjgsImV4cCI6MjEwMTUyNjYyOH0.ebxE042EdeYMHbkJnst8aq5K6RtlYgUXEpoeHuYNHvA',
-);
+const _supabasePublishableKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,13 +17,14 @@ Future<void> main() async {
   runApp(const ProviderScope(child: ChurchApp()));
 }
 
-class ChurchApp extends StatelessWidget {
+class ChurchApp extends ConsumerWidget {
   const ChurchApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(adminRouterProvider);
     return MaterialApp.router(
-      routerConfig: appRouter,
+      routerConfig: router,
       title: 'لوحة الإدارة',
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
@@ -39,3 +37,4 @@ class ChurchApp extends StatelessWidget {
     );
   }
 }
+

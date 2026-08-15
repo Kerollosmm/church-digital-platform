@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 
 const Object _unsetFilter = Object();
 
@@ -81,8 +83,8 @@ class BookingsNotifier extends Notifier<BookingsState> {
             callback: (payload) => _loadBookings(state.filter),
           )
           .subscribe();
-    } catch (_) {
-      // In case dynamic db mock doesn't support full channel object
+    } catch (e, st) {
+      debugPrint('Realtime subscribe error: $e\n$st');
     }
   }
 
@@ -90,10 +92,13 @@ class BookingsNotifier extends Notifier<BookingsState> {
     if (_channel != null) {
       try {
         _channel.unsubscribe();
-      } catch (_) {}
+      } catch (e, st) {
+        debugPrint('Realtime unsubscribe error: $e\n$st');
+      }
       _channel = null;
     }
   }
+
 
   Future<void> _loadBookings(String? filter) async {
     try {
