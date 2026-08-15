@@ -54,3 +54,37 @@ Deno.test("paymob-checkout: payment_id uses existing CREATED payment and returns
     assertEquals(fake.tableRows("payments").length, 1);
   } finally { fetchStub.restore(); }
 });
+
+Deno.test("paymob-checkout: returns 403 when user does not own booking", async () => {
+  const fake = new FakeClient(["bookings", "payments"]);
+  fake.seed("bookings", [{ id: 7, user_id: "user-123", paid_amount: 50, status: "PENDING_PAYMENT" }]);
+  const res = await handleRequest(new Request("https://x/functions/v1/paymob-checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer victim-token" },
+    body: JSON.stringify({ booking_id: 7 }),
+  }), {
+    getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+    getUser: () => Promise.resolve({ data: { user: { id: "attacker-456" } as any }, error: null }),
+    fetch: () => Promise.resolve(jsonRes({})),
+    paymobApiKey: "sk", integrationId: 1, iframeId: 2, amountMultiplier: 100,
+  });
+  assertEquals(res.status, 403);
+});
+
+Deno.test("paymob-checkout: returns 502 when upstream Paymob fails", async () => {
+  const fake = new FakeClient(["bookings", "payments"]);
+  fake.seed("bookings", [{ id: 7, paid_amount: 50, status: "PENDING_PAYMENT" }]);
+  const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(new Response("Gateway Timeout", { status: 504 })));
+  try {
+    const res = await handleRequest(new Request("https://x/functions/v1/paymob-checkout", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ booking_id: 7 }),
+    }), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub, paymobApiKey: "sk", integrationId: 1, iframeId: 2, amountMultiplier: 100,
+    });
+    assertEquals(res.status, 502);
+    const body = await res.json() as Record<string, unknown>;
+    assertEquals(body.error, "PAYMOB_UPSTREAM_ERROR");
+  } finally { fetchStub.restore(); }
+});
+

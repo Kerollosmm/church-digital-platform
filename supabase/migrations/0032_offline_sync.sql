@@ -75,32 +75,51 @@ begin
       continue;
     end if;
 
-    begin
-      -- Record successful processing log
-      insert into public.offline_sync_log (
-        user_id, client_mutation_id, entity_name, action, status, payload
-      ) values (
-        v_user_id, v_mutation_id, v_entity, v_action, 'SUCCESS', v_payload
-      );
+    -- Validate and dispatch supported offline mutations
+    if v_entity = 'complaints' and v_action = 'INSERT' then
+      begin
+        perform public.submit_complaint_secure(
+          v_payload->>'category',
+          v_payload->>'body'
+        );
 
-      v_processed := v_processed + 1;
-      v_results := v_results || jsonb_build_object(
-        'client_mutation_id', v_mutation_id,
-        'status', 'SUCCESS'
-      );
-    exception when others then
+        insert into public.offline_sync_log (
+          user_id, client_mutation_id, entity_name, action, status, payload
+        ) values (
+          v_user_id, v_mutation_id, v_entity, v_action, 'SUCCESS', v_payload
+        );
+
+        v_processed := v_processed + 1;
+        v_results := v_results || jsonb_build_object(
+          'client_mutation_id', v_mutation_id,
+          'status', 'SUCCESS'
+        );
+      exception when others then
+        v_errors := v_errors + 1;
+        insert into public.offline_sync_log (
+          user_id, client_mutation_id, entity_name, action, status, payload, error_message
+        ) values (
+          v_user_id, v_mutation_id, v_entity, v_action, 'ERROR', v_payload, SQLERRM
+        );
+        v_results := v_results || jsonb_build_object(
+          'client_mutation_id', v_mutation_id,
+          'status', 'ERROR',
+          'error', 'SYNC_FAILED'
+        );
+      end;
+    else
       v_errors := v_errors + 1;
       insert into public.offline_sync_log (
         user_id, client_mutation_id, entity_name, action, status, payload, error_message
       ) values (
-        v_user_id, v_mutation_id, v_entity, v_action, 'ERROR', v_payload, SQLERRM
+        v_user_id, v_mutation_id, v_entity, v_action, 'ERROR', v_payload, 'UNSUPPORTED_MUTATION'
       );
       v_results := v_results || jsonb_build_object(
         'client_mutation_id', v_mutation_id,
         'status', 'ERROR',
-        'error', SQLERRM
+        'error', 'UNSUPPORTED_MUTATION'
       );
-    end;
+    end if;
   end loop;
 
   return jsonb_build_object(
@@ -111,5 +130,6 @@ begin
   );
 end;
 $$;
+
 
 grant execute on function public.sync_offline_mutations(jsonb) to authenticated;

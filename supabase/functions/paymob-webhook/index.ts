@@ -42,22 +42,31 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 export async function handleRequest(req: Request, deps: Deps): Promise<Response> {
-  const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type" };
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  const jsonHeaders = { "Content-Type": "application/json" };
+  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405, headers: jsonHeaders });
   try {
     const raw = await req.text();
     const txn = JSON.parse(raw) as Record<string, unknown>;
     const received = new URL(req.url).searchParams.get("hmac") ?? "";
     const expected = await hmacSha512Hex(deps.hmacKey, buildHmacPayload(txn));
-    if (!safeEqual(expected, received)) return new Response(JSON.stringify({ error: "BAD_HMAC" }), { status: 401, headers: cors });
+    if (!safeEqual(expected, received)) return new Response(JSON.stringify({ error: "BAD_HMAC" }), { status: 401, headers: jsonHeaders });
 
+    const orderObj = (txn.order ?? {}) as Record<string, unknown>;
+    const rawOrderId = orderObj.merchant_order_id;
+    if (rawOrderId == null || rawOrderId === "" || rawOrderId === "undefined" || rawOrderId === "null") {
+      return new Response(JSON.stringify({ error: "BAD_MERCHANT_ORDER_ID" }), { status: 400, headers: jsonHeaders });
+    }
+    const merchantOrderId = String(rawOrderId);
     const supabase = deps.getClient() as SupabaseClient;
-    const merchantOrderId = String(((txn.order ?? {}) as Record<string, unknown>).merchant_order_id);
     const paid = Boolean(txn.success);
     const { data: existing } = await supabase.from("payments")
       .select("id, gateway_ref, status, video_id").eq("merchant_order_id", merchantOrderId).maybeSingle();
     let pay: { id: number; status: string; video_id?: number | null };
     if (existing) {
+      // Idempotency: if already processed as PAID, acknowledge without re-invoking state transitions
+      if (existing.status === "PAID" && paid) {
+        return new Response(JSON.stringify({ ok: true, already_processed: true }), { status: 200, headers: jsonHeaders });
+      }
       const { data: updated, error: uErr } = await supabase.from("payments")
         .update({ gateway_ref: txn.id, raw_webhook: txn, ...(paid ? {} : { status: "FAILED" }) })
         .eq("id", existing.id).select().single();
@@ -79,12 +88,13 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
         await deps.applyPayment(pay.id);
       }
     }
-    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: jsonHeaders });
   } catch (e) {
     console.error("paymob-webhook error", e);
-    return new Response(JSON.stringify({ error: "INTERNAL" }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: "INTERNAL" }), { status: 500, headers: jsonHeaders });
   }
 }
+
 
 if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
   Deno.serve((req) => handleRequest(req, {
