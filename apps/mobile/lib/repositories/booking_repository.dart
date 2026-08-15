@@ -1,14 +1,24 @@
+import '../core/either.dart';
+import '../core/failure.dart';
 import '../models/available_slot.dart';
 import '../models/booking.dart';
-import '../models/book_slot_result.dart';
+import '../models/booking_checkout_session.dart';
 
 abstract interface class BookingRepository {
   Future<List<Map<String, dynamic>>> fetchServices();
   Future<List<Map<String, dynamic>>> fetchSlotsForService(int serviceId);
   Future<List<AvailableSlot>> fetchAvailableSlots();
   Future<List<Booking>> fetchMyBookings();
-  Future<BookSlotResult> bookSlot({required int slotId, required bool optIn});
-  Future<Map<String, dynamic>?> createCheckout(int bookingId);
+
+  /// Single public entrypoint for reserving and initiating payment for a slot.
+  Future<Either<Failure, BookingCheckoutSession>> reserveAndPay({
+    required int slotId,
+    bool whatsappOptIn = false,
+  });
+
+  /// Explicit retry method to re-initialize Paymob checkout for a pending booking.
+  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(int bookingId);
+
   Future<void> cancelBooking(int bookingId);
   Future<void> confirmBooking(int bookingId);
   Future<void> completeBooking(int bookingId);

@@ -1,6 +1,8 @@
+import 'package:mobile/core/either.dart';
+import 'package:mobile/core/failure.dart';
 import 'package:mobile/models/available_slot.dart';
 import 'package:mobile/models/booking.dart';
-import 'package:mobile/models/book_slot_result.dart';
+import 'package:mobile/models/booking_checkout_session.dart';
 import 'package:mobile/repositories/booking_repository.dart';
 import 'package:mobile/repositories/videos_repository.dart';
 
@@ -9,10 +11,12 @@ class FakeBookingRepository implements BookingRepository {
     this.bookings = const [],
     this.services = const [],
     this.slots = const [],
+    this.checkoutUrl,
   });
   List<Booking> bookings;
   List<Map<String, dynamic>> services;
   List<Map<String, dynamic>> slots;
+  String? checkoutUrl;
   final List<String> calls = [];
 
   @override
@@ -34,19 +38,62 @@ class FakeBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<BookSlotResult> bookSlot({
+  Future<Either<Failure, BookingCheckoutSession>> reserveAndPay({
     required int slotId,
-    required bool optIn,
+    bool whatsappOptIn = false,
   }) async {
-    calls.add('bookSlot');
-    return BookSlotResult(
-      status: BookSlotStatus.success,
-      booking: bookings.isNotEmpty ? bookings.first : null,
+    calls.add('reserveAndPay');
+    final slot = slots.cast<Map<String, dynamic>?>().firstWhere(
+      (s) => s != null && (s['id'] == slotId || s['slot_id'] == slotId),
+      orElse: () => null,
+    );
+
+    final isFree =
+        (slot?['price'] as num?)?.toInt() == 0 ||
+        (slot == null && checkoutUrl == null);
+
+    final booking = bookings.isNotEmpty
+        ? bookings.first
+        : Booking(
+            id: slotId,
+            status: isFree ? 'CONFIRMED' : 'PENDING_PAYMENT',
+            paidAmount: isFree ? 0 : 50,
+          );
+
+    return Right(
+      BookingCheckoutSession(
+        booking: booking,
+        checkoutUrl: isFree ? null : checkoutUrl,
+        paymentId: isFree ? null : 1001,
+        isConfirmed: isFree,
+      ),
     );
   }
 
   @override
-  Future<Map<String, dynamic>?> createCheckout(int bookingId) async => null;
+  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(
+    int bookingId,
+  ) async {
+    calls.add('retryCheckout');
+    final booking = bookings.firstWhere(
+      (b) => b.id == bookingId,
+      orElse: () => fakeBooking,
+    );
+    if (checkoutUrl == null) {
+      return Left(
+        CheckoutFailure('No checkout URL configured', bookingId: bookingId),
+      );
+    }
+    return Right(
+      BookingCheckoutSession(
+        booking: booking,
+        checkoutUrl: checkoutUrl,
+        paymentId: 1001,
+        isConfirmed: false,
+      ),
+    );
+  }
+
   @override
   Future<void> cancelBooking(int bookingId) async {
     calls.add('cancelBooking');

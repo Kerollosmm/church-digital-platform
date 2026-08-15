@@ -29,8 +29,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: FutureBuilder<List<Booking>>(
         future: _future,
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final bookings = snapshot.data!;
           if (bookings.isEmpty) return const Text('لا توجد حجوزات');
           return ListView.builder(

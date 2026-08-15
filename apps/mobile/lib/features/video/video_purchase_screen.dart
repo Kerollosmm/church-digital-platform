@@ -48,9 +48,16 @@ class _VideoPurchaseScreenState extends State<VideoPurchaseScreen> {
           () async {
             final payment = await widget.repository.purchaseVideo(videoId);
             if (!mounted) return;
+            final paymentId = payment?['id'];
+            if (paymentId == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Failed to initiate payment')),
+              );
+              return;
+            }
             context.pushNamed(
               AppRoutes.paymentRedirect,
-              extra: {'video': true, 'payment_id': payment?['id']},
+              extra: {'video': true, 'payment_id': paymentId},
             );
           },
           onError: (message) {
@@ -86,8 +93,9 @@ class _VideoPurchaseScreenState extends State<VideoPurchaseScreen> {
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _videos,
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final rows = snapshot.data!;
           if (rows.isEmpty) {
             return Center(
@@ -196,7 +204,10 @@ class _VideoPurchaseScreenState extends State<VideoPurchaseScreen> {
                     itemCount: remaining.length,
                     itemBuilder: (context, index) {
                       final v = remaining[index];
-                      final isPurchased = v['privacy'] == 'UNLISTED';
+                      final isPurchased =
+                          v['is_purchased'] == true ||
+                          v['purchased'] == true ||
+                          v['access_granted_at'] != null;
                       final priceStr = '${v['price']} ${AppStrings.egp}';
 
                       return Container(

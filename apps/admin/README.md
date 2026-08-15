@@ -48,7 +48,7 @@ The administrative web portal for church priests and system administrators, buil
 
 2. **Run Web App Locally**:
    ```bash
-   flutter run -d chrome
+   flutter run -d chrome --dart-define=SUPABASE_URL=http://localhost:54321 --dart-define=SUPABASE_ANON_KEY=<your-anon-key>
    ```
 
 3. **Execute Tests**:

@@ -128,7 +128,8 @@ class AdminAuthNotifier extends Notifier<AdminAuthState> {
           .single();
 
       final role = response['role'] as String?;
-      const allowedRoles = {'ADMIN'};
+      const allowedRoles = {'ADMIN', 'PRIEST', 'SUPER_ADMIN'};
+
 
       if (isAllowed || (role != null && allowedRoles.contains(role))) {
         return await _checkPinStatus(user, role);
@@ -199,14 +200,14 @@ class AdminAuthNotifier extends Notifier<AdminAuthState> {
         return true;
       } else {
         state = state.copyWith(
-          status: AdminAuthStatus.unauthenticated,
+          status: AdminAuthStatus.pinRequired,
           errorMessage: 'رمز PIN غير صحيح',
         );
         return false;
       }
     } catch (e) {
       state = state.copyWith(
-        status: AdminAuthStatus.unauthenticated,
+        status: AdminAuthStatus.pinRequired,
         errorMessage: 'رمز PIN غير صحيح',
       );
       return false;
@@ -225,12 +226,13 @@ class AdminAuthNotifier extends Notifier<AdminAuthState> {
       return true;
     } catch (e) {
       state = state.copyWith(
-        status: AdminAuthStatus.unauthenticated,
+        status: AdminAuthStatus.pinSetupRequired,
         errorMessage: 'فشل إعداد رمز PIN',
       );
       return false;
     }
   }
+
 
   Future<void> signOut() async {
     await _client.auth.signOut();

@@ -1,27 +1,46 @@
-# Research & Architectural Decisions: Concurrency, Realtime & Navigation
+# Research & Architectural Decisions: Comprehensive Platform Hardening & Bug Fixes
 
-## Decision 1: Atomic Inventory Decrement vs Pessimistic Locks
-- **Decision**: Reject `SELECT FOR UPDATE` and runtime dynamic `COUNT(*)` in favor of single-statement conditional updates:
-  ```sql
-  UPDATE public.service_slots
-  SET remaining_capacity = remaining_capacity - p_quantity,
-      updated_at = clock_timestamp()
-  WHERE id = p_slot_id AND remaining_capacity >= p_quantity
-  RETURNING id, remaining_capacity, price;
-  ```
-- **Rationale**: Physical row locks are held for $<100\mu\text{s}$ at the database engine level. Eliminates lock queues, avoids connection pool exhaustion, and fails deterministically with zero retry storms.
-- **Alternatives Considered**: 
-  - *OCC (Optimistic Concurrency Control)*: Rejected due to catastrophic retry loops under contention.
-  - *Pessimistic Locking (`SELECT FOR UPDATE`)*: Rejected due to transaction serialization bottlenecks.
+## 1. Role Enum Synchronization (`USER` vs `PARISHIONER`)
+- **Decision**: Update all RPCs (`book_slot`, `purchase_video`, RLS policies) to check for `'USER'` and `'ADMIN'` per `0033_collapse_roles.sql`.
+- **Rationale**: `0033` collapsed `user_role` enum to `('USER', 'ADMIN')`. Legacy RPCs checking for `'PARISHIONER'` throw `42501 FORBIDDEN`.
+- **Alternatives Considered**: Reverting to multi-role enum. Rejected because unified role architecture simplifies JWT claims and RLS InitPlans.
 
-## Decision 2: Instant Inventory Closure via Realtime Broadcast vs WAL CDC
-- **Decision**: Remove write-heavy `public.bookings` from `supabase_realtime`. Implement database triggers emitting `pg_notify('realtime:event_inventory', ...)` on capacity exhaustion.
-- **Rationale**: WAL CDC executes Row-Level Security on every connected client WebSocket per row insert. Realtime Broadcast operates via Phoenix memory channels ($>800\text{k}\text{ msgs/sec}$ at constant 30ms latency) without database CPU overhead.
+## 2. Capacity Restoration on Booking Expiry & Cancellation
+- **Decision**: Implement trigger on `public.bookings (status)`: when status transitions from `('CONFIRMED', 'PENDING_PAYMENT')` to `('CANCELLED', 'EXPIRED', 'REFUNDED')`, atomically increment `public.service_slots.remaining_capacity` by `quantity`.
+- **Rationale**: Currently `0010_lock_expiry_cron.sql`, `0008_booking_state_machine.sql`, and `0024_transition_engine.sql` cancel bookings without restoring `remaining_capacity`, permanently starving slot inventory. Trigger guarantees restoration regardless of caller.
 
-## Decision 3: Admin Web Authentication Guard
-- **Decision**: Bind `GoRouter(redirect: ...)` in `apps/admin/lib/app_router.dart` to listen to `adminAuthProvider`. Redirect unauthenticated sessions to `/login`.
-- **Rationale**: Prevents direct URL access on shared church terminals and guarantees 100% 3-step PIN verification before mounting administrative widgets.
+## 3. Paymob Webhook Payload Wrapping & HMAC Unnesting
+- **Decision**: Unnest `body.obj ?? body` before extracting `txn.amount_cents` and computing HMAC.
+- **Rationale**: Paymob delivers transaction webhooks as `{"type": "TRANSACTION", "obj": { ... }}`. Top-level property extraction yields `undefined`, failing HMAC.
 
-## Decision 4: Mobile Shell & Service Discovery Navigation
-- **Decision**: Set `BottomNavScaffold` as the root route in `apps/mobile/lib/app_router.dart`, attach click handlers to `HomeHubScreen` quick cards, and replace `ComingSoonTab()` with `VideoPurchaseScreen`, `ComplaintsAdminScreen`/form, and `MyBookingsScreen`.
-- **Rationale**: Restores full user journey connectivity from home discovery through booking and pass management.
+## 4. YouTube URL Video ID Regex Extraction
+- **Decision**: Replace `v.yt_url.split("/").pop()` with standard regex matching `[?&]v=([a-zA-Z0-9_-]{11})` and `youtu\.be/([a-zA-Z0-9_-]{11})`.
+- **Rationale**: Fixes the critical bug where standard `https://www.youtube.com/watch?v=XXXX` parsed the ID as `"watch"`.
+
+## 5. Event Outbox Concurrency & Atomic Worker Claim
+- **Decision**: Create an atomic claim RPC `claim_event_outbox_batch(p_batch_size INT)` using `SELECT id FROM event_outbox WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED` and marking `PROCESSING`.
+- **Rationale**: Prevents duplicate execution across concurrent edge function cron runs.
+
+## 6. FCM HTTP v1 String Data Coercion
+- **Decision**: Ensure all values in FCM `data` map are strings via `String(val)`.
+- **Rationale**: Google FCM v1 API strictly rejects non-string values with HTTP 400.
+
+## 7. SMS OTP Webhook Secret Handling
+- **Decision**: Retain standard webhook secret format without stripping `whsec_` prefix.
+- **Rationale**: `standardwebhooks` requires prefix for valid base64 key decoding.
+
+## 8. pg_net Cron URL Scheme Normalization
+- **Decision**: In cron migrations (`0013`, `0016`, `0020`), use `regexp_replace(url, '^https?://', '')` or normalize `SUPABASE_URL` prefixing.
+- **Rationale**: Prevents `https://https://` malformed URL crashes.
+
+## 9. Flutter Type Safety (`num.toInt()`)
+- **Decision**: In `booking.dart` and `available_slot.dart`, replace `(json['paid_amount'] ?? 0) as int` with `(json['paid_amount'] as num?)?.toInt() ?? 0`.
+- **Rationale**: Postgres `numeric(10,2)` deserializes as `double` / `num` in Dart, causing runtime `TypeError`.
+
+## 10. Flutter Admin RPC Named Parameter `params:`
+- **Decision**: Update all `_db.rpc(fn, {...})` calls to `_db.rpc(fn, params: {...})`.
+- **Rationale**: Aligns with `supabase_flutter` v2 signature.
+
+## 11. Admin Realtime Broadcast Subscription
+- **Decision**: Update `bookings_provider.dart` to subscribe to broadcast channel `realtime:event_inventory` instead of dropped `postgres_changes` table stream.
+- **Rationale**: Eliminates DB CPU load while restoring instant UI updates.

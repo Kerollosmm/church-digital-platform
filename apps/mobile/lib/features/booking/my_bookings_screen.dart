@@ -41,7 +41,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     await runGuarded(
       () async {
         if (!mounted) return;
-        context.pushNamed(AppRoutes.paymentRedirect, extra: bookingId);
+        context.pushNamed(
+          AppRoutes.paymentRedirect,
+          extra: {'bookingId': bookingId, 'checkoutUrl': null},
+        );
       },
       onError: (message) {
         if (!mounted) return;
@@ -68,11 +71,13 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
         body: FutureBuilder(
           future: _rows,
           builder: (context, snapshot) {
-            if (!snapshot.hasData)
+            if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
+            }
             final rows = snapshot.data!;
-            if (rows.isEmpty)
+            if (rows.isEmpty) {
               return const Center(child: Text(AppStrings.myBookingsEmpty));
+            }
             return ListView.builder(
               itemCount: rows.length,
               itemBuilder: (_, i) {

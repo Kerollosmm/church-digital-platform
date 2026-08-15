@@ -49,7 +49,7 @@ The cross-platform mobile client application for the Coptic Church Digital Platf
 
 2. **Run Application**:
    ```bash
-   flutter run
+   flutter run --dart-define=SUPABASE_URL=http://localhost:54321 --dart-define=SUPABASE_ANON_KEY=<your-anon-key>
    ```
 
 3. **Execute Unit & Widget Tests**:

@@ -36,9 +36,9 @@ export async function handleRequest(_req: Request, deps: Deps): Promise<Response
     for (const v of videos ?? []) {
       const expiry = new Date(new Date(v.event_date as string).getTime()
         + (v.expires_after_days as number) * 24 * 3600 * 1000);
-      if (expiry > new Date()) continue;
-      const videoId = (v.yt_url as string).split("/").pop()?.split("?")[0] ?? "";
-      if (!videoId) continue;
+      const ytMatch = (v.yt_url as string).match(/(?:youtu\.be\/|[?&]v=)([a-zA-Z0-9_-]{11})/);
+      const videoId = ytMatch ? ytMatch[1] : ((v.yt_url as string).split("/").pop()?.split("?")[0] ?? "");
+      if (!videoId || videoId === "watch") continue;
       const res = await deps.fetch(
         "https://www.googleapis.com/youtube/v3/videos?part=status",
         {

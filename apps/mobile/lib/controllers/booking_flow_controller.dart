@@ -1,4 +1,6 @@
-import '../models/book_slot_result.dart';
+import '../core/either.dart';
+import '../core/failure.dart';
+import '../models/booking_checkout_session.dart';
 import '../repositories/booking_repository.dart';
 import '../services/app_strings.dart';
 
@@ -6,24 +8,30 @@ class BookingFlowController {
   BookingFlowController(this._repository);
   final BookingRepository _repository;
 
-  Future<BookSlotResult> book({
+  Future<Either<Failure, BookingCheckoutSession>> reserveAndPay({
     required int slotId,
-    required bool optIn,
-  }) async {
-    final result = await _repository.bookSlot(slotId: slotId, optIn: optIn);
-    if (result.status == BookSlotStatus.success) return result;
-    return BookSlotResult(
-      status: result.status,
-      message: _messageFor(result.status),
-      booking: result.booking,
+    bool whatsappOptIn = false,
+  }) {
+    return _repository.reserveAndPay(
+      slotId: slotId,
+      whatsappOptIn: whatsappOptIn,
     );
   }
 
-  String _messageFor(BookSlotStatus status) => switch (status) {
-    BookSlotStatus.slotUnavailable => AppStrings.slotUnavailable,
-    BookSlotStatus.slotFull => AppStrings.slotFull,
-    BookSlotStatus.alreadyBooked => AppStrings.alreadyBooked,
-    BookSlotStatus.tooManyActive => AppStrings.tooManyActive,
-    _ => AppStrings.bookingFailed,
-  };
+  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(int bookingId) {
+    return _repository.retryCheckout(bookingId);
+  }
+
+  String localizedMessage(Failure failure) {
+    final msg = failure.message.toUpperCase();
+    if (msg.contains('SLOT_UNAVAILABLE')) return AppStrings.slotUnavailable;
+    if (msg.contains('SLOT_FULL')) return AppStrings.slotFull;
+    if (msg.contains('ALREADY_BOOKED')) return AppStrings.alreadyBooked;
+    if (msg.contains('TOO_MANY')) return AppStrings.tooManyActive;
+    if (failure is AuthFailure || msg.contains('AUTH_REQUIRED')) {
+      return AppStrings.authExpired;
+    }
+    if (failure is CheckoutFailure) return AppStrings.paymentOpenFailed;
+    return AppStrings.bookingFailed;
+  }
 }

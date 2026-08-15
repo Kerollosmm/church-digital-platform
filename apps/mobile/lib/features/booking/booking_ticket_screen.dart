@@ -8,6 +8,7 @@ import 'package:mobile/services/app_strings.dart';
 import 'package:mobile/theme/app_colors.dart';
 import 'package:mobile/theme/app_theme.dart';
 import 'package:mobile/theme/app_typography.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class BookingTicketScreen extends StatefulWidget {
   const BookingTicketScreen({
@@ -241,10 +242,9 @@ class _BookingTicketScreenState extends State<BookingTicketScreen> {
                                   ),
                                 ),
                               ),
-                              child: const Icon(
-                                Icons.qr_code_2,
-                                size: 128,
-                                color: AppColors.onSurfaceVariant,
+                              child: BookingQrView(
+                                payload:
+                                    'CHURCH-TICKET-V1:$bookingId:${widget.booking['service_name'] ?? ''}',
                               ),
                             ),
                             const SizedBox(height: AppSpacing.sm),
@@ -365,6 +365,30 @@ class _BookingTicketScreenState extends State<BookingTicketScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class BookingQrView extends StatelessWidget {
+  const BookingQrView({super.key, required this.payload});
+  final String payload;
+
+  @override
+  Widget build(BuildContext context) {
+    return QrImageView(
+      data: payload,
+      version: QrVersions.auto,
+      size: 128.0,
+      backgroundColor: Colors.transparent,
+      eyeStyle: const QrEyeStyle(
+        eyeShape: QrEyeShape.square,
+        color: Color(0xFF1E293B),
+      ),
+      dataModuleStyle: const QrDataModuleStyle(
+        dataModuleShape: QrDataModuleShape.square,
+        color: Color(0xFF1E293B),
+      ),
+      errorCorrectionLevel: QrErrorCorrectLevel.M,
     );
   }
 }

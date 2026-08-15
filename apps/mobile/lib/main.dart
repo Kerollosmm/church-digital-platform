@@ -8,8 +8,9 @@ import 'theme/app_theme.dart';
 
 String get defaultSupabaseUrl {
   if (kIsWeb) return 'http://localhost:54321';
-  if (defaultTargetPlatform == TargetPlatform.android)
+  if (defaultTargetPlatform == TargetPlatform.android) {
     return 'http://10.0.2.2:54321';
+  }
   return 'http://127.0.0.1:54321';
 }
 
@@ -18,14 +19,15 @@ String get resolvedSupabaseUrl {
   return envUrl.isNotEmpty ? envUrl : defaultSupabaseUrl;
 }
 
-const _supabasePublishableKey = String.fromEnvironment(
-  'SUPABASE_ANON_KEY',
-  defaultValue:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrc2dwaHJ5ZW1yZHJrd2FxbnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NTA2MjgsImV4cCI6MjEwMTUyNjYyOH0.ebxE042EdeYMHbkJnst8aq5K6RtlYgUXEpoeHuYNHvA',
-);
+const _supabasePublishableKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (_supabasePublishableKey.isEmpty) {
+    throw StateError(
+      'Missing SUPABASE_ANON_KEY. Pass via --dart-define=SUPABASE_ANON_KEY=<key>',
+    );
+  }
   await Supabase.initialize(
     url: resolvedSupabaseUrl,
     publishableKey: _supabasePublishableKey,

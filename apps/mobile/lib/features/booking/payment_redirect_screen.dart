@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/controllers/run_guarded.dart';
+import 'package:mobile/core/either.dart';
+import 'package:mobile/core/failure.dart';
+import 'package:mobile/models/booking_checkout_session.dart';
 import 'package:mobile/services/app_strings.dart';
 import 'package:mobile/theme/app_colors.dart';
 import 'package:mobile/theme/app_theme.dart';
@@ -10,11 +13,16 @@ class PaymentRedirectScreen extends StatefulWidget {
   const PaymentRedirectScreen({
     super.key,
     required this.bookingId,
-    required this.fetchCheckoutUrl,
+    this.checkoutUrl,
+    this.onRetryCheckout,
+    this.fetchCheckoutUrl,
   });
 
   final int bookingId;
-  final Future<String> Function(int bookingId) fetchCheckoutUrl;
+  final String? checkoutUrl;
+  final Future<Either<Failure, BookingCheckoutSession>> Function(int bookingId)?
+  onRetryCheckout;
+  final Future<String> Function(int bookingId)? fetchCheckoutUrl;
 
   @override
   State<PaymentRedirectScreen> createState() => _PaymentRedirectScreenState();
@@ -23,15 +31,73 @@ class PaymentRedirectScreen extends StatefulWidget {
 class _PaymentRedirectScreenState extends State<PaymentRedirectScreen> {
   bool _busy = false;
   int _selectedMethod = 0;
+  String? _currentCheckoutUrl;
+  String? _errorMessage;
 
-  Future<void> _start() async {
+  bool get _hasCheckoutUrl =>
+      _currentCheckoutUrl != null && _currentCheckoutUrl!.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentCheckoutUrl = widget.checkoutUrl;
+    if (!_hasCheckoutUrl && widget.fetchCheckoutUrl == null) {
+      _errorMessage = AppStrings.paymentOpenFailed;
+    }
+  }
+
+  Future<void> _pay() async {
     if (_busy) return;
     setState(() => _busy = true);
     await runGuarded(
       () async {
-        final url = await widget.fetchCheckoutUrl(widget.bookingId);
+        String? targetUrl = _currentCheckoutUrl;
+
+        // If no checkoutUrl, user-triggered retry
+        if (targetUrl == null || targetUrl.isEmpty) {
+          if (widget.onRetryCheckout != null) {
+            final res = await widget.onRetryCheckout!(widget.bookingId);
+            res.fold(
+              (failure) {
+                if (mounted) {
+                  setState(() => _errorMessage = AppStrings.paymentOpenFailed);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text(AppStrings.paymentOpenFailed)),
+                  );
+                }
+              },
+              (session) {
+                targetUrl = session.checkoutUrl;
+                if (mounted) {
+                  setState(() {
+                    _currentCheckoutUrl = targetUrl;
+                    _errorMessage = null;
+                  });
+                }
+              },
+            );
+          } else if (widget.fetchCheckoutUrl != null) {
+            targetUrl = await widget.fetchCheckoutUrl!(widget.bookingId);
+            if (mounted) {
+              setState(() {
+                _currentCheckoutUrl = targetUrl;
+                _errorMessage = null;
+              });
+            }
+          }
+        }
+
+        if (targetUrl == null || targetUrl!.isEmpty) {
+          if (mounted && _errorMessage == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text(AppStrings.paymentOpenFailed)),
+            );
+          }
+          return;
+        }
+
         final opened = await launchUrl(
-          Uri.parse(url),
+          Uri.parse(targetUrl!),
           mode: LaunchMode.externalApplication,
         );
         if (!opened && mounted) {
@@ -254,13 +320,45 @@ class _PaymentRedirectScreenState extends State<PaymentRedirectScreen> {
                       ),
                     ],
                   ),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        border: Border.all(color: AppColors.error),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            color: AppColors.error,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: AppTypography.bodyMd.copyWith(
+                                color: AppColors.error,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _busy ? null : _pay,
+                            child: const Text(AppStrings.retryPayment),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.md),
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: FilledButton.icon(
                       style: AppTheme.goldButton(),
-                      onPressed: _busy ? null : _start,
+                      onPressed: _busy ? null : _pay,
                       icon: _busy
                           ? const SizedBox(
                               width: 20,

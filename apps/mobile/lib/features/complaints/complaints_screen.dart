@@ -156,8 +156,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                               )
                               .toList(),
                           onChanged: (val) {
-                            if (val != null)
+                            if (val != null) {
                               setState(() => _selectedCategory = val);
+                            }
                           },
                         ),
                         const SizedBox(height: AppSpacing.sm),
@@ -176,10 +177,12 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                           ),
                           validator: (val) {
                             final trimmed = (val ?? '').trim();
-                            if (trimmed.isEmpty)
+                            if (trimmed.isEmpty) {
                               return 'يرجى كتابة تفاصيل الشكوى';
-                            if (trimmed.length > 4000)
+                            }
+                            if (trimmed.length > 4000) {
                               return 'الرسالة طويلة جداً';
+                            }
                             return null;
                           },
                         ),

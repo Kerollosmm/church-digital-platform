@@ -236,10 +236,12 @@ language sql stable security definer
 set search_path = ''
 as $$
   select coalesce(
+    (select u.tenant_id::text from public.users u where u.id = auth.uid() and u.deleted_at is null),
     nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'tenant_id',
     '1'
   )::bigint
 $$;
+
 
 create or replace function public.current_user_role()
 returns text

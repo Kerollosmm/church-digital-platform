@@ -41,8 +41,9 @@ Deno.serve(async (req: Request) => {
     });
 
     if (error) {
+      console.error("sync_offline_mutations RPC error:", error);
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: "Sync failed" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -52,10 +53,11 @@ Deno.serve(async (req: Request) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Internal Server Error";
+    console.error("offline-sync edge function failure:", err);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: "Internal Server Error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+
 });

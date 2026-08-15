@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'core/auth/admin_auth_provider.dart';
 import 'features/analytics/analytics_admin_screen.dart';
 import 'features/auth/admin_login_screen.dart';
+
 import 'features/bookings/bookings_admin_screen.dart';
 import 'features/bookings/emergency_override_screen.dart';
 import 'features/bookings/manual_book_screen.dart';
@@ -113,10 +116,14 @@ class AdminShell extends StatelessWidget {
   }
 }
 
+const allowedAdminRoles = {'ADMIN', 'PRIEST', 'SUPER_ADMIN'};
+
 GoRouter createAdminRouter({
   bool Function()? isAuthenticated,
+  String? Function()? getUserRole,
   String initialLocation = '/bookings',
   dynamic db,
+  Listenable? refreshListenable,
 }) {
   dynamic resolveDb() {
     if (db != null) return db;
@@ -129,18 +136,18 @@ GoRouter createAdminRouter({
 
   return GoRouter(
     initialLocation: initialLocation,
+    refreshListenable: refreshListenable,
     redirect: (context, state) {
       final isAuthed = isAuthenticated != null
           ? isAuthenticated()
-          : (() {
-              try {
-                return Supabase.instance.client.auth.currentUser != null;
-              } catch (_) {
-                return false;
-              }
-            })();
+          : (resolveDb() is SupabaseClient
+              ? (resolveDb() as SupabaseClient).auth.currentUser != null
+              : false);
+      final role = getUserRole != null ? getUserRole() : null;
+      final hasAllowedRole = role != null && allowedAdminRoles.contains(role);
+      final isAllowed = isAuthed && hasAllowedRole;
       final loggingIn = state.uri.path == '/login';
-      if (!isAuthed) {
+      if (!isAllowed) {
         return loggingIn ? null : '/login';
       }
       if (loggingIn) {
@@ -220,4 +227,27 @@ GoRouter createAdminRouter({
   );
 }
 
+class AdminAuthListenable extends ChangeNotifier {
+  AdminAuthListenable(Ref ref) {
+    ref.listen<AdminAuthState>(adminAuthProvider, (_, _) {
+      notifyListeners();
+    });
+  }
+}
+
+final adminAuthListenableProvider = Provider<AdminAuthListenable>((ref) {
+  return AdminAuthListenable(ref);
+});
+
+final adminRouterProvider = Provider<GoRouter>((ref) {
+  final listenable = ref.watch(adminAuthListenableProvider);
+  return createAdminRouter(
+    isAuthenticated: () => ref.read(adminAuthProvider).isAuthenticated,
+    getUserRole: () => ref.read(adminAuthProvider).role,
+    refreshListenable: listenable,
+  );
+});
+
 final appRouter = createAdminRouter();
+
+

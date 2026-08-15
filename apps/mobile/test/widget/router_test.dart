@@ -72,6 +72,31 @@ void main() {
   );
 
   testWidgets(
+    'T1b: payment-redirect route with map extra renders PaymentRedirectScreen with booking number',
+    (tester) async {
+      final fakeDb = FakeAppSupabase();
+      final router = buildRouter(
+        db: fakeDb,
+        videos: FakeVideosRepository(),
+        isUserLoggedIn: () => true,
+      );
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      final BuildContext context = tester.element(find.byType(HomeHubScreen));
+      context.pushNamed(
+        AppRoutes.paymentRedirect,
+        extra: {'bookingId': 42, 'checkoutUrl': 'https://paymob.test/x'},
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PaymentRedirectScreen), findsOneWidget);
+      expect(find.text('#42'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
     'T2: payment-redirect route with video map extra renders PaymentRedirectScreen with payment id',
     (tester) async {
       final fakeDb = FakeAppSupabase();

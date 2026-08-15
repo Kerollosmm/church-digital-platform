@@ -32,8 +32,11 @@ class _AnnouncementsAdminScreenState extends State<AnnouncementsAdminScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
           TextButton(
             onPressed: () async {
+              if (title.text.trim().isEmpty || body.text.trim().isEmpty) return;
               await widget.db.from('announcements').insert({
-                'title_ar': title.text, 'body_ar': body.text,
+                'title_ar': title.text.trim(),
+                'body_ar': body.text.trim(),
+                'tenant_id': 1,
                 'published_at': DateTime.now().toUtc().toIso8601String(),
               });
               if (ctx.mounted) Navigator.pop(ctx);

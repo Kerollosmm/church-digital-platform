@@ -50,7 +50,12 @@ export async function handleRequest(req: Request, deps: Deps): Promise<Response>
   if (from) query = query.gte("month", from);
   if (to) query = query.lte("month", to);
   const { data, error: qErr } = await query;
-  if (qErr) return new Response(qErr.message, { status: 500 });
+  if (qErr) {
+    console.error("analytics-export query error", qErr);
+    return new Response("Export failed", { status: 500 });
+  }
+
+
   const rows = (data ?? []).map((r: Record<string, unknown>) => Object.values(r).map(String));
   const headers = data && data.length > 0 ? Object.keys(data[0]) : ["empty"];
   return new Response(buildCsv(headers, rows), {

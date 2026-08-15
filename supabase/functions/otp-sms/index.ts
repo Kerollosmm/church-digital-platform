@@ -14,7 +14,7 @@ export async function handleRequest(
   const rawSecret = customDeps?.hookSecret ??
     (typeof Deno !== "undefined" ? Deno.env.get("SEND_SMS_HOOK_SECRET") : "") ??
     "";
-  const secret = rawSecret.replace(/^v1,whsec_/, "");
+  const secret = rawSecret.replace(/^v1,/, "").replace(/^whsec_/, "").trim();
 
   if (!secret) {
     return new Response(

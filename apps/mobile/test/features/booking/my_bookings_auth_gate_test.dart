@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mobile/core/auth/auth_gateway.dart';
 import 'package:mobile/core/auth/phone_verify_gate.dart';
 import 'package:mobile/features/booking/my_bookings_screen.dart';
 import 'package:mobile/models/booking.dart';
 import 'package:mobile/services/app_strings.dart';
 import '../../helpers/fakes.dart';
+import '../../helpers/mock_auth_gateway.dart';
 
 void main() {
   testWidgets(

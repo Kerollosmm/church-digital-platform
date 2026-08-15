@@ -4,7 +4,6 @@ import 'package:mobile/controllers/booking_flow_controller.dart';
 import 'package:mobile/controllers/run_guarded.dart';
 import 'package:mobile/core/auth/auth_gateway.dart';
 import 'package:mobile/core/auth/phone_verify_gate.dart';
-import 'package:mobile/models/book_slot_result.dart';
 import 'package:mobile/repositories/booking_repository.dart';
 import 'package:mobile/services/app_routes.dart';
 import 'package:mobile/services/app_strings.dart';
@@ -51,22 +50,29 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         await runGuarded(
           () async {
             final slotId = widget.slot['slot_id'] as int;
-            final result = await _controller.book(
+            final result = await _controller.reserveAndPay(
               slotId: slotId,
-              optIn: _optIn,
+              whatsappOptIn: _optIn,
             );
             if (!mounted) return;
-            if (result.status == BookSlotStatus.success &&
-                result.booking != null) {
-              context.pushNamed(
-                AppRoutes.paymentRedirect,
-                extra: result.booking!.id,
-              );
-            } else {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(result.message)));
-            }
+            result.fold(
+              (failure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(_controller.localizedMessage(failure)),
+                  ),
+                );
+              },
+              (session) {
+                context.pushNamed(
+                  AppRoutes.paymentRedirect,
+                  extra: {
+                    'bookingId': session.booking.id,
+                    'checkoutUrl': session.checkoutUrl,
+                  },
+                );
+              },
+            );
           },
           onError: (message) {
             if (!mounted) return;

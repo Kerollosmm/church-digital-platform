@@ -18,12 +18,12 @@ class AvailableSlot {
   final int availableSeats;
 
   factory AvailableSlot.fromJson(Map<String, dynamic> json) => AvailableSlot(
-    slotId: json['slot_id'] as int,
-    serviceId: json['service_id'] as int,
-    titleAr: json['title_ar'] as String,
-    startsAt: json['starts_at'] as String,
-    price: (json['price'] ?? 0) as int,
-    slotStatus: json['slot_status'] as String,
-    availableSeats: (json['available_seats'] ?? 0) as int,
+    slotId: (json['slot_id'] as num?)?.toInt() ?? 0,
+    serviceId: (json['service_id'] as num?)?.toInt() ?? 0,
+    titleAr: json['title_ar'] as String? ?? '',
+    startsAt: json['starts_at'] as String? ?? '',
+    price: (json['price'] as num?)?.toInt() ?? 0,
+    slotStatus: json['slot_status'] as String? ?? '',
+    availableSeats: (json['available_seats'] as num?)?.toInt() ?? 0,
   );
 }

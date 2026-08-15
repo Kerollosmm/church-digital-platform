@@ -1,5 +1,20 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+String normalizeEgyptPhone(String rawPhone) {
+  var digits = rawPhone.replaceAll(RegExp(r'[\s\-()]'), '');
+  if (digits.startsWith('+20')) {
+    digits = digits.substring(3);
+  } else if (digits.startsWith('0020')) {
+    digits = digits.substring(4);
+  } else if (digits.startsWith('20') && digits.length > 10) {
+    digits = digits.substring(2);
+  }
+  if (digits.startsWith('0')) {
+    digits = digits.substring(1);
+  }
+  return '+20$digits';
+}
+
 abstract class AuthGateway {
   Future<void> sendOtp(String phone);
   Future<bool> verifyOtp(String phone, String token);
@@ -13,13 +28,13 @@ class SupabaseAuthGateway implements AuthGateway {
 
   @override
   Future<void> sendOtp(String phone) async {
-    final formatted = phone.startsWith('+20') ? phone : '+20$phone';
+    final formatted = normalizeEgyptPhone(phone);
     await client.auth.signInWithOtp(phone: formatted);
   }
 
   @override
   Future<bool> verifyOtp(String phone, String token) async {
-    final formatted = phone.startsWith('+20') ? phone : '+20$phone';
+    final formatted = normalizeEgyptPhone(phone);
     final response = await client.auth.verifyOTP(
       type: OtpType.sms,
       phone: formatted,
@@ -35,34 +50,6 @@ class SupabaseAuthGateway implements AuthGateway {
 
   @override
   bool get isAuthenticated => client.auth.currentSession != null;
-}
-
-class MockAuthGateway implements AuthGateway {
-  String? lastSentPhone;
-  bool _authenticated = false;
-
-  @override
-  Future<void> sendOtp(String phone) async {
-    lastSentPhone = phone;
-  }
-
-  @override
-  Future<bool> verifyOtp(String phone, String token) async {
-    if (token == '123456' || token == '999999') {
-      _authenticated = true;
-      return true;
-    }
-    return false;
-  }
-
-  @override
-  Future<void> signOut() async {
-    _authenticated = false;
-    lastSentPhone = null;
-  }
-
-  @override
-  bool get isAuthenticated => _authenticated;
 }
 
 class UnimplementedAuthGateway implements AuthGateway {

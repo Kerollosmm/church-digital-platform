@@ -22,6 +22,7 @@ export interface Deps {
   getClient(): SupabaseClient;
   fetch: typeof fetch;
   phoneId: string;
+  whatsappToken?: string;
   paymobApiKey: string;
   amountMultiplier: number;
   fcmProjectId?: string;
@@ -44,12 +45,22 @@ export async function sendWhatsApp(row: Row, deps: Deps): Promise<Result> {
   if (!tmpl) return { ok: false, retryable: false };
   const { data: optin } = await client.from("whatsapp_optins").select("phone").eq("phone", phone).maybeSingle();
   if (!optin) return { ok: false, retryable: false };
-  const bodyParams = Array.from({ length: tmpl.paramCount }, (_, idx) => ({
-    type: "text", text: String(Object.values(params ?? {})[idx] ?? ""),
-  }));
+  const bodyParams = Array.from({ length: tmpl.paramCount }, (_, idx) => {
+    let val = "";
+    if (params) {
+      if (Array.isArray(params)) {
+        val = String(params[idx] ?? "");
+      } else {
+        const key = `param${idx + 1}` in params ? `param${idx + 1}` : (String(idx + 1) in params ? String(idx + 1) : Object.keys(params)[idx]);
+        val = String(params[key] ?? Object.values(params)[idx] ?? "");
+      }
+    }
+    return { type: "text", text: val };
+  });
+  const token = deps.whatsappToken ?? (typeof Deno !== "undefined" ? Deno.env.get("WHATSAPP_TOKEN") : "") ?? "";
   const res = await deps.fetch(`https://graph.facebook.com/v20.0/${deps.phoneId}/messages`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("WHATSAPP_TOKEN")}` },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({
       messaging_product: "whatsapp", to: phone, type: "template",
       template: { name: template_name, language: { code: "ar" }, components: [{ type: "body", parameters: bodyParams }] },
@@ -58,6 +69,7 @@ export async function sendWhatsApp(row: Row, deps: Deps): Promise<Result> {
   if (res.ok) return { ok: true, retryable: false };
   return res.status >= 400 && res.status < 500 ? { ok: false, retryable: false } : { ok: false, retryable: true };
 }
+
 
 export async function triggerPaymobRefund(row: Row, deps: Deps): Promise<Result> {
   const client = deps.getClient();
@@ -139,11 +151,18 @@ export async function sendFcmPush(row: Row, deps: Deps): Promise<Result> {
   if (title) notification.title = title;
   if (body) notification.body = body;
 
+  const stringData: Record<string, string> = {};
+  if (data) {
+    for (const [k, v] of Object.entries(data)) {
+      stringData[k] = v == null ? "" : String(v);
+    }
+  }
+
   const fcmPayload: Record<string, unknown> = {
     message: {
       token: fcm_token,
       ...(Object.keys(notification).length > 0 ? { notification } : {}),
-      ...(data ? { data } : {}),
+      ...(Object.keys(stringData).length > 0 ? { data: stringData } : {}),
     },
   };
 
@@ -211,6 +230,11 @@ export async function handleRequest(_req: Request, deps: Deps): Promise<Response
 if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
   Deno.serve((req) => handleRequest(req, {
     getClient: () => makeServiceClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")),
-    fetch, phoneId: Deno.env.get("WHATSAPP_PHONE_ID")!, paymobApiKey: Deno.env.get("PAYMOB_API_KEY")!, amountMultiplier: 100,
+    fetch,
+    phoneId: Deno.env.get("WHATSAPP_PHONE_ID")!,
+    whatsappToken: Deno.env.get("WHATSAPP_TOKEN"),
+    paymobApiKey: Deno.env.get("PAYMOB_API_KEY")!,
+    amountMultiplier: 100,
   }));
 }
+
