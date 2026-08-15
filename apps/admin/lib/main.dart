@@ -10,9 +10,13 @@ const _supabaseUrl = String.fromEnvironment(
 );
 const _supabasePublishableKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (_supabasePublishableKey.isEmpty) {
+    throw StateError(
+      'Missing SUPABASE_ANON_KEY. Pass via --dart-define=SUPABASE_ANON_KEY=<key>',
+    );
+  }
   await Supabase.initialize(url: _supabaseUrl, publishableKey: _supabasePublishableKey);
   runApp(const ProviderScope(child: ChurchApp()));
 }
