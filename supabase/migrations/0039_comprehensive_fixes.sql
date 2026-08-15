@@ -120,4 +120,4 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.claim_event_outbox_batch(INT) TO service_role, authenticated, anon;
+GRANT EXECUTE ON FUNCTION public.claim_event_outbox_batch(INT) TO service_role;

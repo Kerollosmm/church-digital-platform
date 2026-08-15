@@ -1,29 +1,36 @@
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+export interface OfflineSyncDeps {
+  getClient?: (authHeader?: string | null) => unknown;
+}
 
-Deno.serve(async (req: Request) => {
+export async function handleRequest(req: Request, deps?: OfflineSyncDeps): Promise<Response> {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const authHeader = req.headers.get("Authorization");
+    let supabase: SupabaseClient;
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables.");
+    if (deps?.getClient) {
+      supabase = deps.getClient(authHeader) as unknown as SupabaseClient;
+    } else {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error("Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables.");
+      }
+
+      // Initialize Supabase Client with caller's JWT auth context
+      supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader ?? "" } },
+      });
     }
-
-    // Initialize Supabase Client with caller's JWT auth context
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader ?? "" } },
-    });
 
     const body = await req.json().catch(() => ({}));
     const { mutations } = body;
@@ -59,5 +66,8 @@ Deno.serve(async (req: Request) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
+}
 
-});
+if (import.meta.main) {
+  Deno.serve((req: Request) => handleRequest(req));
+}
