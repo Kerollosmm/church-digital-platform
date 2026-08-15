@@ -1,0 +1,17 @@
+# Agent skill scaffolding copied into the repo by coding-agent runs — never track
+.agents/
+.claude/
+.windsurf/
+
+# Dependencies
+node_modules/
+
+# OS noise
+.DS_Store
+Thumbs.db
+.agents/
+
+# Environment files
+.env
+.env.*
+!.env.example

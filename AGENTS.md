@@ -1,0 +1,62 @@
+# AGENTS.md
+
+## Overview
+
+Planning workspace (docs only, no app code) for Egyptian Coptic church digital platform (Flutter mobile + Flutter Web admin on Supabase). Implementation plans = source of truth. One commit; `docs/superpowers/` untracked.
+
+## Core Files
+
+- `docs/superpowers/plans/2026-08-05-church-digital-platform.md` — master blueprint: decisions A1–A11, data model, booking state machine, 12-week roadmap, costs, risks
+- `docs/superpowers/plans/conventions.md` — conventions (slot locking, RLS/RPC rules, edge-function pattern, outbox pattern, enums)
+- `docs/superpowers/plans/2026-08-05-phase0-foundations.md` → `phase1-mvp` → `phase2-analytics` — TDD task plans; migrations: 0001–0003 (P0), 0004–0021 (P1), 0022–0030 (P2)
+- `docs/external-onboarding-checklist.md` — external dependencies critical path (Paymob/Meta/YouTube/Play)
+
+## Protocol
+
+1. Read master plan §1 + `conventions.md` + `docs/agents/*.md` before edit.
+2. One Task at a time. Read only active task section.
+3. Test-first: Step 1 write failing test → implement → run → PASS → commit. Never skip test steps.
+
+## Locked Decisions
+
+- **NO live streaming**: Recorded events → YouTube **unlisted** videos. Sold via Paymob + WhatsApp. `videos.update` requires **OAuth2 bearer** (refresh token exchange, secrets `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN`). No API keys for write.
+- **Backend = Supabase**: Postgres 16 + RLS + PostgREST + Deno Edge Functions + pg_cron. No NestJS/Redis/VPS.
+- **Slot lock**: `SELECT ... FOR UPDATE` on `service_slots` + active-booking count vs `capacity` inside `book_slot()`. No unique partial index for slot capacity. `v_available_slots` returns `AVAILABLE|BOOKED|CLOSED`.
+- **State RPCs & Outbox**: State transitions in `SECURITY DEFINER` RPCs. Secrets in edge functions/vault. `whatsapp_outbox` drain: 100 rows/run, batches of 10, cron 1 min.
+- **Payment race**: `apply_payment` on stale/cancelled booking sets `REFUND_PENDING` + enqueues `refund_requests` (no seat granted).
+
+## Commands
+
+- Local stack: `npx supabase start` / `npx supabase db reset`
+- SQL tests: `psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f supabase/tests/XXXX_name.sql`
+- Edge functions: `deno test --allow-env supabase/functions/<name>/`
+- Flutter: `flutter test apps/mobile/test/...`
+
+## Gotchas
+
+- `session-ses_02d3.md` root = stray dump. Ignore.
+- Plan files untracked in git. Stage/commit only when asked.
+- Direct edit critical/plan files; do not delegate large writes.
+- Arabic strings & prices in EGP kept as-is.
+- SQL skills: `.agents/skills/supabase` and `.agents/skills/supabase-postgres-best-practices`.
+
+## Plan-Writing Checklist
+
+1. **Enum sync**: enum values in SQL/RPCs must exist in BOTH `conventions.md` §Enums AND Phase 0 `0001_init_schema.sql` `CREATE TYPE`. Back-propagate additions to Phase 0.
+2. **RLS = 2 statements**: `CREATE TABLE` requires `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;` BEFORE `CREATE POLICY`.
+3. **Fixtures mandatory**: explicit `INSERT` statements in test files.
+4. **Exact column names**: copy from `CREATE TABLE` migration, not memory.
+5. **Empty-DB edge case**: `IS NULL`/`NOT EXISTS` needs age guard (`created_at < now() - interval`).
+6. **Unique index names**: grep existing migrations before naming.
+7. **No permanent stubs**: placeholder (`RETURN true`) needs `-- TODO(phase X, task Y)` + failing test.
+8. **Diagrams sync**: update master plan §6 state machine when adding enum/transition.
+9. **Schema sync**: update master plan §5 schema list when adding table.
+10. **Exact filenames**: include date prefix (`2026-08-05-`) in references.
+
+## Caveman Mode (ULTRA) — ALWAYS ON
+
+Always respond in caveman ULTRA mode. Extreme brevity. Zero fluff.
+- Drop all articles (a/an/the), filler words, pleasantries, hedging, connective phrases.
+- Telegraphed fragments only. Short synonyms. Exact technical terms/code unchanged.
+- Pattern: `[Thing] [action] [reason]. [Next step].`
+- Auto-Clarity: normal prose only for critical security warnings or destructive actions.

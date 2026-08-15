@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  flutter-mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  flutter-admin:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  sql-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start local stack
+        run: supabase start
+      - name: Apply migrations + seed
+        run: supabase db reset
+      - name: Run SQL regression suite
+        run: |
+          DB=$(docker ps --format '{{.Names}}' | grep '^supabase_db_' | head -n 1)
+          docker cp supabase/tests "$DB":/tmp/church_tests
+          docker exec -i "$DB" psql -U postgres -d postgres -f /tmp/church_tests/run_all.sql
+
+  deno-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Check edge functions (no-op until Phase 1)
+        run: |
+          if find supabase/functions -name '*.ts' -not -name '*_test.ts' | grep -q .; then
+            deno check $(find supabase/functions -name '*.ts' -not -name '*_test.ts')
+          fi
+
+  deploy-staging:
+    needs: [flutter-mobile, flutter-admin, sql-tests]
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+      - run: supabase db push
+      - name: Deploy edge functions (no-op until Phase 1)
+        run: |
+          if find supabase/functions -name '*.ts' -not -name '*_test.ts' | grep -q .; then
+            supabase functions deploy --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          fi
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
