@@ -18,24 +18,8 @@ GoRoute paymentRedirectRoute(AppSupabase db) {
     name: AppRoutes.paymentRedirect,
     builder: (context, state) {
       final extra = state.extra;
-      if (extra is int) {
-        return PaymentRedirectScreen(
-          bookingId: extra,
-          fetchCheckoutUrl: (id) async {
-            final res = await bookings.retryCheckout(id);
-            return res.fold((failure) => throw StateError(failure.message), (
-              session,
-            ) {
-              final url = session.checkoutUrl;
-              if (url == null || url.isEmpty) {
-                throw StateError('checkout_url missing');
-              }
-              return url;
-            });
-          },
-        );
-      }
       if (extra is Map && extra['video'] == true) {
+        // Video checkout is out of scope for this pass and still a write leak.
         final paymentId = extra['payment_id'];
         if (paymentId is! int) {
           throw StateError('payment_id missing or not int');
@@ -53,6 +37,25 @@ GoRoute paymentRedirectRoute(AppSupabase db) {
             }
             return url;
           },
+        );
+      }
+      if (extra is Map) {
+        final bookingId = (extra['bookingId'] ?? extra['booking_id']) as int?;
+        if (bookingId != null) {
+          final checkoutUrl =
+              (extra['checkoutUrl'] ?? extra['checkout_url']) as String?;
+          return PaymentRedirectScreen(
+            bookingId: bookingId,
+            checkoutUrl: checkoutUrl,
+            onRetryCheckout: (id) => bookings.retryCheckout(id),
+          );
+        }
+      }
+      if (extra is int) {
+        return PaymentRedirectScreen(
+          bookingId: extra,
+          checkoutUrl: null,
+          onRetryCheckout: (id) => bookings.retryCheckout(id),
         );
       }
       throw StateError('invalid payment-redirect extra: $extra');

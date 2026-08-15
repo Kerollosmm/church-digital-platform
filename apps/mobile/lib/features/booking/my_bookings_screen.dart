@@ -41,7 +41,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     await runGuarded(
       () async {
         if (!mounted) return;
-        context.pushNamed(AppRoutes.paymentRedirect, extra: bookingId);
+        context.pushNamed(
+          AppRoutes.paymentRedirect,
+          extra: {'bookingId': bookingId, 'checkoutUrl': null},
+        );
       },
       onError: (message) {
         if (!mounted) return;

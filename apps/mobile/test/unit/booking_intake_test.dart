@@ -48,6 +48,24 @@ class MockAppSupabase implements AppSupabase {
     return functionResponse ?? {};
   }
 
+  List<Map<String, dynamic>> queryResponse = [];
+  final List<String> queryTables = [];
+  final Map<String, dynamic> queryFilters = {};
+
+  @override
+  Future<List<Map<String, dynamic>>> query(
+    String table, {
+    Map<String, dynamic>? filters,
+    String? orderBy,
+    bool ascending = true,
+  }) async {
+    queryTables.add(table);
+    if (filters != null) {
+      queryFilters.addAll(filters);
+    }
+    return queryResponse;
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -214,7 +232,15 @@ void main() {
     test(
       '6. retryCheckout returns Either<Failure, BookingCheckoutSession> on success and failure',
       () async {
-        // Success case
+        // Success case: booking exists with PENDING_PAYMENT
+        mockSupabase.queryResponse = [
+          {
+            'id': 201,
+            'status': 'PENDING_PAYMENT',
+            'paid_amount': 50,
+            'title_ar': 'رحلة',
+          },
+        ];
         mockSupabase.functionResponse = {
           'checkout_url':
               'https://accept.paymob.com/standalone?payment_token=token456',
@@ -225,18 +251,51 @@ void main() {
         expect(okResult.isRight, isTrue);
         final session = okResult.rightOrNull!;
         expect(session.booking.id, equals(201));
+        expect(session.booking.status, equals('PENDING_PAYMENT'));
         expect(
           session.checkoutUrl,
           equals('https://accept.paymob.com/standalone?payment_token=token456'),
         );
+        expect(mockSupabase.queryTables, contains('v_my_bookings'));
 
-        // Error case
+        // Error case: Paymob failure
+        mockSupabase.queryResponse = [
+          {'id': 202, 'status': 'PENDING_PAYMENT', 'paid_amount': 50},
+        ];
         mockSupabase.functionError = Exception('Network Timeout');
         final errResult = await repository.retryCheckout(202);
         expect(errResult.isLeft, isTrue);
         final failure = errResult.leftOrNull!;
         expect(failure, isA<CheckoutFailure>());
         expect((failure as CheckoutFailure).bookingId, equals(202));
+      },
+    );
+
+    test(
+      '6b. retryCheckout on non-existent booking returns Left(BookingFailure) without calling paymob-checkout',
+      () async {
+        mockSupabase.queryResponse = []; // Not found
+
+        final result = await repository.retryCheckout(203);
+        expect(result.isLeft, isTrue);
+        final failure = result.leftOrNull!;
+        expect(failure, isA<BookingFailure>());
+        expect(mockSupabase.functionCalls, isNot(contains('paymob-checkout')));
+      },
+    );
+
+    test(
+      '6c. retryCheckout on non-PENDING_PAYMENT booking returns Left(CheckoutFailure) without calling paymob-checkout',
+      () async {
+        mockSupabase.queryResponse = [
+          {'id': 204, 'status': 'CONFIRMED', 'paid_amount': 50},
+        ];
+
+        final result = await repository.retryCheckout(204);
+        expect(result.isLeft, isTrue);
+        final failure = result.leftOrNull!;
+        expect(failure, isA<CheckoutFailure>());
+        expect(mockSupabase.functionCalls, isNot(contains('paymob-checkout')));
       },
     );
 

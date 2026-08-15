@@ -130,6 +130,25 @@ class SupabaseBookingRepository implements BookingRepository {
     int bookingId,
   ) async {
     try {
+      final rows = await _supabase.query(
+        'v_my_bookings',
+        filters: {'id': bookingId},
+      );
+      if (rows.isEmpty) {
+        return Left(
+          BookingFailure('Booking #$bookingId not found', code: 'PGRST204'),
+        );
+      }
+      final booking = Booking.fromJson(rows.first);
+      if (booking.status != 'PENDING_PAYMENT') {
+        return Left(
+          CheckoutFailure(
+            'Cannot retry checkout for booking with status ${booking.status}',
+            bookingId: bookingId,
+          ),
+        );
+      }
+
       final checkout = await _createCheckout(bookingId);
       final checkoutUrl = checkout?['checkout_url'] as String?;
       final paymentId = checkout?['payment_id'] as int?;
@@ -145,7 +164,7 @@ class SupabaseBookingRepository implements BookingRepository {
 
       return Right(
         BookingCheckoutSession(
-          booking: Booking(id: bookingId, status: 'PENDING_PAYMENT'),
+          booking: booking,
           checkoutUrl: checkoutUrl,
           paymentId: paymentId,
           isConfirmed: false,

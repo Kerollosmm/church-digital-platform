@@ -66,7 +66,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               (session) {
                 context.pushNamed(
                   AppRoutes.paymentRedirect,
-                  extra: session.booking.id,
+                  extra: {
+                    'bookingId': session.booking.id,
+                    'checkoutUrl': session.checkoutUrl,
+                  },
                 );
               },
             );

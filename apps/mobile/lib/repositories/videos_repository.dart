@@ -1,4 +1,3 @@
-
 abstract interface class VideosRepository {
   Future<List<Map<String, dynamic>>> fetchVideos();
   Future<Map<String, dynamic>?> purchaseVideo(int videoId);
