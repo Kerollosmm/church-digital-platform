@@ -95,7 +95,7 @@ Deno.test("reconcile: stale PENDING_PAYMENT unpaid on Paymob -> cancels booking 
   }
 });
 
-Deno.test("reconcile: upstream error or malformed JSON continues gracefully", async () => {
+Deno.test("reconcile: upstream error marks payment FAILED with incident logging", async () => {
   const fake = new FakeClient(["bookings", "payments"]);
   fake.seed("payments", [
     { id: 3, booking_id: 9, merchant_order_id: "19", status: "CREATED", gateway_ref: null },
@@ -107,7 +107,7 @@ Deno.test("reconcile: upstream error or malformed JSON continues gracefully", as
     if (String(url).endsWith("/api/auth/tokens")) {
       return Promise.resolve(jsonRes({ token: "tok_auth" }));
     }
-    return Promise.resolve(new Response("Malformed", { status: 200, headers: { "Content-Type": "text/html" } }));
+    return Promise.resolve(new Response("Malformed", { status: 502, headers: { "Content-Type": "text/html" } }));
   });
   try {
     const res = await handleRequest(
@@ -122,8 +122,10 @@ Deno.test("reconcile: upstream error or malformed JSON continues gracefully", as
     assertEquals(res.status, 200);
     const body = await res.json();
     assertEquals(body.ok, true);
-    assertEquals(body.resolved, 0);
+    assertEquals(body.resolved, 1);
+    assertEquals(fake.tableRows("payments")[0].status, "FAILED");
   } finally {
     fetchStub.restore();
   }
 });
+

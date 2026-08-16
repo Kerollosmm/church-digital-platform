@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { makeServiceClient } from "../_shared/client.ts";
 import { respond } from "../_shared/http.ts";
-import { createPaymob, PaymobOrderStatusResult } from "../_shared/paymob.ts";
+import { createPaymob, markPaymentFailed } from "../_shared/paymob.ts";
 
 export interface Deps {
   getClient(): unknown;
@@ -44,18 +44,19 @@ export async function handleRequest(
       );
       if (!stale || !pay.merchant_order_id) continue;
 
-      let order: PaymobOrderStatusResult;
-      try {
-        order = await paymob.orderStatus(pay.merchant_order_id);
-      } catch (upstreamErr) {
-        console.warn(
-          `Upstream Paymob error for payment ${pay.id}:`,
-          upstreamErr,
+      const order = await paymob.orderStatus(pay.merchant_order_id);
+      if (!order.ok) {
+        console.error(
+          `[INCIDENT] Upstream Paymob orderStatus failure for payment ${pay.id} (merchant_order_id=${pay.merchant_order_id}): HTTP ${order.status} ${order.message}`,
         );
+        await markPaymentFailed(supabase, pay.id, {
+          reason: `upstream_status_${order.status}`,
+        });
+        resolved++;
         continue;
       }
 
-      if (!order || !Array.isArray(order.transactions)) {
+      if (!Array.isArray(order.transactions)) {
         continue;
       }
 
@@ -69,10 +70,9 @@ export async function handleRequest(
         await supabase.rpc("cancel_booking", {
           p_booking_id: pay.booking_id,
         });
-        await supabase
-          .from("payments")
-          .update({ status: "FAILED" })
-          .eq("id", pay.id);
+        await markPaymentFailed(supabase, pay.id, {
+          reason: "unpaid_on_reconcile",
+        });
         resolved++;
       }
     }
@@ -84,6 +84,10 @@ export async function handleRequest(
 }
 
 if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
+  const apiKey = Deno.env.get("PAYMOB_API_KEY");
+  if (!apiKey) {
+    throw new Error("Missing PAYMOB_API_KEY environment variable.");
+  }
   Deno.serve((req) =>
     handleRequest(req, {
       getClient: () =>
@@ -92,7 +96,7 @@ if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
         ),
       fetch,
-      paymobApiKey: Deno.env.get("PAYMOB_API_KEY")!,
+      paymobApiKey: apiKey,
       applyPayment: async (id) => {
         const sb = makeServiceClient(
           Deno.env.get("SUPABASE_URL"),
