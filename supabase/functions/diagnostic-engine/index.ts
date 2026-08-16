@@ -152,11 +152,7 @@ export async function handleRequest(
     });
   } catch (err: any) {
     console.error("diagnostic error:", err);
-    return respond(
-      500,
-      "INTERNAL",
-      err?.message ?? "Diagnostic execution failure",
-    );
+    return respond(500, "INTERNAL");
   }
 }
 

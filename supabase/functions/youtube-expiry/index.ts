@@ -83,7 +83,7 @@ export async function handleRequest(
     return respond(200, { ok: true, flipped });
   } catch (e: any) {
     console.error("youtube-expiry error", e);
-    return respond(500, "INTERNAL", e?.message ?? "YouTube expiry failure");
+    return respond(500, "INTERNAL");
   }
 }
 
