@@ -140,10 +140,9 @@ export async function triggerPaymobRefund(
   });
 
   if (res.ok) {
-    await client
-      .from("payments")
-      .update({ status: "REFUNDED" })
-      .eq("id", payment_id);
+    await client.rpc("mark_payment_refunded", {
+      p_payment_id: payment_id,
+    });
     return { ok: true, retryable: false };
   }
 

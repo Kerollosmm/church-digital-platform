@@ -120,6 +120,15 @@ export class FakeClient {
       const batchSize = (args?.p_batch_size as number) ?? 100;
       return { data: rows.slice(0, batchSize), error: null };
     }
+    if (fn === "mark_payment_refunded") {
+      const paymentId = Number(args?.p_payment_id);
+      const rows = this.db.get("payments") ?? [];
+      const payment = rows.find((r) => r.id === paymentId);
+      if (payment) {
+        payment.status = "REFUNDED";
+      }
+      return { data: null, error: null };
+    }
     return { data: { rpc: fn, args }, error: null };
   }
   from(table: string) { return new FakeQuery(this.db, table); }

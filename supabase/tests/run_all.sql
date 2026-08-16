@@ -37,3 +37,5 @@
 \ir 0043_faq_categories_test.sql
 \ir 0044_storage_buckets_test.sql
 \ir 0045_audit_hardening_test.sql
+\ir 0046_payment_refunded_test.sql
+
