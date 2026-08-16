@@ -1,6 +1,8 @@
 import type { SupabaseClient, User } from "npm:@supabase/supabase-js@2";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { makeServiceClient } from "../_shared/client.ts";
+import { auth, respond } from "../_shared/http.ts";
+import { createPaymob, PaymobCheckoutResult } from "../_shared/paymob.ts";
 
 export interface Deps {
   getClient(): unknown;
@@ -9,185 +11,204 @@ export interface Deps {
   integrationId: number;
   iframeId: number;
   amountMultiplier: number;
-  getUser?: (token: string) => Promise<{ data: { user: User | null }; error: unknown }>;
+  getUser?: (
+    token: string,
+  ) => Promise<{ data: { user: User | null }; error: unknown }>;
+  client?: unknown;
 }
 
-export async function handleRequest(req: Request, deps: Deps): Promise<Response> {
-  const cors = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Content-Type": "application/json",
-  };
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ") || !deps.getUser) {
-      return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), { status: 401, headers: cors });
-    }
-    const userToken = authHeader.replace(/^Bearer\s+/i, "").trim();
-    if (!userToken) {
-      return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), { status: 401, headers: cors });
-    }
-    const { data, error: authErr } = await deps.getUser(userToken);
-    if (authErr || !data?.user) {
-      return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), { status: 401, headers: cors });
-    }
-    const callerUser = data.user;
+async function markPaymentFailed(
+  supabase: SupabaseClient,
+  paymentId: number | null,
+) {
+  if (paymentId) {
+    await supabase
+      .from("payments")
+      .update({ status: "FAILED" })
+      .eq("id", paymentId);
+  }
+}
 
-    const body = await req.json() as Record<string, unknown>;
+export async function handleRequest(
+  req: Request,
+  deps?: Deps,
+): Promise<Response> {
+  const authRes = await auth(req, {
+    client: deps?.client ?? (deps?.getClient ? deps.getClient() : undefined),
+    getUser: deps?.getUser,
+  });
+  if (authRes instanceof Response) return authRes;
+  const callerUser = authRes;
+
+  try {
+    const body = (await req.json().catch(() => ({}))) as Record<
+      string,
+      unknown
+    >;
     const paymentId = Number(body.payment_id ?? 0);
     const bookingId = Number(body.booking_id ?? 0);
-    const supabase = deps.getClient() as SupabaseClient;
+
+    const supabase = (
+      deps?.getClient
+        ? deps.getClient()
+        : makeServiceClient(
+            Deno.env.get("SUPABASE_URL"),
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+          )
+    ) as SupabaseClient;
+
     let orderId: number;
     let amountCents: number;
     let createdPaymentId: number | null = null;
 
+    const amountMultiplier = deps?.amountMultiplier ?? 100;
+
     if (paymentId > 0) {
-      const { data: pay, error: pErr } = await supabase.from("payments")
-        .select("id, amount, booking_id, video_id").eq("id", paymentId).single();
-      if (pErr || !pay) return new Response(JSON.stringify({ error: "PAYMENT_NOT_FOUND" }), { status: 404, headers: cors });
+      const { data: pay, error: pErr } = await supabase
+        .from("payments")
+        .select("id, amount, booking_id, video_id")
+        .eq("id", paymentId)
+        .single();
+      if (pErr || !pay) {
+        return respond(404, "BAD_REQUEST", "Payment not found");
+      }
 
       if (callerUser) {
         if (pay.booking_id) {
-          const { data: b } = await supabase.from("bookings").select("user_id").eq("id", pay.booking_id).maybeSingle();
+          const { data: b } = await supabase
+            .from("bookings")
+            .select("user_id")
+            .eq("id", pay.booking_id)
+            .maybeSingle();
           if (b && b.user_id && b.user_id !== callerUser.id) {
-            return new Response(JSON.stringify({ error: "FORBIDDEN" }), { status: 403, headers: cors });
+            return respond(403, "FORBIDDEN");
           }
         } else if (pay.video_id) {
-          const { data: vp } = await supabase.from("video_purchases").select("user_id").eq("payment_id", paymentId).maybeSingle();
+          const { data: vp } = await supabase
+            .from("video_purchases")
+            .select("user_id")
+            .eq("payment_id", paymentId)
+            .maybeSingle();
           if (vp && vp.user_id && vp.user_id !== callerUser.id) {
-            return new Response(JSON.stringify({ error: "FORBIDDEN" }), { status: 403, headers: cors });
+            return respond(403, "FORBIDDEN");
           }
         }
       }
 
       orderId = pay.id as number;
-      amountCents = Math.round((pay.amount as number) * deps.amountMultiplier);
+      amountCents = Math.round((pay.amount as number) * amountMultiplier);
     } else if (bookingId > 0) {
-      if (!Number.isInteger(bookingId)) return new Response(JSON.stringify({ error: "BAD_REQUEST" }), { status: 400, headers: cors });
-      const { data: b, error: bErr } = await supabase.from("bookings").select("id, user_id, paid_amount, slot_id").eq("id", bookingId).single();
-      if (bErr || !b) return new Response(JSON.stringify({ error: "BOOKING_NOT_FOUND" }), { status: 404, headers: cors });
+      if (!Number.isInteger(bookingId)) {
+        return respond(400, "BAD_REQUEST", "Invalid booking_id");
+      }
+      const { data: b, error: bErr } = await supabase
+        .from("bookings")
+        .select("id, user_id, paid_amount, slot_id")
+        .eq("id", bookingId)
+        .single();
+      if (bErr || !b) {
+        return respond(404, "BAD_REQUEST", "Booking not found");
+      }
 
       if (callerUser && b.user_id && b.user_id !== callerUser.id) {
-        return new Response(JSON.stringify({ error: "FORBIDDEN" }), { status: 403, headers: cors });
+        return respond(403, "FORBIDDEN");
       }
 
       let amount = (b.paid_amount as number) || 0;
       if (amount === 0 && b.slot_id) {
-        const { data: slot } = await supabase.from("service_slots").select("price").eq("id", b.slot_id).single();
+        const { data: slot } = await supabase
+          .from("service_slots")
+          .select("price")
+          .eq("id", b.slot_id)
+          .single();
         if (slot?.price) amount = slot.price;
       }
-      amountCents = Math.round(amount * deps.amountMultiplier);
-      const { data: pay, error: pErr } = await supabase.from("payments").insert({
-        booking_id: bookingId, amount, status: "CREATED", gateway_ref: null,
-      }).select().single();
+      amountCents = Math.round(amount * amountMultiplier);
+      const { data: pay, error: pErr } = await supabase
+        .from("payments")
+        .insert({
+          booking_id: bookingId,
+          amount,
+          status: "CREATED",
+          gateway_ref: null,
+        })
+        .select()
+        .single();
       if (pErr) throw pErr;
       orderId = pay.id as number;
       createdPaymentId = orderId;
     } else {
-      return new Response(JSON.stringify({ error: "BAD_REQUEST" }), { status: 400, headers: cors });
+      return respond(
+        400,
+        "BAD_REQUEST",
+        "booking_id or payment_id is required",
+      );
     }
-    await supabase.from("payments").update({ merchant_order_id: String(orderId) }).eq("id", orderId);
 
-    // STEP 1: Auth token
-    const authRes = await deps.fetch("https://accept.paymob.com/api/auth/tokens", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ api_key: deps.paymobApiKey }),
+    await supabase
+      .from("payments")
+      .update({ merchant_order_id: String(orderId) })
+      .eq("id", orderId);
+
+    const apiKey = deps?.paymobApiKey ?? Deno.env.get("PAYMOB_API_KEY") ?? "";
+    const integrationId =
+      deps?.integrationId ??
+      Number(Deno.env.get("PAYMOB_INTEGRATION_ID") ?? "0");
+    const iframeId =
+      deps?.iframeId ?? Number(Deno.env.get("PAYMOB_IFRAME_ID") ?? "0");
+
+    const paymob = createPaymob({
+      apiKey,
+      fetch: deps?.fetch,
     });
-    if (!authRes.ok) {
-      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
-      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
-    }
-    let authJson: Record<string, unknown>;
+
+    let checkoutResult: PaymobCheckoutResult;
     try {
-      authJson = (await authRes.json()) as Record<string, unknown>;
-    } catch {
-      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
-      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
-    }
-    const token = String(authJson.token ?? "");
-    if (!token) {
-      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
-      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
+      checkoutResult = await paymob.checkout({
+        amountCents,
+        merchantOrderId: String(orderId),
+        integrationId,
+        iframeId,
+      });
+    } catch (err) {
+      await markPaymentFailed(supabase, createdPaymentId);
+      return respond(
+        502,
+        "UPSTREAM_ERROR",
+        err instanceof Error ? err.message : "Paymob upstream error",
+      );
     }
 
-    // STEP 2: Order registration
-    const orderRes = await deps.fetch("https://accept.paymob.com/api/ecommerce/orders", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        auth_token: token, delivery_needed: "false",
-        amount_cents: String(amountCents), currency: "EGP",
-        merchant_order_id: String(orderId), items: [],
-      }),
+    return respond(200, {
+      checkout_url: checkoutResult.checkoutUrl,
+      payment_id: orderId,
     });
-    if (!orderRes.ok) {
-      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
-      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
-    }
-    let orderJson: Record<string, unknown>;
-    try {
-      orderJson = (await orderRes.json()) as Record<string, unknown>;
-    } catch {
-      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
-      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
-    }
-    const paymobOrderId = Number(orderJson.id ?? 0);
-    if (!paymobOrderId) {
-      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
-      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
-    }
-
-    // STEP 3: Payment key
-    const keyRes = await deps.fetch("https://accept.paymob.com/api/acceptance/payment_keys", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        auth_token: token, amount_cents: String(amountCents),
-        expiration: 3600, order_id: String(paymobOrderId),
-        billing_data: { first_name: "Parishioner", last_name: "User", email: "p@example.com", phone_number: "+201000000000", country: "EG", city: "Cairo", street: "N/A", building: "N/A", floor: "N/A", apartment: "N/A" },
-        currency: "EGP", integration_id: deps.integrationId,
-      }),
-    });
-    if (!keyRes.ok) {
-      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
-      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
-    }
-    let keyJson: Record<string, unknown>;
-    try {
-      keyJson = (await keyRes.json()) as Record<string, unknown>;
-    } catch {
-      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
-      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
-    }
-    const paymentKey = String(keyJson.token ?? "");
-    if (!paymentKey) {
-      if (createdPaymentId) await supabase.from("payments").update({ status: "FAILED" }).eq("id", createdPaymentId);
-      return new Response(JSON.stringify({ error: "PAYMOB_UPSTREAM_ERROR" }), { status: 502, headers: cors });
-    }
-
-    const url = `https://accept.paymob.com/api/acceptance/iframes/${deps.iframeId}?payment_token=${paymentKey}`;
-    return new Response(JSON.stringify({ checkout_url: url, payment_id: orderId }), { status: 200, headers: cors });
   } catch (e) {
     console.error("paymob-checkout error", e);
-    return new Response(JSON.stringify({ error: "INTERNAL" }), { status: 500, headers: cors });
+    return respond(500, "INTERNAL", "Checkout execution failed");
   }
 }
 
 if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
-  Deno.serve((req) => handleRequest(req, {
-    getClient: () => makeServiceClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")),
-    getUser: async (token: string) => {
-      const client = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-      );
-      return await client.auth.getUser(token);
-    },
-    fetch,
-    paymobApiKey: Deno.env.get("PAYMOB_API_KEY")!,
-    integrationId: Number(Deno.env.get("PAYMOB_INTEGRATION_ID") ?? "0"),
-    iframeId: Number(Deno.env.get("PAYMOB_IFRAME_ID") ?? "0"),
-    amountMultiplier: 100,
-  }));
+  Deno.serve((req) =>
+    handleRequest(req, {
+      getClient: () =>
+        makeServiceClient(
+          Deno.env.get("SUPABASE_URL"),
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+        ),
+      getUser: async (token: string) => {
+        const client = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_ANON_KEY")!,
+        );
+        return await client.auth.getUser(token);
+      },
+      fetch,
+      paymobApiKey: Deno.env.get("PAYMOB_API_KEY")!,
+      integrationId: Number(Deno.env.get("PAYMOB_INTEGRATION_ID") ?? "0"),
+      iframeId: Number(Deno.env.get("PAYMOB_IFRAME_ID") ?? "0"),
+      amountMultiplier: 100,
+    }),
+  );
 }
-
