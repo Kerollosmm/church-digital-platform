@@ -28,9 +28,9 @@ export interface AuthOptions {
 
 export function respond(
   status: number,
-  codeOrBody?: ErrorCode | Record<string, unknown> | unknown,
+  codeOrBody?: ErrorCode | unknown,
   message?: string,
-  extra?: Record<string, unknown>,
+  body?: unknown,
 ): Response {
   const headers = new Headers({
     ...corsHeaders,
@@ -44,8 +44,8 @@ export function respond(
     if (message !== undefined && message !== null) {
       errorBody.message = message;
     }
-    if (extra && typeof extra === "object") {
-      Object.assign(errorBody, extra);
+    if (body !== undefined && body !== null && typeof body === "object") {
+      Object.assign(errorBody, body);
     }
     return new Response(JSON.stringify(errorBody), { status, headers });
   }
@@ -82,7 +82,7 @@ export async function auth(
   opts?: AuthOptions,
 ): Promise<Response | AuthUser> {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders, status: 200 });
+    return respond(200, "ok");
   }
 
   const authHeader =
