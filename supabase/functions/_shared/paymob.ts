@@ -74,31 +74,59 @@ export interface PaymobRefundParams {
   amountCents: number;
 }
 
-export function hmacFields(t: Record<string, unknown>): string {
-  const o = (t.order ?? {}) as Record<string, unknown>;
-  const s = (t.source_data ?? {}) as Record<string, unknown>;
+export const PAYMOB_HMAC_FIELDS: string[] = [
+  "amount_cents",
+  "created_at",
+  "currency",
+  "error_occured",
+  "has_parent_transaction",
+  "id",
+  "integration_id",
+  "is_3d_secure",
+  "is_auth",
+  "is_capture",
+  "is_refunded",
+  "is_standalone_payment",
+  "is_voided",
+  "order.id",
+  "owner",
+  "pending",
+  "source_data.pan",
+  "source_data.sub_type",
+  "source_data.type",
+  "success",
+];
+
+export function hmacFields(): string[];
+export function hmacFields(txn: Record<string, unknown>): string;
+export function hmacFields(txn?: Record<string, unknown>): string[] | string {
+  if (!txn) {
+    return PAYMOB_HMAC_FIELDS;
+  }
+  const o = (txn.order ?? {}) as Record<string, unknown>;
+  const s = (txn.source_data ?? {}) as Record<string, unknown>;
   const str = (v: unknown) => (v == null ? "" : String(v));
   return [
-    t.amount_cents,
-    t.created_at,
-    t.currency,
-    t.error_occured,
-    t.has_parent_transaction,
-    t.id,
-    t.integration_id,
-    t.is_3d_secure,
-    t.is_auth,
-    t.is_capture,
-    t.is_refunded,
-    t.is_standalone_payment,
-    t.is_voided,
+    txn.amount_cents,
+    txn.created_at,
+    txn.currency,
+    txn.error_occured,
+    txn.has_parent_transaction,
+    txn.id,
+    txn.integration_id,
+    txn.is_3d_secure,
+    txn.is_auth,
+    txn.is_capture,
+    txn.is_refunded,
+    txn.is_standalone_payment,
+    txn.is_voided,
     o.id,
-    t.owner,
-    t.pending,
+    txn.owner,
+    txn.pending,
     s.pan,
     s.sub_type,
     s.type,
-    t.success,
+    txn.success,
   ]
     .map(str)
     .join("");

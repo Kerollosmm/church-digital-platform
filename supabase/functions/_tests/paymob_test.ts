@@ -140,7 +140,15 @@ Deno.test("paymob adapter: 2xx with invalid JSON returns typed UPSTREAM_ERROR", 
   }
 });
 
-Deno.test("paymob adapter: hmacFields correctly concatenates 20 fields", () => {
+Deno.test("paymob adapter: hmacFields() returns string[] of 20 field names per contract", () => {
+  const fields = hmacFields();
+  assertEquals(Array.isArray(fields), true);
+  assertEquals(fields.length, 20);
+  assertEquals(fields[0], "amount_cents");
+  assertEquals(fields[fields.length - 1], "success");
+});
+
+Deno.test("paymob adapter: hmacFields(txn) correctly concatenates 20 fields", () => {
   const txn = {
     amount_cents: 5000,
     created_at: "2026-08-16T12:00:00.000Z",
