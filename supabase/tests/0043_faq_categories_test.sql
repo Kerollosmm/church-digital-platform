@@ -11,11 +11,13 @@ DECLARE
   v_count    int;
 BEGIN
   -- 0. Seed test users
-  INSERT INTO public.users (id, phone, name, role, tenant_id)
-  VALUES 
-    (v_admin_id, '+201099990043', 'Admin 43', 'ADMIN', 1),
-    (v_user_id,  '+201099990044', 'User 44', 'USER', 1)
-  ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role, phone = EXCLUDED.phone;
+  INSERT INTO auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  VALUES
+    (v_admin_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'a43@test.local', '+201099990043', '{}', '{}', now(), now()),
+    (v_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u44@test.local', '+201099990044', '{}', '{}', now(), now())
+  ON CONFLICT (id) DO NOTHING;
+  UPDATE public.users SET role = 'ADMIN', tenant_id = 1, deleted_at = null WHERE id = v_admin_id;
+  UPDATE public.users SET role = 'USER', tenant_id = 1, deleted_at = null WHERE id = v_user_id;
 
   -- 1. Admin creates active and unpublished categories
   SET LOCAL ROLE authenticated;

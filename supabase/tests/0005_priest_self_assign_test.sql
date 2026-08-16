@@ -4,12 +4,15 @@ begin;
   insert into auth.users (id, email) values
     ('bbbbbbbb-0000-0000-0000-000000000001'::uuid, 'priest@test.com'),
     ('bbbbbbbb-0000-0000-0000-000000000002'::uuid, 'submitter@test.com');
-  insert into public.users (id, full_name, phone, role, tenant_id) values
-    ('bbbbbbbb-0000-0000-0000-000000000001'::uuid, 'Priest', '+201000000002', 'PRIEST', 1),
-    ('bbbbbbbb-0000-0000-0000-000000000002'::uuid, 'User', '+201000000003', 'PARISHIONER', 1);
+  insert into public.users (id, name, phone, role, tenant_id) values
+    ('bbbbbbbb-0000-0000-0000-000000000001'::uuid, 'Priest', '+201000000002', 'USER', 1),
+    ('bbbbbbbb-0000-0000-0000-000000000002'::uuid, 'User', '+201000000003', 'USER', 1)
+  on conflict (id) do nothing;
 
   insert into public.complaints (id, user_id, tenant_id, category, body_encrypted, status, assigned_to)
-    values (100, 'bbbbbbbb-0000-0000-0000-000000000002'::uuid, 1, 'GENERAL', 'encrypted_data'::bytea, 'NEW', null);
+    overriding system value
+    values (100, 'bbbbbbbb-0000-0000-0000-000000000002'::uuid, 1, 'GENERAL', 'encrypted_data'::bytea, 'NEW', null)
+    on conflict (id) do nothing;
 
   -- Act as priest
   set local role authenticated;

@@ -5,12 +5,17 @@ declare
   v_n int; v_res public.bookings; v_old_audit int;
 begin
   -- fixtures
-  insert into public.users (id, phone, name, role, tenant_id)
-  values ('00000000-0000-0000-0000-000000000001', '+201000000001', 'parishioner', 'PARISHIONER', 1);
-  insert into public.users (id, phone, name, role, tenant_id)
-  values ('00000000-0000-0000-0000-000000000002', '+201000000002', 'admin', 'ADMIN', 1);
-  insert into public.users (id, phone, name, role, tenant_id)
-  values ('00000000-0000-0000-0000-000000000003', '+201000000003', 'other', 'PARISHIONER', 1);
+  insert into auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u1@test.local', '+201000000241', '{}', '{}', now(), now()),
+         ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u2@test.local', '+201000000242', '{}', '{}', now(), now()),
+         ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u3@test.local', '+201000000243', '{}', '{}', now(), now())
+  on conflict (id) do nothing;
+  update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id in ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003');
+  update public.users set role = 'ADMIN', tenant_id = 1, deleted_at = null where id = '00000000-0000-0000-0000-000000000002';
+
+  delete from public.payments where booking_id in (select id from public.bookings where user_id in ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000003'));
+  delete from public.bookings where user_id in ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000003');
+
   insert into public.service_slots (service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   select id, now() + interval '2 days', now() + interval '2 days 1 hour', 2, 50, 'OPEN', 1
   from public.services limit 1
@@ -25,9 +30,12 @@ begin
   if v_n <> 1 then raise exception 'FAIL: active_booking_count must be 1'; end if;
 
   -- 2. engine transition + single audit row
+  reset role;
+  perform set_config('request.jwt.claims', null, true);
   v_res := public.transition_booking_status(v_book, 'AWAITING_CALL', 'apply_payment');
   if v_res.status <> 'AWAITING_CALL' then raise exception 'FAIL: engine must flip status'; end if;
   if v_res.locked_until is not null then raise exception 'FAIL: engine must clear lock outside PENDING_PAYMENT'; end if;
+  reset role;
   select count(*) into v_n from public.audit_log
     where entity_type = 'bookings' and entity_id = v_book and action = 'apply_payment';
   if v_n <> 1 then raise exception 'FAIL: exactly one audit row (no trigger double-write)'; end if;
@@ -44,6 +52,7 @@ begin
   then raise exception 'FAIL: trg_bookings_audit must be dropped'; end if;
 
   -- 5. ownership gate: another parishioner cannot touch the booking (admins may, legacy behavior)
+  set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000003', 'role', 'authenticated')::text, true);
   begin
     v_res := public.transition_booking_status(v_book, 'CANCELLED', 'cancel_booking');

@@ -2,7 +2,7 @@ do $$
 declare v_admin uuid; v_slot bigint; v_book bigint; v_phone text;
 begin
   select id into v_admin from public.users where role='ADMIN' order by id limit 1;
-  select id, (select phone from public.users where role='PARISHIONER' order by id limit 1) into v_slot, v_phone
+  select id, (select phone from public.users where role='USER' order by id limit 1) into v_slot, v_phone
   from public.service_slots where status <> 'CLOSED' and starts_at > now()
     and id not in (select slot_id from public.bookings where status in ('PENDING_PAYMENT','AWAITING_CALL','CONFIRMED')) order by id limit 1;
   set local role authenticated;
@@ -17,7 +17,7 @@ begin
   if not exists (select 1 from public.whatsapp_optins where phone = v_phone)
   then raise exception 'FAIL: manual_book must record opt-in'; end if;
   -- PARISHIONER cannot use manual_book
-  perform set_config('request.jwt.claims', json_build_object('sub', (select id from public.users where role='PARISHIONER' order by id limit 1), 'role','authenticated')::text, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', (select id from public.users where role='USER' order by id limit 1), 'role','authenticated')::text, true);
   begin
     perform public.manual_book(v_slot, v_phone, false);
     raise exception 'FAIL: PARISHIONER must not call manual_book';

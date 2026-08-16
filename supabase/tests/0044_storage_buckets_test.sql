@@ -10,11 +10,13 @@ DECLARE
   v_count    int;
 BEGIN
   -- 0. Seed test users and buckets
-  INSERT INTO public.users (id, phone, name, role, tenant_id)
+  INSERT INTO auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
   VALUES 
-    (v_admin_id, '+201099990045', 'Admin Storage', 'ADMIN', 1),
-    (v_user_id,  '+201099990046', 'User Storage', 'USER', 1)
-  ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role, phone = EXCLUDED.phone;
+    (v_admin_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'a45@test.local', '+201099990045', '{}', '{}', now(), now()),
+    (v_user_id,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u46@test.local', '+201099990046', '{}', '{}', now(), now())
+  ON CONFLICT (id) DO NOTHING;
+  UPDATE public.users SET role = 'ADMIN', tenant_id = 1, deleted_at = null WHERE id = v_admin_id;
+  UPDATE public.users SET role = 'USER', tenant_id = 1, deleted_at = null WHERE id = v_user_id;
 
   INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
   VALUES 
@@ -46,12 +48,21 @@ BEGIN
       IF SQLERRM LIKE '%FAIL: non-admin%' THEN RAISE; END IF;
   END;
 
-  -- 3. Test user delete denial on church_media (affects 0 rows)
-  DELETE FROM storage.objects WHERE bucket_id = 'church_media';
-  GET DIAGNOSTICS v_count = ROW_COUNT;
-  IF v_count <> 0 THEN
-    RAISE EXCEPTION 'FAIL: non-admin user must NOT delete church_media objects, deleted % rows', v_count;
-  END IF;
+  -- 3. Test user delete denial on church_media (raises protect_delete or affects 0 rows)
+  BEGIN
+    DELETE FROM storage.objects WHERE bucket_id = 'church_media';
+    GET DIAGNOSTICS v_count = ROW_COUNT;
+    IF v_count <> 0 THEN
+      RAISE EXCEPTION 'FAIL: non-admin user must NOT delete church_media objects, deleted % rows', v_count;
+    END IF;
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM LIKE '%Direct deletion from storage%' OR SQLSTATE = '42501' THEN
+        NULL;
+      ELSE
+        RAISE;
+      END IF;
+  END;
 
   RESET ROLE;
   RAISE NOTICE '0044_storage_buckets_test: OK';

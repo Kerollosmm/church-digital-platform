@@ -9,8 +9,16 @@ declare
   v_rem int;
   v_idemp uuid := gen_random_uuid();
 begin
-  select id into v_user from public.users where role = 'PARISHIONER' order by id limit 1;
-  select id into v_user2 from public.users where role = 'PARISHIONER' and id <> v_user order by id limit 1;
+  insert into auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values ('35353535-3535-3535-3535-353535353535', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u35@test.local', '+201035353535', '{}', '{}', now(), now()),
+         ('36363636-3636-3636-3636-363636363636', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u36@test.local', '+201036363636', '{}', '{}', now(), now())
+  on conflict (id) do nothing;
+  update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id in ('35353535-3535-3535-3535-353535353535', '36363636-3636-3636-3636-363636363636');
+
+  v_user := '35353535-3535-3535-3535-353535353535';
+  v_user2 := '36363636-3636-3636-3636-363636363636';
+
+  delete from public.bookings where user_id in (v_user, v_user2);
 
   -- Create a capacity-2 open slot
   insert into public.service_slots (service_id, starts_at, ends_at, capacity, remaining_capacity, price, status, tenant_id, schedule_range)

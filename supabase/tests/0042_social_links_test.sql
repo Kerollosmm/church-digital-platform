@@ -1,5 +1,4 @@
--- supabase/tests/0042_social_links_test.sql
--- Test social_links RLS policies (public read active, admin-only write)
+BEGIN;
 
 DO $$
 DECLARE
@@ -9,11 +8,13 @@ DECLARE
   v_count    int;
 BEGIN
   -- 0. Seed test users
-  INSERT INTO public.users (id, phone, name, role, tenant_id)
-  VALUES 
-    (v_admin_id, '+201099990041', 'Admin 42', 'ADMIN', 1),
-    (v_user_id,  '+201099990042', 'User 42', 'USER', 1)
-  ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role, phone = EXCLUDED.phone;
+  INSERT INTO auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  VALUES
+    (v_admin_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'a42@test.local', '+201099990041', '{}', '{}', now(), now()),
+    (v_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u42@test.local', '+201099990042', '{}', '{}', now(), now())
+  ON CONFLICT (id) DO NOTHING;
+  UPDATE public.users SET role = 'ADMIN', tenant_id = 1, deleted_at = null WHERE id = v_admin_id;
+  UPDATE public.users SET role = 'USER', tenant_id = 1, deleted_at = null WHERE id = v_user_id;
 
   -- 1. Admin creates active and inactive social links
   SET LOCAL ROLE authenticated;
@@ -68,13 +69,12 @@ BEGIN
     IF SQLERRM LIKE '%FAIL: regular user must NOT%' THEN RAISE; END IF;
   END;
 
-  -- USER cannot update
-  BEGIN
-    UPDATE public.social_links SET title_ar = 'تعديل غير مصرح' WHERE id = v_link_id;
-    RAISE EXCEPTION 'FAIL: regular user must NOT be allowed to update social_links';
-  EXCEPTION WHEN OTHERS THEN
-    IF SQLERRM LIKE '%FAIL: regular user must NOT%' THEN RAISE; END IF;
-  END;
+  -- USER cannot update (affects 0 rows due to RLS USING)
+  UPDATE public.social_links SET title_ar = 'تعديل غير مصرح' WHERE id = v_link_id;
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+  IF v_count <> 0 THEN
+    RAISE EXCEPTION 'FAIL: regular user update must affect 0 rows, affected %', v_count;
+  END IF;
 
   -- 4. Admin updates and deletes
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_admin_id, 'role', 'authenticated')::text, true);
@@ -96,3 +96,5 @@ BEGIN
   RESET ROLE;
   RAISE NOTICE '0042_social_links_test: OK';
 END $$;
+
+ROLLBACK;

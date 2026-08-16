@@ -3,8 +3,19 @@ declare
   v_user uuid; v_admin uuid; v_slot1 bigint; v_slot2 bigint; v_book bigint; v_pay bigint;
   v_new_book bigint;
 begin
-  select id into v_user from public.users where role='PARISHIONER' order by id limit 1;
-  select id into v_admin from public.users where role='ADMIN' order by id limit 1;
+  insert into auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values ('17171717-1717-1717-1717-171717171717', '00000000-0000-0000-0000-000000000000',
+          'authenticated', 'authenticated', 'user-ov17@test.local', '+201000000017', '{}', '{"name":"Override User 17"}', now(), now()),
+         ('18181818-1818-1818-1818-181818181818', '00000000-0000-0000-0000-000000000000',
+          'authenticated', 'authenticated', 'admin-ov18@test.local', '+201000000018', '{}', '{"name":"Override Admin 18"}', now(), now())
+  on conflict (id) do nothing;
+  update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id = '17171717-1717-1717-1717-171717171717';
+  update public.users set role = 'ADMIN', tenant_id = 1, deleted_at = null where id = '18181818-1818-1818-1818-181818181818';
+
+  v_user := '17171717-1717-1717-1717-171717171717';
+  v_admin := '18181818-1818-1818-1818-181818181818';
+  delete from public.payments where booking_id in (select id from public.bookings where user_id = v_user);
+  delete from public.bookings where user_id = v_user;
 
   insert into public.service_slots (service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   select service_id, now() + interval '10 days', now() + interval '10 days 1 hour', 1, 50, 'OPEN', public.tenant_id()
@@ -22,6 +33,7 @@ begin
   select id into v_book from public.book_slot(v_slot1, true);
 
   reset role;
+  perform set_config('request.jwt.claims', null, true);
   insert into public.payments (booking_id, amount, status, gateway_ref, merchant_order_id, tenant_id)
   values (v_book, 50, 'PAID', 555, 'order-5', public.tenant_id()) returning id into v_pay;
 
@@ -32,6 +44,7 @@ begin
   if v_new_book is null then raise exception 'FAIL: emergency_override must return new booking id'; end if;
 
   reset role;
+  perform set_config('request.jwt.claims', null, true);
   if (select status from public.bookings where id = v_book) <> 'RESCHEDULED'
   then raise exception 'FAIL: old booking must be RESCHEDULED'; end if;
   if (select status from public.bookings where id = v_new_book) <> 'CONFIRMED'

@@ -11,7 +11,7 @@ declare t text;
 begin
   foreach t in array array['users','roles_permissions','priests','services','service_slots',
                           'bookings','payments','waiting_list','videos','video_purchases',
-                          'complaints','announcements','audit_log','whatsapp_outbox',
+                          'complaints','announcements','audit_log','event_outbox',
                           'whatsapp_optins'] loop
     perform tests.expect(
       exists (select 1 from pg_tables where schemaname = 'public' and tablename = t),
@@ -41,7 +41,7 @@ begin
       'CMeeting enum must not exist: ' || e);
   end loop;
   perform tests.expect(
-    (select array_agg(e.enumlabel order by e.enumsortorder)
+    (select array_agg(e.enumlabel::text order by e.enumsortorder)
      from pg_enum e
      join pg_type t on t.oid = e.enumtypid
      join pg_namespace n on n.oid = t.typnamespace

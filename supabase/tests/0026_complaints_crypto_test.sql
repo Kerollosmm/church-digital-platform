@@ -11,15 +11,18 @@ declare
   v_cat text;
   v_stat text;
 begin
-  insert into public.users (id, phone, name, role, tenant_id) values
-    (v_u, '+201022222221', 'c', 'USER', 1),
-    (v_other, '+201022222222', 'c2', 'USER', 1),
-    (v_a, '+201022222223', 'a', 'ADMIN', 1)
-  on conflict (id) do update set role = excluded.role, phone = excluded.phone;
+  insert into auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values (v_u, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'c1@test.local', '+201022222221', '{}', '{}', now(), now()),
+         (v_other, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'c2@test.local', '+201022222222', '{}', '{}', now(), now()),
+         (v_a, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'c3@test.local', '+201022222223', '{}', '{}', now(), now())
+  on conflict (id) do nothing;
+  update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id in (v_u, v_other);
+  update public.users set role = 'ADMIN', tenant_id = 1, deleted_at = null where id = v_a;
 
   -- vault key (test-scoped; dev key ships in seed — see Step 2)
-  insert into vault.secrets (name, secret) values ('COMPLAINTS_KEY', 'test-complaints-key')
-  on conflict (name) do update set secret = excluded.secret;
+  if not exists (select 1 from vault.decrypted_secrets where name = 'COMPLAINTS_KEY') then
+    perform vault.create_secret('test-complaints-key', 'COMPLAINTS_KEY');
+  end if;
 
   -- 1. Submitter submits complaint
   set local role authenticated;
@@ -79,15 +82,20 @@ begin
   if v_body <> 'body-plaintext' then raise exception 'FAIL: admin decrypt'; end if;
 
   -- 8. Missing key raises COMPLAINT_KEY_MISSING / COMPLAINTS_KEY_NOT_SET
-  delete from vault.secrets where name = 'COMPLAINTS_KEY';
+  reset role;
+  perform set_config('request.jwt.claims', null, true);
+  delete from vault.decrypted_secrets where name = 'COMPLAINTS_KEY';
+  set local role authenticated;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_a, 'role', 'authenticated')::text, true);
   begin
     v_body := public.decrypt_complaint(v_cid);
     raise exception 'FAIL: missing key must raise';
   exception when others then
     if sqlerrm not like '%COMPLAINT_KEY_MISSING%' and sqlerrm not like '%COMPLAINTS_KEY_NOT_SET%' then raise; end if;
   end;
-  insert into vault.secrets (name, secret) values ('COMPLAINTS_KEY', 'test-complaints-key')
-  on conflict (name) do update set secret = excluded.secret;
+  reset role;
+  perform set_config('request.jwt.claims', null, true);
+  perform vault.create_secret('test-complaints-key', 'COMPLAINTS_KEY');
 
   reset role;
   raise notice 'OK';

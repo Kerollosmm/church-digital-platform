@@ -30,7 +30,7 @@ begin
      where role = 'USER' and action = 'DELETE') = 0,
     'USER must never DELETE');
   perform tests.expect(
-    not exists (select 1 from public.roles_permissions where role = 'SERVANT'),
+    not exists (select 1 from public.roles_permissions where role::text = 'SERVANT'),
     'SERVANT role must not exist in matrix');
 
   perform tests.expect(

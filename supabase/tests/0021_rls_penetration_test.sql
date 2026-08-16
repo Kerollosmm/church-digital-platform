@@ -2,14 +2,24 @@ do $$
 declare
   v_parishioner uuid; v_other uuid; v_admin uuid; v_other_booking bigint; v_amount numeric; v_price int; v_sum numeric;
 begin
-  select id into v_parishioner from public.users
-  where role='PARISHIONER'
-    and (select count(*) from public.bookings where user_id = users.id and status in ('PENDING_PAYMENT','AWAITING_CALL','CONFIRMED')) < 2
-  order by id limit 1;
-  select id into v_other from public.users
-  where role='PARISHIONER' and id <> v_parishioner
-  order by id limit 1;
-  select id into v_admin from public.users where role='ADMIN' order by id limit 1;
+  insert into auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values ('21212121-2121-2121-2121-212121212121', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'p21@test.local', '+201000000211', '{}', '{}', now(), now()),
+         ('22222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'p22@test.local', '+201000000212', '{}', '{}', now(), now()),
+         ('23232323-2323-2323-2323-232323232323', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'p23@test.local', '+201000000213', '{}', '{}', now(), now())
+  on conflict (id) do nothing;
+  update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id in ('21212121-2121-2121-2121-212121212121', '22222222-2222-2222-2222-222222222222');
+  update public.users set role = 'ADMIN', tenant_id = 1, deleted_at = null where id = '23232323-2323-2323-2323-232323232323';
+
+  v_parishioner := '21212121-2121-2121-2121-212121212121';
+  v_other := '22222222-2222-2222-2222-222222222222';
+  v_admin := '23232323-2323-2323-2323-232323232323';
+
+  delete from public.bookings where user_id in (v_parishioner, v_other);
+  insert into public.services (id, title_ar, tenant_id) overriding system value values (99921, 'خدمة 021', 1) on conflict do nothing;
+  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, remaining_capacity, price, status, tenant_id)
+  overriding system value
+  values (999211, 99921, now() + interval '12 days', now() + interval '12 days 1 hour', 5, 5, 50, 'OPEN', 1)
+  on conflict (id) do update set starts_at = now() + interval '12 days', capacity = 5, remaining_capacity = 5, status = 'OPEN';
 
   -- seed a complaint owned by someone else (as postgres, bypasses RLS; trigger encrypts it)
   insert into public.complaints (user_id, category, body_encrypted, tenant_id)
@@ -18,10 +28,7 @@ begin
   -- create a booking owned by v_parishioner
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_parishioner, 'role','authenticated')::text, true);
-  select id into v_other_booking from public.book_slot(
-    (select id from public.service_slots where status <> 'CLOSED' and starts_at > now()
-       and id not in (select slot_id from public.bookings where status in ('PENDING_PAYMENT','AWAITING_CALL','CONFIRMED')) limit 1),
-    false);
+  select id into v_other_booking from public.book_slot(999211, false);
 
   -- 1. PARISHIONER cannot write service_slots, bookings, or payments (RLS filters silently -> assert no change)
   reset role;
@@ -70,6 +77,7 @@ begin
   if (select count(*) from public.payments) = 0 then raise exception 'FAIL: ADMIN must read payments'; end if;
   update public.service_slots set price = price + 1 where id = (select id from public.service_slots limit 1);
 
-  -- 4. body_encrypted never readable via views (complaints table has deny policy)
+  -- 4. body_encrypted never readable via direct table read by regular users
+  perform set_config('request.jwt.claims', json_build_object('sub', v_parishioner, 'role','authenticated')::text, true);
   if exists (select 1 from public.complaints) then raise exception 'FAIL: users must not read complaints table directly'; end if;
 end $$;

@@ -5,7 +5,7 @@ begin
   -- Setup: user with a pending-payment booking
   insert into auth.users (id, email) values ('cccccccc-0000-0000-0000-000000000001'::uuid, 'user@test.com');
   insert into public.users (id, phone, name, role, tenant_id)
-    values ('cccccccc-0000-0000-0000-000000000001'::uuid, '+201000000004', 'User', 'PARISHIONER', 1);
+    values ('cccccccc-0000-0000-0000-000000000001'::uuid, '+201000000004', 'User', 'USER', 1);
 
   insert into public.services (id, tenant_id, title_ar)
     overriding system value

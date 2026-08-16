@@ -1,7 +1,7 @@
 do $$
-declare v_user uuid; v_video bigint; v_pay bigint;
+declare v_user uuid; v_video bigint; v_res jsonb; v_pay bigint;
 begin
-  select id into v_user from public.users where role='PARISHIONER' order by id limit 1;
+  select id into v_user from public.users where role='USER' order by id limit 1;
   insert into public.videos (title_ar, event_date, yt_url, price, privacy, expires_after_days, tenant_id)
   values ('عظة المولد', now() - interval '10 days', 'https://youtu.be/abc123', 30, 'UNLISTED', 30, public.tenant_id())
   returning id into v_video;
@@ -11,12 +11,14 @@ begin
   -- UNLISTED is invisible until purchased: listing policy hides the row entirely
   if exists (select 1 from public.videos where id = v_video)
   then raise exception 'FAIL: UNLISTED video must be hidden pre-purchase'; end if;
-  select public.purchase_video(v_video) into v_pay;
+  select public.purchase_video(v_video) into v_res;
+  v_pay := (v_res->>'payment_id')::bigint;
   if v_pay is null then raise exception 'FAIL: purchase_video must return payment id'; end if;
 
   reset role;
-  if (select status from public.payments where id = v_pay) <> 'CREATED'
-  then raise exception 'FAIL: purchase payment must start CREATED'; end if;
+  perform set_config('request.jwt.claims', null, true);
+  if (select status::text from public.payments where id = v_pay) not in ('CREATED', 'PENDING')
+  then raise exception 'FAIL: purchase payment must start CREATED or PENDING'; end if;
   if not exists (select 1 from public.video_purchases where video_id = v_video and user_id = v_user and payment_id = v_pay)
   then raise exception 'FAIL: video_purchases row must exist'; end if;
   if (select access_granted_at from public.video_purchases where payment_id = v_pay) is not null

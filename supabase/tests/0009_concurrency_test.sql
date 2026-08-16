@@ -4,14 +4,26 @@ declare
   v_user uuid; v_user2 uuid; v_slot bigint;
   v_b1 bigint; v_b2 bigint;
 begin
-  select id into v_user from public.users where role = 'PARISHIONER' order by id limit 1;
-  select id into v_user2 from public.users where role = 'PARISHIONER' and id <> v_user order by id limit 1;
+  insert into auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values ('88888888-8888-8888-8888-888888888888', '00000000-0000-0000-0000-000000000000',
+          'authenticated', 'authenticated', 'user-conc1@test.local', '+201000000061', '{}', '{"name":"Conc User 1"}', now(), now()),
+         ('99999999-9999-9999-9999-999999999999', '00000000-0000-0000-0000-000000000000',
+          'authenticated', 'authenticated', 'user-conc2@test.local', '+201000000062', '{}', '{"name":"Conc User 2"}', now(), now())
+  on conflict (id) do nothing;
+  update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id in ('88888888-8888-8888-8888-888888888888', '99999999-9999-9999-9999-999999999999');
 
-  -- Create a capacity-1 open slot
-  insert into public.service_slots (service_id, starts_at, ends_at, capacity, price, status, tenant_id)
-  select service_id, now() + interval '6 days', now() + interval '6 days 1 hour', 1, 0, 'OPEN', public.tenant_id()
-  from public.service_slots limit 1
-  returning id into v_slot;
+  v_user := '88888888-8888-8888-8888-888888888888';
+  v_user2 := '99999999-9999-9999-9999-999999999999';
+
+  delete from public.bookings where user_id in (v_user, v_user2);
+
+  insert into public.services (id, title_ar, tenant_id) overriding system value values (99909, 'خدمة 009', 1) on conflict do nothing;
+
+  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, remaining_capacity, price, status, tenant_id)
+  overriding system value
+  values (999091, 99909, now() + interval '6 days', now() + interval '6 days 1 hour', 1, 1, 0, 'OPEN', 1)
+  on conflict (id) do update set starts_at = now() + interval '6 days', capacity = 1, remaining_capacity = 1, status = 'OPEN';
+  v_slot := 999091;
 
   -- First user books slot
   set local role authenticated;

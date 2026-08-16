@@ -2,8 +2,11 @@
 do $$
 declare v_user uuid; v_slot bigint; v_book bigint; v_price int; v_paid int;
 begin
-  insert into public.users (id, phone, name, role, tenant_id)
-  values ('00000000-0000-0000-0000-000000000038', '+201033333338', 'p38', 'PARISHIONER', 1);
+  insert into auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values ('00000000-0000-0000-0000-000000000038', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'p38@test.local', '+201033333338', '{}', '{}', now(), now())
+  on conflict (id) do nothing;
+  update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id = '00000000-0000-0000-0000-000000000038';
+  delete from public.bookings where user_id = '00000000-0000-0000-0000-000000000038';
   insert into public.service_slots (service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   select id, now() + interval '3 days', now() + interval '3 days 1 hour', 5, 75, 'OPEN', 1
   from public.services limit 1
