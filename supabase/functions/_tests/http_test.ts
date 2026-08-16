@@ -173,6 +173,54 @@ Deno.test("http seam: auth() rejects non-staff user when requireStaff is true (4
   }
 });
 
+Deno.test("http seam: auth() rejects spoofed user_metadata.role SUPER_ADMIN when DB users.role is USER (403)", async () => {
+  const fake = new FakeAuthSupabaseClient();
+  fake.seed("users", [
+    { id: "00000000-0000-0000-0000-000000000001", role: "USER" },
+  ]);
+  fake.setAuthToken("spoofed.token", {
+    id: "00000000-0000-0000-0000-000000000001",
+    role: "authenticated",
+    user_metadata: { role: "SUPER_ADMIN" },
+    app_metadata: { role: "SUPER_ADMIN" },
+  });
+
+  const req = new Request("https://localhost/functions/v1/test", {
+    method: "POST",
+    headers: { Authorization: "Bearer spoofed.token" },
+  });
+  const res = await auth(req, { requireStaff: true, client: fake as any });
+  assertEquals(res instanceof Response, true);
+  if (res instanceof Response) {
+    assertEquals(res.status, 403);
+    const body = await res.json();
+    assertEquals(body.error, "FORBIDDEN");
+  }
+});
+
+Deno.test("http seam: auth() rejects request when role lookup throws/fails (403)", async () => {
+  const fake = new FakeAuthSupabaseClient();
+  fake.from = () => {
+    throw new Error("DB connection failure");
+  };
+  fake.setAuthToken("valid.token", {
+    id: "00000000-0000-0000-0000-000000000001",
+    role: "authenticated",
+  });
+
+  const req = new Request("https://localhost/functions/v1/test", {
+    method: "POST",
+    headers: { Authorization: "Bearer valid.token" },
+  });
+  const res = await auth(req, { requireStaff: true, client: fake as any });
+  assertEquals(res instanceof Response, true);
+  if (res instanceof Response) {
+    assertEquals(res.status, 403);
+    const body = await res.json();
+    assertEquals(body.error, "FORBIDDEN");
+  }
+});
+
 Deno.test("http seam: auth() passes staff user (ADMIN) when requireStaff is true", async () => {
   const fake = new FakeAuthSupabaseClient();
   fake.seed("users", [
@@ -193,3 +241,5 @@ Deno.test("http seam: auth() passes staff user (ADMIN) when requireStaff is true
   assertEquals(user.id, "00000000-0000-0000-0000-000000000002");
   assertEquals(user.role, "ADMIN");
 });
+
+

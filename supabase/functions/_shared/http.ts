@@ -17,8 +17,6 @@ export interface AuthUser {
   role?: string;
   phone?: string;
   email?: string;
-  app_metadata?: Record<string, unknown>;
-  user_metadata?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -68,6 +66,17 @@ export function respond(
   return new Response(null, { status, headers: new Headers(corsHeaders) });
 }
 
+function createStrictServiceClient(): any {
+  const url = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !serviceKey) {
+    throw new Error(
+      "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variable.",
+    );
+  }
+  return makeServiceClient(url, serviceKey);
+}
+
 export async function auth(
   req: Request,
   opts?: AuthOptions,
@@ -91,14 +100,6 @@ export async function auth(
     return respond(401, "UNAUTHORIZED", "Empty bearer token");
   }
 
-  const client =
-    opts?.client ??
-    makeServiceClient(
-      Deno.env.get("SUPABASE_URL"),
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
-        Deno.env.get("SUPABASE_ANON_KEY"),
-    );
-
   let user: any = null;
   if (opts?.getUser) {
     const res = await opts.getUser(token);
@@ -110,44 +111,57 @@ export async function auth(
       );
     }
     user = res.data.user;
-  } else if (client?.auth?.getUser) {
-    const { data, error } = await client.auth.getUser(token);
-    if (error || !data?.user) {
-      return respond(
-        401,
-        "UNAUTHORIZED",
-        error?.message ?? "Invalid or expired token",
-      );
-    }
-    user = data.user;
   } else {
-    return respond(500, "INTERNAL", "Auth service unavailable");
+    let client: any;
+    try {
+      client = opts?.client ?? createStrictServiceClient();
+    } catch (err) {
+      console.error("Auth client initialization error:", err);
+      return respond(500, "INTERNAL");
+    }
+
+    if (client?.auth?.getUser) {
+      const { data, error } = await client.auth.getUser(token);
+      if (error || !data?.user) {
+        return respond(
+          401,
+          "UNAUTHORIZED",
+          error?.message ?? "Invalid or expired token",
+        );
+      }
+      user = data.user;
+    } else {
+      return respond(500, "INTERNAL");
+    }
   }
 
-  let role =
-    (user.app_metadata?.role as string) ??
-    (user.user_metadata?.role as string) ??
-    (user.role as string);
-
-  if (client?.from) {
-    try {
-      const { data: profile } = await client
+  // Look up role exclusively from public.users table using service client
+  let role: string | undefined = undefined;
+  try {
+    const dbClient = opts?.client ?? createStrictServiceClient();
+    if (dbClient?.from) {
+      const { data: profile, error: dbErr } = await dbClient
         .from("users")
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
-      if (profile?.role) {
+
+      if (dbErr || !profile?.role) {
+        if (opts?.requireStaff) {
+          return respond(403, "FORBIDDEN", "Staff role required");
+        }
+      } else {
         role = profile.role;
       }
-    } catch {
-      // ignore
+    } else if (opts?.requireStaff) {
+      return respond(403, "FORBIDDEN", "Staff role required");
+    }
+  } catch (err) {
+    console.error("Role lookup error in users table:", err);
+    if (opts?.requireStaff) {
+      return respond(403, "FORBIDDEN", "Staff role required");
     }
   }
-
-  const authUser: AuthUser = {
-    ...user,
-    role,
-  };
 
   if (opts?.requireStaff) {
     const staffRoles = ["ADMIN", "PRIEST", "SUPER_ADMIN"];
@@ -155,6 +169,13 @@ export async function auth(
       return respond(403, "FORBIDDEN", "Staff role required");
     }
   }
+
+  const authUser: AuthUser = {
+    id: user.id,
+    email: user.email,
+    phone: user.phone,
+    role,
+  };
 
   return authUser;
 }
