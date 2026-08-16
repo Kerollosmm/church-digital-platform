@@ -1,0 +1,5 @@
+-- ==============================================================================
+-- 0049_accessibility_foundations.sql
+-- Feature: 004-accessibility-foundations (Phase 2 & Phase 3 foundations)
+-- Purpose: media_assets registry, error_messages catalog, publish gates, delivery RPC
+-- ==============================================================================
