@@ -1,4 +1,5 @@
 import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
+import { respond } from "../_shared/http.ts";
 
 export interface Deps {
   fetch: typeof fetch;
@@ -11,16 +12,14 @@ export async function handleRequest(
   req: Request,
   customDeps?: Partial<Deps>,
 ): Promise<Response> {
-  const rawSecret = customDeps?.hookSecret ??
+  const rawSecret =
+    customDeps?.hookSecret ??
     (typeof Deno !== "undefined" ? Deno.env.get("SEND_SMS_HOOK_SECRET") : "") ??
     "";
   const secret = rawSecret.replace(/^v1,/, "").replace(/^whsec_/, "").trim();
 
   if (!secret) {
-    return new Response(
-      JSON.stringify({ error: "Unauthorized", message: "Missing hook secret" }),
-      { status: 401, headers: { "Content-Type": "application/json" } },
-    );
+    return respond(401, "UNAUTHORIZED", "Missing hook secret");
   }
 
   const rawBody = await req.text();
@@ -31,12 +30,10 @@ export async function handleRequest(
     const headers = Object.fromEntries(req.headers.entries());
     payload = wh.verify(rawBody, headers);
   } catch (err) {
-    return new Response(
-      JSON.stringify({
-        error: "Unauthorized",
-        message: err instanceof Error ? err.message : String(err),
-      }),
-      { status: 401, headers: { "Content-Type": "application/json" } },
+    return respond(
+      401,
+      "UNAUTHORIZED",
+      err instanceof Error ? err.message : String(err),
     );
   }
 
@@ -44,20 +41,16 @@ export async function handleRequest(
   const otp = payload?.sms?.otp;
 
   if (!phone || typeof phone !== "string" || !otp || typeof otp !== "string") {
-    return new Response(
-      JSON.stringify({
-        error: "Bad Request",
-        message: "Missing phone or otp in payload",
-      }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+    return respond(400, "BAD_REQUEST", "Missing phone or otp in payload");
   }
 
   const fetchFn = customDeps?.fetch ?? fetch;
-  const phoneId = customDeps?.phoneId ??
+  const phoneId =
+    customDeps?.phoneId ??
     (typeof Deno !== "undefined" ? Deno.env.get("WHATSAPP_PHONE_ID") : "") ??
     "";
-  const whatsappToken = customDeps?.whatsappToken ??
+  const whatsappToken =
+    customDeps?.whatsappToken ??
     (typeof Deno !== "undefined" ? Deno.env.get("WHATSAPP_TOKEN") : "") ??
     "";
 
@@ -94,10 +87,7 @@ export async function handleRequest(
     );
 
     if (res.ok) {
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return respond(200, { ok: true });
     }
 
     const errText = await res.text();
@@ -109,26 +99,22 @@ export async function handleRequest(
     }
 
     const message =
-      typeof errDetails === "object" && errDetails !== null && "error" in errDetails
+      typeof errDetails === "object" &&
+      errDetails !== null &&
+      "error" in errDetails
         ? (errDetails as { error: unknown }).error
         : errText;
 
-    return new Response(
-      JSON.stringify({
-        error: "Meta API failure",
-        http_code: res.status,
-        message,
-      }),
-      { status: 502, headers: { "Content-Type": "application/json" } },
+    return respond(
+      502,
+      "UPSTREAM_ERROR",
+      typeof message === "string" ? message : JSON.stringify(message),
     );
   } catch (err) {
-    return new Response(
-      JSON.stringify({
-        error: "Meta API failure",
-        http_code: 500,
-        message: err instanceof Error ? err.message : String(err),
-      }),
-      { status: 502, headers: { "Content-Type": "application/json" } },
+    return respond(
+      502,
+      "UPSTREAM_ERROR",
+      err instanceof Error ? err.message : String(err),
     );
   }
 }

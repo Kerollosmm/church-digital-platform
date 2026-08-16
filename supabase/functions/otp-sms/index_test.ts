@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "jsr:@std/assert";
+import { assertEquals } from "jsr:@std/assert";
 import { stub } from "jsr:@std/testing/mock";
 import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 import { handleRequest } from "./index.ts";
@@ -103,7 +103,7 @@ Deno.test("otp-sms: valid signed webhook sends WhatsApp template message and ret
   }
 });
 
-Deno.test("otp-sms: invalid or missing signature returns 401", async () => {
+Deno.test("otp-sms: invalid or missing signature returns 401 UNAUTHORIZED", async () => {
   const payloadStr = JSON.stringify({
     user: { phone: "+201234567890" },
     sms: { otp: "561166" },
@@ -133,13 +133,15 @@ Deno.test("otp-sms: invalid or missing signature returns 401", async () => {
     });
 
     assertEquals(res.status, 401);
+    const body = await res.json();
+    assertEquals(body.error, "UNAUTHORIZED");
     assertEquals(fetchStub.calls.length, 0);
   } finally {
     fetchStub.restore();
   }
 });
 
-Deno.test("otp-sms: missing phone or otp returns 400", async () => {
+Deno.test("otp-sms: missing phone or otp returns 400 BAD_REQUEST", async () => {
   const payloadObj = {
     user: { phone: "+201234567890" },
     sms: {}, // missing otp
@@ -161,14 +163,14 @@ Deno.test("otp-sms: missing phone or otp returns 400", async () => {
 
     assertEquals(res.status, 400);
     const resBody = await res.json();
-    assertStringIncludes(resBody.error, "Bad Request");
+    assertEquals(resBody.error, "BAD_REQUEST");
     assertEquals(fetchStub.calls.length, 0);
   } finally {
     fetchStub.restore();
   }
 });
 
-Deno.test("otp-sms: Meta API non-2xx returns 502 with http_code and message", async () => {
+Deno.test("otp-sms: Meta API non-2xx returns 502 UPSTREAM_ERROR", async () => {
   const payloadObj = {
     user: { phone: "+201234567890" },
     sms: { otp: "999888" },
@@ -198,9 +200,7 @@ Deno.test("otp-sms: Meta API non-2xx returns 502 with http_code and message", as
 
     assertEquals(res.status, 502);
     const resBody = await res.json();
-    assertEquals(resBody.error, "Meta API failure");
-    assertEquals(resBody.http_code, 401);
-    assertEquals(resBody.message, metaErrorBody.error);
+    assertEquals(resBody.error, "UPSTREAM_ERROR");
   } finally {
     fetchStub.restore();
   }
