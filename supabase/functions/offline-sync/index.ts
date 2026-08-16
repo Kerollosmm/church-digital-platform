@@ -63,13 +63,13 @@ export async function handleRequest(
 
     if (error) {
       console.error("sync_offline_mutations RPC error:", error);
-      return respond(500, "INTERNAL", "Sync failed");
+      return respond(500, "INTERNAL");
     }
 
     return respond(200, { success: true, result: data });
   } catch (err) {
     console.error("offline-sync edge function failure:", err);
-    return respond(500, "INTERNAL", "Internal Server Error");
+    return respond(500, "INTERNAL");
   }
 }
 
