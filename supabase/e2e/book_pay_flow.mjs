@@ -1,6 +1,7 @@
 // Run against staging with: node supabase/e2e/book_pay_flow.mjs
 // Requires env: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, PAYMOB_HMAC_KEY (staging sandbox), TEST_USER_ID, TEST_USER_PHONE, TEST_SLOT_ID
 import { createClient } from "@supabase/supabase-js";
+import { hmacFields } from "../functions/_shared/paymob.ts";
 
 const url = process.env.SUPABASE_URL;
 const service = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -10,13 +11,6 @@ const hmac = async (secret, payload) => {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-512" }, false, ["sign"]);
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
   return [...new Uint8Array(sig)].map(x => x.toString(16).padStart(2, "0")).join("");
-};
-const txnFields = (t) => {
-  const o = t.order, s = t.source_data;
-  const str = (v) => v == null ? "" : String(v);
-  return [t.amount_cents, t.created_at, t.currency, t.error_occured, t.has_parent_transaction, t.id,
-    t.integration_id, t.is_3d_secure, t.is_auth, t.is_capture, t.is_refunded,
-    t.is_standalone_payment, t.is_voided, o.id, t.owner, t.pending, s.pan, s.sub_type, s.type, t.success].map(str).join("");
 };
 
 // 1. book
@@ -44,7 +38,7 @@ const txn = {
   order: { id: 501, merchant_order_id: String(pay.id) }, owner: 1, pending: false,
   source_data: { pan: "1234", sub_type: "CARD", type: "card" },
 };
-const signature = await hmac(process.env.PAYMOB_HMAC_KEY, txnFields(txn));
+const signature = await hmac(process.env.PAYMOB_HMAC_KEY, hmacFields(txn));
 const hookRes = await fetch(`${url}/functions/v1/paymob-webhook?hmac=${signature}`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
