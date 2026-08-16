@@ -38,4 +38,6 @@
 \ir 0044_storage_buckets_test.sql
 \ir 0045_audit_hardening_test.sql
 \ir 0046_payment_refunded_test.sql
+\ir 0047_database_optimizations_test.sql
+
 
