@@ -113,7 +113,15 @@ export class FakeClient {
   seed(table: string, rows: Row[]) { this.db.set(table, rows); }
   tableRows(table: string): Row[] { return this.db.get(table)!; }
   rpcCalls: string[] = [];
-  async rpc(fn: string, args: Record<string, unknown>) { this.rpcCalls.push(fn); return { data: { rpc: fn, args }, error: null }; }
+  async rpc(fn: string, args: Record<string, unknown>) {
+    this.rpcCalls.push(fn);
+    if (fn === "claim_event_outbox_batch") {
+      const rows = this.db.get("event_outbox")?.filter((r) => r.status === "PENDING" || r.status === "PROCESSING") ?? [];
+      const batchSize = (args?.p_batch_size as number) ?? 100;
+      return { data: rows.slice(0, batchSize), error: null };
+    }
+    return { data: { rpc: fn, args }, error: null };
+  }
   from(table: string) { return new FakeQuery(this.db, table); }
 }
 
