@@ -30,6 +30,9 @@ Planning workspace (docs only, no app code) for Egyptian Coptic church digital p
 - **Direct Repository Testing**: Unit tests must instantiate and invoke the real repository/service class with fake/mock clients—never test duplicate private parsing helpers in isolation. Test fakes must be slot-aware.
 - **Repository Seams & Errors**: Single unified write seam per flow (`reserveAndPay`). Hide internal pipeline steps (`createCheckout`). Return `Either<Failure, Success>` with zero raw `PostgrestException` or `UnimplementedError` leaks. No dead parameters. Free checks must strictly verify `paidAmount == 0`.
 - **Startup Fail-Fast**: `main.dart` in mobile and admin apps must validate `SUPABASE_ANON_KEY` and throw `StateError` if empty.
+- **Function Privilege Hardening**: Every restricted `SECURITY DEFINER` function must explicitly `REVOKE ALL ON FUNCTION public.<func_name>(<args>) FROM PUBLIC, anon, authenticated;` before granting to `service_role`.
+- **Identity Sequences**: Tables using `GENERATED ALWAYS AS IDENTITY` accessible to client inserts must grant `USAGE, SELECT` on their generated sequence to `authenticated`.
+- **Negative Authorization Verification**: SQL tests for restricted functions must assert execution denial for unprivileged roles (`anon`, `authenticated`).
 
 ## Commands
 
@@ -58,6 +61,8 @@ Planning workspace (docs only, no app code) for Egyptian Coptic church digital p
 8. **Diagrams sync**: update master plan §6 state machine when adding enum/transition.
 9. **Schema sync**: update master plan §5 schema list when adding table.
 10. **Exact filenames**: include date prefix (`2026-08-05-`) in references.
+11. **Sequence permissions**: add sequence grant for `IDENTITY` tables.
+12. **Revoke PUBLIC**: use `REVOKE ALL ... FROM PUBLIC, anon, authenticated;` for restricted RPCs.
 
 ## Caveman Mode (ULTRA) — ALWAYS ON
 

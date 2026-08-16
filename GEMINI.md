@@ -39,6 +39,10 @@ C:\church
 - **Slot Locking**: `SELECT ... FOR UPDATE` on `service_slots` + active booking count check vs `capacity`. No unique partial index on slot capacity.
 - **Integrations**: Paymob HMAC (SHA512 lowercase hex, param `hmac`), WhatsApp outbox (100 rows/batch, cron 1 min), YouTube video expiry (OAuth2 bearer with refresh token exchange — secrets `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN`).
 - **Webhook & Checkout Invariants**: Enforce positive integer `merchant_order_id`, protect `PAID` records from being overwritten by failure webhooks, require Bearer token auth before DB queries, and catch malformed upstream JSON (502 + mark FAILED).
+- **Function Privilege Hardening**: PostgreSQL grants `EXECUTE` to `PUBLIC` by default. Every restricted `SECURITY DEFINER` RPC must explicitly execute: `REVOKE ALL ON FUNCTION public.<func_name>(<args>) FROM PUBLIC, anon, authenticated;` before granting to `service_role` or specific authorized roles.
+- **Identity Sequences**: Tables using `GENERATED ALWAYS AS IDENTITY` with client insert policies must explicitly grant `USAGE, SELECT` on their generated sequence to `authenticated` (e.g. via `pg_get_serial_sequence` or schema sequence grant).
+- **Negative Authorization Tests**: SQL regression tests for restricted RPCs must assert that unprivileged roles (`anon`, `authenticated`) receive permission denied (`SET LOCAL ROLE anon; ... EXCEPTION WHEN OTHERS THEN ...`).
+- **Diagnostic & Test Script Hygiene**: Test scripts must never embed plaintext credentials, API keys, or fallback secret literals. Scripts must never execute network mutations on import—guard with `if (import.meta.main)` and require explicit `RUN_LIVE_TESTS=true` with safe deterministic in-memory fallback.
 - **Migration Discipline**: Any function/schema edit requires both updating base migrations (for `db reset`) AND creating a new forward migration `00XX_*.sql` (for `db push` on existing databases).
 - **Tests**: SQL: `psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f supabase/tests/XXXX.sql`. Edge: `deno test --allow-env supabase/functions/<name>/`.
 
