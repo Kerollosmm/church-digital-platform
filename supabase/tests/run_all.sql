@@ -40,5 +40,6 @@
 \ir 0046_payment_refunded_test.sql
 \ir 0047_database_optimizations_test.sql
 \ir 0048_role_gates_test.sql
+\ir 0049_accessibility_test.sql
 
 
