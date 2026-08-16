@@ -27,6 +27,10 @@ Planning workspace (docs only, no app code) for Egyptian Coptic church digital p
 - **Migration Upgrade Path**: Never modify past applied migrations in place without creating a corresponding new forward migration (`00XX_*.sql`) so `supabase db push` applies changes on existing environments.
 - **Edge Function Defense**: Validate Bearer auth token on all checkout/protected endpoints. Wrap external upstream JSON parsing in try/catch to set payment status `FAILED` and return 502 `UPSTREAM_ERROR`. Webhook positive integer validation and `PAID` status idempotency mandatory.
 - **Admin UI Role Guard**: Admin routes must strictly require non-null `role` from `ADMIN|PRIEST|SUPER_ADMIN`.
+- **RLS & Storage Policy Guard**: Admin mutation policies on all tables and `storage.objects` must include `public.is_admin()`. Migrations creating bucket policies must run `ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;`. Target roles explicitly with `TO authenticated` or `TO anon, authenticated`. Tables must use `public.tenant_id()` default and tenant check (`tenant_id = public.tenant_id()`). Use granular DML grants (`SELECT, INSERT, UPDATE, DELETE`)—never `GRANT ALL`. No `CREATE INDEX CONCURRENTLY` in migration files.
+- **RLS Test Semantics**: Unauthorized `UPDATE`/`DELETE` tests must assert 0 rows affected (`ROW_COUNT = 0` / `is(...) = 0`), not exceptions. Test users must update `public.users.role` (not `public.profiles`). All test scripts must be transactionally isolated (`BEGIN ... ROLLBACK`).
+- **Pre-Commit Code Audit**: Never blindly trust prompt/template SQL snippets. Verify every policy for missing role gates, hardcoded tenant IDs, and overbroad grants before committing.
+- **Test Runner Registration**: Every test in `supabase/tests/` MUST be registered in `supabase/tests/run_all.sql` with `\ir`.
 - **Direct Repository Testing**: Unit tests must instantiate and invoke the real repository/service class with fake/mock clients—never test duplicate private parsing helpers in isolation. Test fakes must be slot-aware.
 - **Repository Seams & Errors**: Single unified write seam per flow (`reserveAndPay`). Hide internal pipeline steps (`createCheckout`). Return `Either<Failure, Success>` with zero raw `PostgrestException` or `UnimplementedError` leaks. No dead parameters. Free checks must strictly verify `paidAmount == 0`.
 - **Startup Fail-Fast**: `main.dart` in mobile and admin apps must validate `SUPABASE_ANON_KEY` and throw `StateError` if empty.
@@ -63,6 +67,9 @@ Planning workspace (docs only, no app code) for Egyptian Coptic church digital p
 10. **Exact filenames**: include date prefix (`2026-08-05-`) in references.
 11. **Sequence permissions**: add sequence grant for `IDENTITY` tables.
 12. **Revoke PUBLIC**: use `REVOKE ALL ... FROM PUBLIC, anon, authenticated;` for restricted RPCs.
+13. **Test Runner Sync**: Every new test file in `supabase/tests/` must be registered in `supabase/tests/run_all.sql` with `\ir`.
+14. **Storage RLS & Grants**: Migrations provisioning buckets must explicitly run `ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;` and grant granular DML (`GRANT SELECT ON storage.buckets`, `GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated`).
+15. **Tenant Invariant**: All multi-tenant tables must define `tenant_id BIGINT NOT NULL DEFAULT public.tenant_id()` and enforce `tenant_id = public.tenant_id()` on all policies.
 
 ## Caveman Mode (ULTRA) — ALWAYS ON
 

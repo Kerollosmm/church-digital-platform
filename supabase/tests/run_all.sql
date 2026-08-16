@@ -5,6 +5,7 @@
 \ir 0002_rls_test.sql
 \ir 0003_rbac_test.sql
 \ir 0004_portal_read_views_test.sql
+\ir 0005_priest_self_assign_test.sql
 \ir 0006_announcements_test.sql
 \ir 0007_available_slots_test.sql
 \ir 0008_booking_state_machine_test.sql
@@ -30,3 +31,7 @@
 \ir 0032_offline_sync_test.sql
 \ir 0034_admin_pins_test.sql
 \ir 0035_concurrency_atomic_test.sql
+\ir 0037_seed_data_test.sql
+\ir 0039_fixes_regression_test.sql
+\ir 0043_faq_categories_test.sql
+\ir 0044_storage_buckets_test.sql
