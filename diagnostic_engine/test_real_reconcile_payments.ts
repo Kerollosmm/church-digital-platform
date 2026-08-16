@@ -1,7 +1,7 @@
 import { handleRequest } from "../supabase/functions/reconcile-payments/index.ts";
 import { FakeClient } from "../supabase/functions/_shared/fake_supabase.ts";
 
-export async function runReconcilePaymentsVerification() {
+export async function runReconcilePaymentsVerification(): Promise<void> {
   console.log("\x1b[35m===================================================================\x1b[0m");
   console.log("\x1b[35m      NIGHTLY PAYMENT RECONCILIATION CRON RUNNER TEST              \x1b[0m");
   console.log("\x1b[35m===================================================================\x1b[0m\n");

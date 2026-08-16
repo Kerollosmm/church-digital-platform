@@ -1,6 +1,6 @@
 import { handleRequest } from "../supabase/functions/offline-sync/index.ts";
 
-export async function runOfflineSyncVerification() {
+export async function runOfflineSyncVerification(): Promise<void> {
   console.log("\x1b[35m===================================================================\x1b[0m");
   console.log("\x1b[35m       OFFLINE MUTATION BATCH SYNCHRONIZATION RUNNER TEST          \x1b[0m");
   console.log("\x1b[35m===================================================================\x1b[0m\n");

@@ -120,4 +120,5 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.claim_event_outbox_batch(INT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_event_outbox_batch(INT) TO service_role;

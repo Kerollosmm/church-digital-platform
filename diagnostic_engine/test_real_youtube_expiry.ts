@@ -1,7 +1,7 @@
 import { handleRequest } from "../supabase/functions/youtube-expiry/index.ts";
 import { FakeClient } from "../supabase/functions/_shared/fake_supabase.ts";
 
-export async function runYoutubeExpiryVerification() {
+export async function runYoutubeExpiryVerification(): Promise<void> {
   console.log("\x1b[35m===================================================================\x1b[0m");
   console.log("\x1b[35m       YOUTUBE RECORDED EVENT EXPIRY RUNNER TEST                   \x1b[0m");
   console.log("\x1b[35m===================================================================\x1b[0m\n");

@@ -31,4 +31,14 @@ CREATE POLICY "social_links admin all" ON public.social_links
 GRANT SELECT ON public.social_links TO anon, authenticated;
 GRANT ALL ON public.social_links TO authenticated;
 
+DO $$
+DECLARE
+  v_seq text;
+BEGIN
+  v_seq := pg_get_serial_sequence('public.social_links', 'id');
+  IF v_seq IS NOT NULL THEN
+    EXECUTE 'GRANT USAGE, SELECT ON SEQUENCE ' || v_seq || ' TO authenticated';
+  END IF;
+END $$;
+
 COMMENT ON TABLE public.social_links IS 'Official church social links, map directions, and contact channels for public directory and mobile portal.';

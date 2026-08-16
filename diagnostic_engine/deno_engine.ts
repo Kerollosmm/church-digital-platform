@@ -6,14 +6,14 @@ import * as path from "node:path";
 // ============================================================================
 // ENVIRONMENT & CREDENTIAL RESOLUTION
 // ============================================================================
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "https://qksgphryemrdrkwaqnxp.supabase.co";
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrc2dwaHJ5ZW1yZHJrd2FxbnhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NTA2MjgsImV4cCI6MjEwMTUyNjYyOH0.ebxE042EdeYMHbkJnst8aq5K6RtlYgUXEpoeHuYNHvA";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || SUPABASE_ANON_KEY;
-const PAYMOB_HMAC_KEY = Deno.env.get("PAYMOB_HMAC_KEY") || "38A2FEAE52EECCFC41F9982EDCCBF43F";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const PAYMOB_HMAC_KEY = Deno.env.get("PAYMOB_HMAC_KEY") ?? "";
 
 const TEST_PHONES = {
-  primary: "01274173806",
-  secondary: "01018306120",
+  primary: Deno.env.get("TEST_PHONE_PRIMARY") ?? "01200000001",
+  secondary: Deno.env.get("TEST_PHONE_SECONDARY") ?? "01200000002",
 };
 
 export type AuthRole = "service_role" | "admin" | "parishioner" | "anon";
