@@ -2,26 +2,28 @@
 
 ## Overview
 
-Planning workspace (docs only, no app code) for Egyptian Coptic church digital platform (Flutter mobile + Flutter Web admin on Supabase). Implementation plans = source of truth. One commit; `docs/superpowers/` untracked.
+Monorepo for a **single** Egyptian Coptic church digital platform (Flutter mobile + Flutter Web admin on Supabase backend). `specs/` (speckit) + `.specify/memory/constitution.md` = feature/product source of truth; `docs/superpowers/plans/conventions.md` = engineering conventions. Single-church deployment: tenant scaffolding stays internal, never exposed in UI or data entry.
 
 ## Core Files
 
-- `docs/superpowers/plans/2026-08-05-church-digital-platform.md` — master blueprint: decisions A1–A11, data model, booking state machine, 12-week roadmap, costs, risks
-- `docs/superpowers/plans/conventions.md` — conventions (slot locking, RLS/RPC rules, edge-function pattern, outbox pattern, enums)
-- `docs/superpowers/plans/2026-08-05-phase0-foundations.md` → `phase1-mvp` → `phase2-analytics` — TDD task plans; migrations: 0001–0003 (P0), 0004–0021 (P1), 0022–0030 (P2)
+- `docs/superpowers/plans/conventions.md` — conventions (slot locking, RLS/RPC rules, edge-function pattern, outbox pattern, enums). Sole surviving doc in `plans/`; dated plan files were removed 2026-08-17 (history in git).
+- `specs/` — speckit feature specs = feature source of truth (003 edge kernel, 004 accessibility + video delivery, 005 admin domain, 006 mobile domain); `.specify/memory/constitution.md` — project constitution.
+- `docs/adr/` — architecture decision records (ADR 0001 domain model).
 - `docs/external-onboarding-checklist.md` — external dependencies critical path (Paymob/Meta/YouTube/Play)
 
 ## Protocol
 
-1. Read master plan §1 + `conventions.md` + `docs/agents/*.md` before edit.
+1. Read `conventions.md` + `.specify/memory/constitution.md` + `docs/agents/*.md` before edit.
 2. One Task at a time. Read only active task section.
 3. Test-first: Step 1 write failing test → implement → run → PASS → commit. Never skip test steps.
 
 ## Locked Decisions
 
-- **NO live streaming**: Recorded events → YouTube **unlisted** videos. Sold via Paymob + WhatsApp. `videos.update` requires **OAuth2 bearer** (refresh token exchange, secrets `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN`). No API keys for write.
+- **NO live streaming — two video types** (owner decision 2026-08-17): **Global videos** = public catalog, external YouTube links (never embedded in-app), free or paid per video (`price = 0` = free; paid via Paymob wallets/Visa); `videos.update` requires **OAuth2 bearer** (refresh token exchange, secrets `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN`). No API keys for write. **Personal videos** = per-booking filming add-ons (baptism/wedding): staff enters buyer phone + YouTube URL + title — **title is the only metadata (NO captions/transcripts; caption enforcement removed by owner)**; `deliver_personal_video` RPC resolves buyer by exact `users.phone` match (refuses `UNKNOWN_PHONE`), requires PAID payment, is idempotent, and enqueues exactly one `video_ready` WhatsApp outbox event.
 - **Backend = Supabase**: Postgres 16 + RLS + PostgREST + Deno Edge Functions + pg_cron. No NestJS/Redis/VPS.
 - **Slot lock**: `SELECT ... FOR UPDATE` on `service_slots` + active-booking count vs `capacity` inside `book_slot()`. No unique partial index for slot capacity. `v_available_slots` returns `AVAILABLE|BOOKED|CLOSED`.
+- **Booking Confirmation Call**: Bookings stay `AWAITING_CALL` (قيد التنفيذ) until an admin confirms by phone after calling — order-processing model. States `PENDING_PAYMENT → AWAITING_CALL → CONFIRMED → COMPLETED` (guarded by `bookings_status_guard`; confirmation via `transition_booking_status`).
+- **Arabic Error Contract**: All client-facing errors use `{"error": CODE, "message_ar": "…"}` — codes frozen (`UNAUTHORIZED|FORBIDDEN|BAD_REQUEST|UPSTREAM_ERROR|INTERNAL`), Arabic sentences from the `error_messages` catalog (5-min edge cache, `FALLBACK` fail-safe). Clients display `message_ar`, never raw codes.
 - **State RPCs & Outbox**: State transitions in `SECURITY DEFINER` RPCs. Secrets in edge functions/vault. `whatsapp_outbox` drain: 100 rows/run, batches of 10, cron 1 min.
 - **Payment race**: `apply_payment` on stale/cancelled booking sets `REFUND_PENDING` + enqueues `refund_requests` (no seat granted).
 - **Migration Upgrade Path**: Never modify past applied migrations in place without creating a corresponding new forward migration (`00XX_*.sql`) so `supabase db push` applies changes on existing environments.
@@ -51,7 +53,7 @@ Planning workspace (docs only, no app code) for Egyptian Coptic church digital p
 ## Gotchas
 
 - `session-ses_02d3.md` root = stray dump. Ignore.
-- Plan files untracked in git. Stage/commit only when asked.
+- Dated plan files were deleted 2026-08-17 (git history preserves them); `conventions.md` is the only surviving doc in `docs/superpowers/plans/`. Stage/commit deletions when asked.
 - Direct edit critical/plan files; do not delegate large writes.
 - Arabic strings & prices in EGP kept as-is.
 - SQL skills: `.agents/skills/supabase` and `.agents/skills/supabase-postgres-best-practices`.
@@ -65,8 +67,8 @@ Planning workspace (docs only, no app code) for Egyptian Coptic church digital p
 5. **Empty-DB edge case**: `IS NULL`/`NOT EXISTS` needs age guard (`created_at < now() - interval`).
 6. **Unique index names**: grep existing migrations before naming.
 7. **No permanent stubs**: placeholder (`RETURN true`) needs `-- TODO(phase X, task Y)` + failing test.
-8. **Diagrams sync**: update master plan §6 state machine when adding enum/transition.
-9. **Schema sync**: update master plan §5 schema list when adding table.
+8. **Diagrams sync**: update the owning feature's `specs/<feature>/data-model.md` state machine when adding enum/transition (master-plan diagrams removed 2026-08-17).
+9. **Schema sync**: update the owning feature's `specs/<feature>/data-model.md` when adding a table.
 10. **Exact filenames**: include date prefix (`2026-08-05-`) in references.
 11. **Sequence permissions**: add sequence grant for `IDENTITY` tables.
 12. **Revoke PUBLIC**: use `REVOKE ALL ... FROM PUBLIC, anon, authenticated;` for restricted RPCs.

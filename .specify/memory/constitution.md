@@ -1,50 +1,39 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Church Digital Platform Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Test-First (NON-NEGOTIABLE)
+Every behavior change ships as: failing test → verify red → minimal implementation → verify green → commit. Never skip test steps. SQL tests run transactionally (`BEGIN ... ROLLBACK`) with explicit fixtures and are registered in `supabase/tests/run_all.sql`.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Security by Default
+All state transitions in `SECURITY DEFINER` RPCs with the REVOKE-then-grant privilege pattern. RLS on every table with explicit role targeting and tenant checks. Role authorization reads `users.role` via service-role client — never user-editable metadata; lookup failures fail closed (403). Secrets live only in environment/vault — zero credential literals or fallbacks in code.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Forward-Only Migrations
+Never edit an applied migration in place; changes ship as new forward migrations (`00XX_*.sql`). Feature migrations contain only their feature's changes — general hardening gets its own migration and test. `videos`, `payments`, and other applied tables are additive-only territory.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Arabic-First
+The product language is Arabic: UI, error messages (`message_ar` catalog), alt text, announcements. Arabic strings and EGP prices are preserved verbatim. Error codes are frozen English tokens for machines; humans see Arabic.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Deep Modules, Thin Handlers
+Cross-cutting behavior (auth, error shaping, payment gateway) lives behind small shared seams (`_shared/http.ts`, `_shared/paymob.ts`); function handlers stay thin adapters. One adapter per external concern; duplication is a defect.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Product Truth (owner-ratified 2026-08-17)
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- **Single church** deployment. Tenant scaffolding stays internal; no multi-church UI or data entry ever ships.
+- **Paymob is the only payment rail** (electronic wallets + Visa).
+- **Two video types**: Global (public catalog, external YouTube links, free or paid per video) and Personal (per-booking filming add-ons; staff enter phone + YouTube URL + title; automated WhatsApp delivery to the booking phone). Title is the only video metadata — **no captions/transcripts** (owner removed caption enforcement).
+- **Booking confirmation call is mandatory**: bookings wait in `AWAITING_CALL` until an admin confirms by phone (order-processing model); state machine `PENDING_PAYMENT → AWAITING_CALL → CONFIRMED → COMPLETED`.
+- **Error contract**: `{"error": CODE, "message_ar": "…"}` — codes frozen from feature 003; Arabic messages data-editable.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Development Workflow
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- Specs in `specs/` are the feature source of truth (speckit flow: specify → clarify → plan → tasks → implement).
+- Implementation loop: fast model implements from tasks.md; reviewer verifies against spec + AGENTS.md locked decisions with the two-axis review.
+- Commits: `feat(scope):` / `fix(scope):` / `test(scope):`, one logical change each, on feature branches.
+- One speckit command at a time across concurrent sessions (`.specify/feature.json` is a single shared pointer).
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+Constitution supersedes ad-hoc practice; AGENTS.md Locked Decisions are the enforcement detail. Amendments require an owner decision recorded in `docs/adr/` and a date bump below.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-17

@@ -15,7 +15,8 @@ C:\church
 ├── apps/mobile/   [P1: User Mobile App] (Flutter Mobile - Android/iOS, Riverpod, GoRouter, FCM, Arabic RTL)
 ├── apps/admin/    [P2: Admin Dashboard] (Flutter Web PWA - Riverpod, Realtime subs, RBAC: Admin/Priest/SuperAdmin)
 ├── supabase/      [P3: Backend Services] (Postgres 16 + RLS + SECURITY DEFINER RPCs + Deno Edge Functions + pg_cron)
-└── docs/          [SOURCE OF TRUTH] Master plan (`2026-08-05-church-digital-platform.md`), `conventions.md`, phase plans
+├── specs/         [Feature specs] (speckit: 003 edge kernel, 004 accessibility + video delivery, 005 admin domain, 006 mobile domain)
+└── docs/          [REFERENCE] `conventions.md` (living rules), `docs/adr/` (decisions), external onboarding checklist — dated plan files removed 2026-08-17
 ```
 
 ---
@@ -28,7 +29,8 @@ C:\church
 | Webhooks (Paymob, WhatsApp Meta, YouTube API, FCM, SMS) | `supabase/functions/` | Deno + TS, `deno test` |
 | Parishioner mobile UI, booking flow, status display, push | `apps/mobile/` | Flutter Mobile, Riverpod, `supabase_flutter` direct, `flutter test apps/mobile/test` |
 | Admin UI, booking management, overrides, refunds, realtime | `apps/admin/` | Flutter Web, Riverpod, Realtime, fl_chart, `flutter test apps/admin/test` |
-| Architecture decisions, state machines, API contracts | `docs/superpowers/plans/` | Read-only reference |
+| Conventions, RLS/RPC/outbox rules, enums | `docs/superpowers/plans/conventions.md` | Read-only reference |
+| Feature specs, data models, contracts | `specs/<feature>/` | speckit docs (spec/plan/data-model/contracts/tasks) |
 
 ---
 
@@ -41,7 +43,11 @@ C:\church
 - **SQL & pgTAP Testing Invariants**: RLS `UPDATE` and `DELETE` on hidden rows modify 0 rows silently (no exception thrown)—assert `ROW_COUNT = 0` / `is(...) = 0`. Catch `SQLSTATE '42501'` on `INSERT` violations. User roles live in `public.users` (not `public.profiles`). Always wrap test runs in `BEGIN; ... ROLLBACK;` with isolated fixtures.
 - **Test Runner Registration**: Every new SQL test in `supabase/tests/` MUST be registered in `supabase/tests/run_all.sql` with `\ir <filename>.sql`.
 - **Pre-Commit Code Audit**: Never adopt user or template SQL blindly; inspect every line for missing `is_admin()` checks, hardcoded IDs, and overbroad grants before writing.
-- **Integrations**: Paymob HMAC (SHA512 lowercase hex, param `hmac`), WhatsApp outbox (100 rows/batch, cron 1 min), YouTube video expiry (OAuth2 bearer with refresh token exchange — secrets `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN`).
+- **Integrations**: Paymob HMAC (SHA512 lowercase hex, param `hmac`) — Paymob is the ONLY payment rail (electronic wallets + Visa); WhatsApp outbox (100 rows/batch, cron 1 min); YouTube video expiry (OAuth2 bearer with refresh token exchange — secrets `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN`).
+- **Video Model (owner decision 2026-08-17)**: TWO types. **Global**: public catalog, external YouTube links (never embedded), free or paid per video (`price = 0` free). **Personal**: per-booking filming add-ons (baptism/wedding) — `deliver_personal_video(p_phone, p_yt_url, p_title_ar, p_payment_id)`: exact `users.phone` match (`UNKNOWN_PHONE` refusal), PAID payment bound, idempotent, enqueues one `video_ready` WhatsApp outbox event. Title is the ONLY video metadata — NO caption/transcript fields anywhere.
+- **Booking Confirmation Call**: Booking waits in `AWAITING_CALL` (قيد التنفيذ) until an admin confirms by phone — order-processing model. State machine: `PENDING_PAYMENT → AWAITING_CALL → CONFIRMED → COMPLETED`; confirm via `transition_booking_status` RPC.
+- **Arabic Error Contract**: Client-facing errors are `{"error": CODE, "message_ar": "…"}` — codes frozen (`UNAUTHORIZED|FORBIDDEN|BAD_REQUEST|UPSTREAM_ERROR|INTERNAL`), Arabic from `error_messages` catalog (5-min edge cache, FALLBACK fail-safe).
+- **Single Church**: One church in practice; tenant scaffolding internal only — never exposed in UI or data entry.
 - **Webhook & Checkout Invariants**: Enforce positive integer `merchant_order_id`, protect `PAID` records from being overwritten by failure webhooks, require Bearer token auth before DB queries, and catch malformed upstream JSON (502 + mark FAILED).
 - **Function Privilege Hardening**: PostgreSQL grants `EXECUTE` to `PUBLIC` by default. Every restricted `SECURITY DEFINER` RPC must explicitly execute: `REVOKE ALL ON FUNCTION public.<func_name>(<args>) FROM PUBLIC, anon, authenticated;` before granting to `service_role` or specific authorized roles.
 - **Identity Sequences**: Tables using `GENERATED ALWAYS AS IDENTITY` with client insert policies must explicitly grant `USAGE, SELECT` on their generated sequence to `authenticated` (e.g. via `pg_get_serial_sequence` or schema sequence grant).
