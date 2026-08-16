@@ -1,4 +1,7 @@
 \set ON_ERROR_STOP on
+
+BEGIN;
+
 create schema if not exists tests;
 create or replace function tests.expect(p_cond boolean, p_msg text) returns void
 language plpgsql as $$
@@ -81,3 +84,5 @@ begin
     where table_schema = 'public' and table_name = 'service_slots' and column_name = 'capacity'),
     'service_slots.capacity missing');
 end $$;
+
+ROLLBACK;

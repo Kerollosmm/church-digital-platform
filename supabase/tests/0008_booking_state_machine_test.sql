@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 declare v_user uuid; v_slot bigint; v_book bigint; v_id bigint;
        v_slot2 bigint; v_user2 uuid; v_book2 bigint; v_book3 bigint; v_third bigint;
@@ -87,3 +89,5 @@ begin
   if (select status from public.bookings where id = v_book) <> 'CANCELLED'
   then raise exception 'FAIL: cancel_booking must set CANCELLED'; end if;
 end $$;
+
+ROLLBACK;

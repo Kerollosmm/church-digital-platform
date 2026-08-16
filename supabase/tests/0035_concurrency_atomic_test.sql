@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0035_concurrency_atomic_test.sql: Test atomic booking decrement, invariants and schedule exclusion
 do $$
 declare
@@ -67,3 +69,5 @@ begin
   end if;
 
 end $$;
+
+ROLLBACK;

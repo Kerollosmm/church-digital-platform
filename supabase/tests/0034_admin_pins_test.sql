@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0034: admin pins test
 do $$
 declare
@@ -113,3 +115,5 @@ begin
 
   raise notice 'OK: 0034 admin pins test passed';
 end $$;
+
+ROLLBACK;

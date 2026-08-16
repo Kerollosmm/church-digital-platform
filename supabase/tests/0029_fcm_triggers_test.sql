@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0029: FCM token update RPC + FCM push outbox trigger test
 do $$
 declare
@@ -101,3 +103,5 @@ begin
 
   raise notice 'FCM triggers test OK';
 end $$;
+
+ROLLBACK;

@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 declare
   v_user uuid; v_admin uuid; v_slot1 bigint; v_slot2 bigint; v_book bigint; v_pay bigint;
@@ -65,3 +67,5 @@ begin
     raise exception 'FAIL: PARISHIONER must not call emergency_override';
   exception when insufficient_privilege or others then null; end;
 end $$;
+
+ROLLBACK;

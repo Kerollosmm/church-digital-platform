@@ -1,4 +1,7 @@
 \set ON_ERROR_STOP on
+
+BEGIN;
+
 create schema if not exists tests;
 create or replace function tests.expect(p_cond boolean, p_msg text) returns void
 language plpgsql as $$
@@ -43,3 +46,5 @@ begin
     public.rbac_allows('ADMIN', 'payments', 'DELETE'),
     'ADMIN delete grants missing');
 end $$;
+
+ROLLBACK;

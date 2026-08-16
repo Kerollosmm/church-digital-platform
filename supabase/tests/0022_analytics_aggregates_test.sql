@@ -1,3 +1,5 @@
+BEGIN;
+
 -- supabase/tests/0022_analytics_aggregates_test.sql
 DO $$
 DECLARE v_slots_total int; v_slots_booked int; v_bookings_total int; v_conf int;
@@ -61,3 +63,5 @@ BEGIN
 
   RAISE NOTICE 'PASS: materialize_analytics';
 END $$;
+
+ROLLBACK;

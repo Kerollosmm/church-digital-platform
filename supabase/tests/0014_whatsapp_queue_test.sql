@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 begin
   -- registry CHECK exists
@@ -24,3 +26,5 @@ begin
     raise exception 'FAIL: duplicate optin phone must violate PK';
   exception when unique_violation then null; end;
 end $$;
+
+ROLLBACK;

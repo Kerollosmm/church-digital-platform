@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 declare
   v_parishioner uuid; v_other uuid; v_admin uuid; v_other_booking bigint; v_amount numeric; v_price int; v_sum numeric;
@@ -81,3 +83,5 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_parishioner, 'role','authenticated')::text, true);
   if exists (select 1 from public.complaints) then raise exception 'FAIL: users must not read complaints table directly'; end if;
 end $$;
+
+ROLLBACK;

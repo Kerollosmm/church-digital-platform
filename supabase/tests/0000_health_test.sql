@@ -1,4 +1,7 @@
 \set ON_ERROR_STOP on
+
+BEGIN;
+
 do $$
 begin
   if current_database() <> 'postgres' then
@@ -11,3 +14,5 @@ begin
     raise exception 'FAIL: auth.users table missing';
   end if;
 end $$;
+
+ROLLBACK;

@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0009: Concurrency + lock verification test
 do $$
 declare
@@ -47,3 +49,5 @@ begin
     raise exception 'FAIL: capacity=1 slot must have exactly 1 winner';
   end if;
 end $$;
+
+ROLLBACK;

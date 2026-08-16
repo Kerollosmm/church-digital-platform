@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 declare v_slot bigint; v_user uuid; v_price int;
 begin
@@ -13,3 +15,5 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', (select id from public.users where role='ADMIN' limit 1), 'role','authenticated')::text, true);
   update public.service_slots set price = price + 1 where id = v_slot;
 end $$;
+
+ROLLBACK;

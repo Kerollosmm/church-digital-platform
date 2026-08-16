@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0024: transition whitelist test
 do $$
 declare v_book public.bookings;
@@ -36,3 +38,5 @@ begin
 
   raise notice 'OK';
 end $$;
+
+ROLLBACK;

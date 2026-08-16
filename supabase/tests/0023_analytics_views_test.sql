@@ -1,3 +1,5 @@
+BEGIN;
+
 -- supabase/tests/0023_analytics_views_test.sql
 DO $$
 DECLARE n int;
@@ -14,3 +16,5 @@ BEGIN
   RESET ROLE;
   RAISE NOTICE 'PASS: analytics RLS';
 END $$;
+
+ROLLBACK;

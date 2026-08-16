@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0027: event_outbox schema + enqueue behavior
 do $$
 declare v_user uuid; v_slot bigint; v_book bigint; v_pay bigint; v_n int;
@@ -45,3 +47,5 @@ begin
 
   raise notice 'OK';
 end $$;
+
+ROLLBACK;

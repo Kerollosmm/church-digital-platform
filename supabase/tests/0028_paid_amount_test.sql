@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0028: paid_amount price snapshot test
 do $$
 declare v_user uuid; v_slot bigint; v_book bigint; v_price int; v_paid int;
@@ -22,3 +24,5 @@ begin
 
   raise notice 'OK';
 end $$;
+
+ROLLBACK;

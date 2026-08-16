@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0024: transition engine + active_booking_count
 do $$
 declare
@@ -101,3 +103,5 @@ begin
 
   raise notice 'OK';
 end $$;
+
+ROLLBACK;

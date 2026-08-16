@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 declare v_user uuid; v_wait uuid; v_slot bigint; v_book bigint;
 begin
@@ -55,3 +57,5 @@ begin
   if not exists (select 1 from cron.job where jobname = 'expire-bookings')
   then raise exception 'FAIL: cron job expire-bookings must be scheduled'; end if;
 end $$;
+
+ROLLBACK;

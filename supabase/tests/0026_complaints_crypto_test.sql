@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0026: complaints pgp round-trip + access rules + view metadata read isolation
 do $$
 declare
@@ -100,3 +102,5 @@ begin
   reset role;
   raise notice 'OK';
 end $$;
+
+ROLLBACK;

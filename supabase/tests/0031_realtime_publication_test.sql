@@ -1,4 +1,7 @@
 \set ON_ERROR_STOP on
+
+BEGIN;
+
 create schema if not exists tests;
 create or replace function tests.expect(p_cond boolean, p_msg text) returns void
 language plpgsql as $$
@@ -30,3 +33,5 @@ begin
     'public.service_slots must be in supabase_realtime publication'
   );
 end $$;
+
+ROLLBACK;

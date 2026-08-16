@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0025: rbac helpers
 do $$
 declare v_u uuid; v_a uuid; v_n int;
@@ -28,3 +30,5 @@ begin
 
   raise notice 'OK';
 end $$;
+
+ROLLBACK;

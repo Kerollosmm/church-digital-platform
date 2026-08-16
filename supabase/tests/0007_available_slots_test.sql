@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 declare v int; v_user uuid;
 begin
@@ -49,3 +51,5 @@ begin
   select count(*) into v from public.v_available_slots where slot_status = 'BOOKED';
   if v < 1 then raise exception 'FAIL: parishioner must see TRUE booked slot status via v_available_slots'; end if;
 end $$;
+
+ROLLBACK;

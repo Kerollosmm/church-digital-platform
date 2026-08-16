@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 declare v_user uuid; v_slot bigint; v_book bigint; v_pay bigint; v_pay2 bigint;
 begin
@@ -51,3 +53,5 @@ begin
     then raise exception 'FAIL: late webhook must enqueue a refund request'; end if;
   end;
 end $$;
+
+ROLLBACK;

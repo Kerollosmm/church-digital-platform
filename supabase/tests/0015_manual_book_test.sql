@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 declare v_admin uuid; v_slot bigint; v_book bigint; v_phone text;
 begin
@@ -23,3 +25,5 @@ begin
     raise exception 'FAIL: PARISHIONER must not call manual_book';
   exception when insufficient_privilege or others then null; end;
 end $$;
+
+ROLLBACK;

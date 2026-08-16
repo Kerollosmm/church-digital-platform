@@ -1,3 +1,5 @@
+BEGIN;
+
 -- supabase/tests/0004_portal_read_views_test.sql
 -- Ensure slot fixture for today exists
 INSERT INTO public.services (id, title_ar, tenant_id) OVERRIDING SYSTEM VALUE VALUES (99904, 'قداس اليوم', 1) ON CONFLICT DO NOTHING;
@@ -31,3 +33,5 @@ begin
     json_build_object('sub', (select id from public.users where role='ADMIN' limit 1), 'role','authenticated')::text, true);
   update public.services set title_ar = title_ar where id = (select id from public.services limit 1);
 end $$;
+
+ROLLBACK;

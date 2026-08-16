@@ -1,3 +1,5 @@
+BEGIN;
+
 -- Test for 0039_comprehensive_fixes.sql & 0041_restrict_event_outbox_claim.sql
 DO $$
 DECLARE
@@ -39,3 +41,5 @@ BEGIN
 
   RAISE NOTICE '0039_fixes_regression_test: OK';
 END $$;
+
+ROLLBACK;

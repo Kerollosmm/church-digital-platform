@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 begin
   insert into auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -19,3 +21,5 @@ begin
   if not exists (select 1 from public.announcements where title_ar='اعلان تجريبي')
   then raise exception 'FAIL: published announcement must be visible to anon'; end if;
 end $$;
+
+ROLLBACK;

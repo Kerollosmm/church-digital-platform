@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 declare v_user uuid; v_video bigint; v_res jsonb; v_pay bigint;
 begin
@@ -54,3 +56,5 @@ begin
   select count(*) into v_unlisted_hidden from public.videos where privacy = 'UNLISTED';
   if v_unlisted_hidden <> 0 then raise exception 'FAIL: anon must not read UNLISTED videos'; end if;
 end $$;
+
+ROLLBACK;
