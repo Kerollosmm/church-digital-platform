@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.faq_categories (
   description_ar TEXT,
   position INT NOT NULL DEFAULT 0,
   published BOOLEAN NOT NULL DEFAULT true,
-  tenant_id BIGINT NOT NULL DEFAULT 1,
+  tenant_id BIGINT NOT NULL DEFAULT public.tenant_id(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   
   CONSTRAINT faq_categories_name_unique UNIQUE (name_ar, tenant_id)
@@ -28,14 +28,22 @@ DROP POLICY IF EXISTS "Admins can do everything on faq_categories" ON public.faq
 CREATE POLICY "Admins can do everything on faq_categories"
   ON public.faq_categories
   FOR ALL
-  USING (public.is_admin())
-  WITH CHECK (public.is_admin());
+  TO authenticated
+  USING (
+    public.is_admin()
+    AND tenant_id = public.tenant_id()
+  )
+  WITH CHECK (
+    public.is_admin()
+    AND tenant_id = public.tenant_id()
+  );
 
 -- Users can read only published categories
 DROP POLICY IF EXISTS "Users can read published categories" ON public.faq_categories;
 CREATE POLICY "Users can read published categories"
   ON public.faq_categories
   FOR SELECT
+  TO anon, authenticated
   USING (
     published = true
     AND tenant_id = public.tenant_id()
@@ -67,7 +75,7 @@ ON CONFLICT (name_ar, tenant_id) DO NOTHING;
 
 -- 8. Grants and sequence permissions
 GRANT SELECT ON public.faq_categories TO anon, authenticated;
-GRANT ALL ON public.faq_categories TO authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.faq_categories TO authenticated;
 
 DO $$
 DECLARE

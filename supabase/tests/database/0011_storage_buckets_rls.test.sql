@@ -13,8 +13,8 @@ SELECT plan(9);
 SELECT tests.create_supabase_user('admin_storage@example.com', 'member');
 SELECT tests.create_supabase_user('user_storage@example.com', 'member');
 
--- Set admin role
-UPDATE public.profiles SET role = 'ADMIN' WHERE id = tests.get_supabase_uid('admin_storage@example.com');
+-- Set admin role in public.users
+UPDATE public.users SET role = 'ADMIN' WHERE id = tests.get_supabase_uid('admin_storage@example.com');
 
 -- Test 1: Buckets exist
 SELECT results_eq(
@@ -28,7 +28,6 @@ SELECT results_eq(
 );
 
 -- Test 2: Admin can insert into priest_photos bucket
--- Note: We can't actually upload files in pgTAP, but we can verify policies exist.
 SELECT has_policy(
   'storage.objects',
   'Admins can upload priest photos',

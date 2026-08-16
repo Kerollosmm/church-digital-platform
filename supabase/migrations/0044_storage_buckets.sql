@@ -48,10 +48,11 @@ ON CONFLICT (id) DO NOTHING;
 -- priest_photos bucket policies
 -- =====================================================
 
--- Admins can upload/update/delete priest photos
+-- Admins can upload priest photos
 CREATE POLICY "Admins can upload priest photos"
   ON storage.objects
   FOR INSERT
+  TO authenticated
   WITH CHECK (
     bucket_id = 'priest_photos'
     AND public.is_admin()
@@ -60,6 +61,7 @@ CREATE POLICY "Admins can upload priest photos"
 CREATE POLICY "Admins can update priest photos"
   ON storage.objects
   FOR UPDATE
+  TO authenticated
   USING (
     bucket_id = 'priest_photos'
     AND public.is_admin()
@@ -68,6 +70,7 @@ CREATE POLICY "Admins can update priest photos"
 CREATE POLICY "Admins can delete priest photos"
   ON storage.objects
   FOR DELETE
+  TO authenticated
   USING (
     bucket_id = 'priest_photos'
     AND public.is_admin()
@@ -77,6 +80,7 @@ CREATE POLICY "Admins can delete priest photos"
 CREATE POLICY "Users can read priest photos"
   ON storage.objects
   FOR SELECT
+  TO authenticated
   USING (
     bucket_id = 'priest_photos'
   );
@@ -85,10 +89,11 @@ CREATE POLICY "Users can read priest photos"
 -- church_media bucket policies
 -- =====================================================
 
--- Admins can upload/update/delete church media
+-- Admins can upload church media
 CREATE POLICY "Admins can upload church media"
   ON storage.objects
   FOR INSERT
+  TO authenticated
   WITH CHECK (
     bucket_id = 'church_media'
     AND public.is_admin()
@@ -97,6 +102,7 @@ CREATE POLICY "Admins can upload church media"
 CREATE POLICY "Admins can update church media"
   ON storage.objects
   FOR UPDATE
+  TO authenticated
   USING (
     bucket_id = 'church_media'
     AND public.is_admin()
@@ -105,14 +111,17 @@ CREATE POLICY "Admins can update church media"
 CREATE POLICY "Admins can delete church media"
   ON storage.objects
   FOR DELETE
+  TO authenticated
   USING (
     bucket_id = 'church_media'
+    AND public.is_admin()
   );
 
 -- Users can read church media
 CREATE POLICY "Users can read church media"
   ON storage.objects
   FOR SELECT
+  TO authenticated
   USING (
     bucket_id = 'church_media'
   );
@@ -121,10 +130,11 @@ CREATE POLICY "Users can read church media"
 -- announcement_images bucket policies
 -- =====================================================
 
--- Admins can upload/update/delete announcement images
+-- Admins can upload announcement images
 CREATE POLICY "Admins can upload announcement images"
   ON storage.objects
   FOR INSERT
+  TO authenticated
   WITH CHECK (
     bucket_id = 'announcement_images'
     AND public.is_admin()
@@ -133,6 +143,7 @@ CREATE POLICY "Admins can upload announcement images"
 CREATE POLICY "Admins can update announcement images"
   ON storage.objects
   FOR UPDATE
+  TO authenticated
   USING (
     bucket_id = 'announcement_images'
     AND public.is_admin()
@@ -141,6 +152,7 @@ CREATE POLICY "Admins can update announcement images"
 CREATE POLICY "Admins can delete announcement images"
   ON storage.objects
   FOR DELETE
+  TO authenticated
   USING (
     bucket_id = 'announcement_images'
     AND public.is_admin()
@@ -150,6 +162,7 @@ CREATE POLICY "Admins can delete announcement images"
 CREATE POLICY "Users can read announcement images"
   ON storage.objects
   FOR SELECT
+  TO authenticated
   USING (
     bucket_id = 'announcement_images'
   );
@@ -162,5 +175,3 @@ COMMENT ON COLUMN storage.objects.bucket_id IS 'Bucket identifier (priest_photos
 GRANT USAGE ON SCHEMA storage TO authenticated;
 GRANT ALL ON storage.objects TO authenticated;
 GRANT ALL ON storage.buckets TO authenticated;
-
--- Note: anon users can only SELECT (read) via the policies above.
