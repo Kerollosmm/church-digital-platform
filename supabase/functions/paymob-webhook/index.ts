@@ -131,27 +131,25 @@ export async function handleRequest(
 }
 
 if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
+  const hmacKey = Deno.env.get("PAYMOB_HMAC_KEY");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!hmacKey || !supabaseUrl || !serviceKey) {
+    throw new Error(
+      "Missing required environment variables: PAYMOB_HMAC_KEY, SUPABASE_URL, or SUPABASE_SERVICE_ROLE_KEY.",
+    );
+  }
   Deno.serve((req) =>
     handleRequest(req, {
-      getClient: () =>
-        makeServiceClient(
-          Deno.env.get("SUPABASE_URL"),
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
-        ),
-      hmacKey: Deno.env.get("PAYMOB_HMAC_KEY")!,
+      getClient: () => makeServiceClient(supabaseUrl, serviceKey),
+      hmacKey,
       applyPayment: async (id) => {
-        const sb = makeServiceClient(
-          Deno.env.get("SUPABASE_URL"),
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
-        );
+        const sb = makeServiceClient(supabaseUrl, serviceKey);
         const { error } = await sb.rpc("apply_payment", { p_payment_id: id });
         if (error) throw error;
       },
       applyVideoPayment: async (id) => {
-        const sb = makeServiceClient(
-          Deno.env.get("SUPABASE_URL"),
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
-        );
+        const sb = makeServiceClient(supabaseUrl, serviceKey);
         const { error } = await sb.rpc("apply_video_payment", {
           p_payment_id: id,
         });
@@ -160,3 +158,4 @@ if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
     }),
   );
 }
+

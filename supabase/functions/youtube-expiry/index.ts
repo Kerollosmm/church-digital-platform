@@ -88,17 +88,26 @@ export async function handleRequest(
 }
 
 if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
+  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+  const refreshToken = Deno.env.get("GOOGLE_REFRESH_TOKEN");
+
+  if (!supabaseUrl || !serviceKey || !clientId || !clientSecret || !refreshToken) {
+    throw new Error(
+      "Missing required environment variables for youtube-expiry.",
+    );
+  }
+
   Deno.serve((req) =>
     handleRequest(req, {
-      getClient: () =>
-        makeServiceClient(
-          Deno.env.get("SUPABASE_URL"),
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
-        ),
+      getClient: () => makeServiceClient(supabaseUrl, serviceKey),
       fetch,
-      clientId: Deno.env.get("GOOGLE_CLIENT_ID")!,
-      clientSecret: Deno.env.get("GOOGLE_CLIENT_SECRET")!,
-      refreshToken: Deno.env.get("GOOGLE_REFRESH_TOKEN")!,
+      clientId,
+      clientSecret,
+      refreshToken,
     }),
   );
 }
+
