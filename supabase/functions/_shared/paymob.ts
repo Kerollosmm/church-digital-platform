@@ -25,41 +25,53 @@ export interface PaymobCheckoutParams {
   expiration?: number;
 }
 
-export interface PaymobCheckoutResult {
-  checkoutUrl: string;
-  paymobOrderId: number;
-  paymentKey: string;
-}
+export type PaymobError = {
+  ok: false;
+  kind: "UPSTREAM_ERROR";
+  status: number;
+  message: string;
+  raw?: unknown;
+};
 
-export interface PaymobRefundParams {
-  transactionId: string | number;
-  amountCents: number;
-}
+export type PaymobSessionResult =
+  | { ok: true; token: string }
+  | PaymobError;
 
-export interface PaymobRefundResult {
-  success: boolean;
-  raw: unknown;
-}
+export type PaymobCheckoutResult =
+  | { ok: true; checkoutUrl: string; paymobOrderId: number; paymentKey: string }
+  | PaymobError;
 
-export interface PaymobOrderStatusResult {
-  id: number;
-  transactions: Array<{
-    id: number;
-    success: boolean;
-    amount_cents: number;
-    [key: string]: unknown;
-  }>;
-  [key: string]: unknown;
-}
+export type PaymobRefundResult =
+  | { ok: true; raw: unknown }
+  | PaymobError;
+
+export type PaymobOrderStatusResult =
+  | {
+      ok: true;
+      id: number;
+      transactions: Array<{
+        id: number;
+        success: boolean;
+        amount_cents: number;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    }
+  | PaymobError;
 
 export interface PaymobAdapter {
-  session(): Promise<string>;
+  session(): Promise<PaymobSessionResult>;
   checkout(params: PaymobCheckoutParams): Promise<PaymobCheckoutResult>;
   refund(params: PaymobRefundParams): Promise<PaymobRefundResult>;
   orderStatus(
     merchantOrderIdOrPaymobOrderId: string | number,
   ): Promise<PaymobOrderStatusResult>;
   hmacFields(txn: Record<string, unknown>): string;
+}
+
+export interface PaymobRefundParams {
+  transactionId: string | number;
+  amountCents: number;
 }
 
 export function hmacFields(t: Record<string, unknown>): string {
@@ -92,6 +104,27 @@ export function hmacFields(t: Record<string, unknown>): string {
     .join("");
 }
 
+export async function markPaymentFailed(
+  client: any,
+  paymentId: number,
+  opts?: { reason?: string },
+): Promise<void> {
+  try {
+    const updatePayload: Record<string, unknown> = {
+      status: "FAILED",
+    };
+    if (opts?.reason) {
+      updatePayload.raw_webhook = {
+        failure_reason: opts.reason,
+        failed_at: new Date().toISOString(),
+      };
+    }
+    await client.from("payments").update(updatePayload).eq("id", paymentId);
+  } catch (err) {
+    console.error(`Failed to mark payment ${paymentId} as FAILED:`, err);
+  }
+}
+
 export function createPaymob(opts: PaymobClientOptions): PaymobAdapter {
   const baseUrl = (opts.baseUrl ?? "https://accept.paymob.com").replace(
     /\/+$/,
@@ -102,167 +135,284 @@ export function createPaymob(opts: PaymobClientOptions): PaymobAdapter {
   let cachedToken: string | null = null;
   let cachedExpiresAt = 0;
 
-  async function parseJson(res: Response): Promise<Record<string, unknown>> {
+  async function parseJson(
+    res: Response,
+  ): Promise<
+    | { ok: true; json: Record<string, unknown> }
+    | { ok: false; error: PaymobError }
+  > {
     try {
       const parsed = await res.json();
       if (typeof parsed !== "object" || parsed === null) {
-        throw new Error("Invalid JSON body");
+        return {
+          ok: false,
+          error: {
+            ok: false,
+            kind: "UPSTREAM_ERROR",
+            status: res.status || 502,
+            message: "Invalid JSON body from Paymob upstream",
+          },
+        };
       }
-      return parsed as Record<string, unknown>;
+      return { ok: true, json: parsed as Record<string, unknown> };
     } catch {
-      throw new Error("UPSTREAM_ERROR: failed to parse JSON response");
+      return {
+        ok: false,
+        error: {
+          ok: false,
+          kind: "UPSTREAM_ERROR",
+          status: res.status || 502,
+          message: "Failed to parse JSON response from Paymob upstream",
+        },
+      };
     }
   }
 
-  async function session(): Promise<string> {
+  async function session(): Promise<PaymobSessionResult> {
     const now = Date.now();
     if (cachedToken && now < cachedExpiresAt - 60_000) {
-      return cachedToken;
+      return { ok: true, token: cachedToken };
     }
 
-    const res = await fetchFn(`${baseUrl}/api/auth/tokens`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ api_key: opts.apiKey }),
-    });
+    try {
+      const res = await fetchFn(`${baseUrl}/api/auth/tokens`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ api_key: opts.apiKey }),
+      });
 
-    if (!res.ok) {
-      throw new Error(`UPSTREAM_ERROR: HTTP ${res.status}`);
+      if (!res.ok) {
+        return {
+          ok: false,
+          kind: "UPSTREAM_ERROR",
+          status: res.status,
+          message: `Paymob auth token request failed with status ${res.status}`,
+        };
+      }
+
+      const parsed = await parseJson(res);
+      if (!parsed.ok) return parsed.error;
+
+      const token = String(parsed.json.token ?? "");
+      if (!token) {
+        return {
+          ok: false,
+          kind: "UPSTREAM_ERROR",
+          status: 502,
+          message: "Token missing in Paymob auth response",
+        };
+      }
+
+      const expiresInSec =
+        typeof parsed.json.expires_in === "number"
+          ? parsed.json.expires_in
+          : 3600;
+      cachedToken = token;
+      cachedExpiresAt = now + expiresInSec * 1000;
+      return { ok: true, token };
+    } catch (err: any) {
+      return {
+        ok: false,
+        kind: "UPSTREAM_ERROR",
+        status: 502,
+        message: err?.message ?? "Network error contacting Paymob auth",
+      };
     }
-
-    const json = await parseJson(res);
-    const token = String(json.token ?? "");
-    if (!token) {
-      throw new Error("UPSTREAM_ERROR: token missing in auth response");
-    }
-
-    const expiresInSec =
-      typeof json.expires_in === "number" ? json.expires_in : 3600;
-    cachedToken = token;
-    cachedExpiresAt = now + expiresInSec * 1000;
-    return token;
   }
 
   async function checkout(
     params: PaymobCheckoutParams,
   ): Promise<PaymobCheckoutResult> {
-    const token = await session();
+    const sessionRes = await session();
+    if (!sessionRes.ok) return sessionRes;
+    const token = sessionRes.token;
 
-    // Step 1: Order registration
-    const orderRes = await fetchFn(`${baseUrl}/api/ecommerce/orders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        auth_token: token,
-        delivery_needed: "false",
-        amount_cents: String(params.amountCents),
-        currency: params.currency ?? "EGP",
-        merchant_order_id: String(params.merchantOrderId),
-        items: [],
-      }),
-    });
+    try {
+      // Step 1: Order registration
+      const orderRes = await fetchFn(`${baseUrl}/api/ecommerce/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auth_token: token,
+          delivery_needed: "false",
+          amount_cents: String(params.amountCents),
+          currency: params.currency ?? "EGP",
+          merchant_order_id: String(params.merchantOrderId),
+          items: [],
+        }),
+      });
 
-    if (!orderRes.ok) {
-      throw new Error(
-        `UPSTREAM_ERROR: order creation failed with status ${orderRes.status}`,
-      );
+      if (!orderRes.ok) {
+        return {
+          ok: false,
+          kind: "UPSTREAM_ERROR",
+          status: orderRes.status,
+          message: `Paymob order creation failed with status ${orderRes.status}`,
+        };
+      }
+
+      const orderParsed = await parseJson(orderRes);
+      if (!orderParsed.ok) return orderParsed.error;
+
+      const paymobOrderId = Number(orderParsed.json.id ?? 0);
+      if (!paymobOrderId) {
+        return {
+          ok: false,
+          kind: "UPSTREAM_ERROR",
+          status: 502,
+          message: "Paymob order ID missing in order creation response",
+        };
+      }
+
+      // Step 2: Payment key generation
+      const keyRes = await fetchFn(`${baseUrl}/api/acceptance/payment_keys`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auth_token: token,
+          amount_cents: String(params.amountCents),
+          expiration: params.expiration ?? 3600,
+          order_id: String(paymobOrderId),
+          billing_data: {
+            first_name: params.billingData?.first_name ?? "Parishioner",
+            last_name: params.billingData?.last_name ?? "User",
+            email: params.billingData?.email ?? "p@example.com",
+            phone_number: params.billingData?.phone_number ?? "+201000000000",
+            country: params.billingData?.country ?? "EG",
+            city: params.billingData?.city ?? "Cairo",
+            street: params.billingData?.street ?? "N/A",
+            building: params.billingData?.building ?? "N/A",
+            floor: params.billingData?.floor ?? "N/A",
+            apartment: params.billingData?.apartment ?? "N/A",
+          },
+          currency: params.currency ?? "EGP",
+          integration_id: params.integrationId,
+        }),
+      });
+
+      if (!keyRes.ok) {
+        return {
+          ok: false,
+          kind: "UPSTREAM_ERROR",
+          status: keyRes.status,
+          message: `Paymob payment key creation failed with status ${keyRes.status}`,
+        };
+      }
+
+      const keyParsed = await parseJson(keyRes);
+      if (!keyParsed.ok) return keyParsed.error;
+
+      const paymentKey = String(keyParsed.json.token ?? "");
+      if (!paymentKey) {
+        return {
+          ok: false,
+          kind: "UPSTREAM_ERROR",
+          status: 502,
+          message: "Payment key missing in Paymob payment_keys response",
+        };
+      }
+
+      const checkoutUrl = `${baseUrl}/api/acceptance/iframes/${params.iframeId}?payment_token=${paymentKey}`;
+
+      return {
+        ok: true,
+        checkoutUrl,
+        paymobOrderId,
+        paymentKey,
+      };
+    } catch (err: any) {
+      return {
+        ok: false,
+        kind: "UPSTREAM_ERROR",
+        status: 502,
+        message: err?.message ?? "Network error contacting Paymob checkout",
+      };
     }
-    const orderJson = await parseJson(orderRes);
-    const paymobOrderId = Number(orderJson.id ?? 0);
-    if (!paymobOrderId) {
-      throw new Error("UPSTREAM_ERROR: paymob order id missing");
-    }
-
-    // Step 2: Payment key generation
-    const keyRes = await fetchFn(`${baseUrl}/api/acceptance/payment_keys`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        auth_token: token,
-        amount_cents: String(params.amountCents),
-        expiration: params.expiration ?? 3600,
-        order_id: String(paymobOrderId),
-        billing_data: {
-          first_name: params.billingData?.first_name ?? "Parishioner",
-          last_name: params.billingData?.last_name ?? "User",
-          email: params.billingData?.email ?? "p@example.com",
-          phone_number: params.billingData?.phone_number ?? "+201000000000",
-          country: params.billingData?.country ?? "EG",
-          city: params.billingData?.city ?? "Cairo",
-          street: params.billingData?.street ?? "N/A",
-          building: params.billingData?.building ?? "N/A",
-          floor: params.billingData?.floor ?? "N/A",
-          apartment: params.billingData?.apartment ?? "N/A",
-        },
-        currency: params.currency ?? "EGP",
-        integration_id: params.integrationId,
-      }),
-    });
-
-    if (!keyRes.ok) {
-      throw new Error(
-        `UPSTREAM_ERROR: payment key creation failed with status ${keyRes.status}`,
-      );
-    }
-    const keyJson = await parseJson(keyRes);
-    const paymentKey = String(keyJson.token ?? "");
-    if (!paymentKey) {
-      throw new Error("UPSTREAM_ERROR: payment key missing");
-    }
-
-    const checkoutUrl = `${baseUrl}/api/acceptance/iframes/${params.iframeId}?payment_token=${paymentKey}`;
-
-    return {
-      checkoutUrl,
-      paymobOrderId,
-      paymentKey,
-    };
   }
 
   async function refund(
     params: PaymobRefundParams,
   ): Promise<PaymobRefundResult> {
-    const token = await session();
-    const res = await fetchFn(`${baseUrl}/api/acceptance/void_refund/refund`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        auth_token: token,
-        transaction_id: String(params.transactionId),
-        amount_cents: params.amountCents,
-      }),
-    });
+    const sessionRes = await session();
+    if (!sessionRes.ok) return sessionRes;
+    const token = sessionRes.token;
 
-    if (!res.ok) {
-      throw new Error(`UPSTREAM_ERROR: refund failed with status ${res.status}`);
+    try {
+      const res = await fetchFn(`${baseUrl}/api/acceptance/void_refund/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auth_token: token,
+          transaction_id: String(params.transactionId),
+          amount_cents: params.amountCents,
+        }),
+      });
+
+      if (!res.ok) {
+        return {
+          ok: false,
+          kind: "UPSTREAM_ERROR",
+          status: res.status,
+          message: `Paymob refund failed with status ${res.status}`,
+        };
+      }
+
+      const parsed = await parseJson(res);
+      if (!parsed.ok) return parsed.error;
+
+      return {
+        ok: true,
+        raw: parsed.json,
+      };
+    } catch (err: any) {
+      return {
+        ok: false,
+        kind: "UPSTREAM_ERROR",
+        status: 502,
+        message: err?.message ?? "Network error contacting Paymob refund",
+      };
     }
-
-    const json = await parseJson(res);
-    return {
-      success: true,
-      raw: json,
-    };
   }
 
   async function orderStatus(
     orderId: string | number,
   ): Promise<PaymobOrderStatusResult> {
-    const token = await session();
-    const res = await fetchFn(`${baseUrl}/api/ecommerce/orders/${orderId}`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const sessionRes = await session();
+    if (!sessionRes.ok) return sessionRes;
+    const token = sessionRes.token;
 
-    if (!res.ok) {
-      throw new Error(
-        `UPSTREAM_ERROR: orderStatus failed with status ${res.status}`,
-      );
+    try {
+      const res = await fetchFn(`${baseUrl}/api/ecommerce/orders/${orderId}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        return {
+          ok: false,
+          kind: "UPSTREAM_ERROR",
+          status: res.status,
+          message: `Paymob orderStatus failed with status ${res.status}`,
+        };
+      }
+
+      const parsed = await parseJson(res);
+      if (!parsed.ok) return parsed.error;
+
+      return {
+        ok: true,
+        ...(parsed.json as any),
+      };
+    } catch (err: any) {
+      return {
+        ok: false,
+        kind: "UPSTREAM_ERROR",
+        status: 502,
+        message: err?.message ?? "Network error contacting Paymob orderStatus",
+      };
     }
-
-    const json = (await parseJson(res)) as unknown as PaymobOrderStatusResult;
-    return json;
   }
 
   return {

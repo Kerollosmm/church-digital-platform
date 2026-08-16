@@ -2,7 +2,10 @@ import type { SupabaseClient, User } from "npm:@supabase/supabase-js@2";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { makeServiceClient } from "../_shared/client.ts";
 import { auth, respond } from "../_shared/http.ts";
-import { createPaymob, PaymobCheckoutResult } from "../_shared/paymob.ts";
+import {
+  createPaymob,
+  markPaymentFailed,
+} from "../_shared/paymob.ts";
 
 export interface Deps {
   getClient(): unknown;
@@ -15,18 +18,6 @@ export interface Deps {
     token: string,
   ) => Promise<{ data: { user: User | null }; error: unknown }>;
   client?: unknown;
-}
-
-async function markPaymentFailed(
-  supabase: SupabaseClient,
-  paymentId: number | null,
-) {
-  if (paymentId) {
-    await supabase
-      .from("payments")
-      .update({ status: "FAILED" })
-      .eq("id", paymentId);
-  }
 }
 
 export async function handleRequest(
@@ -162,20 +153,23 @@ export async function handleRequest(
       fetch: deps?.fetch,
     });
 
-    let checkoutResult: PaymobCheckoutResult;
-    try {
-      checkoutResult = await paymob.checkout({
-        amountCents,
-        merchantOrderId: String(orderId),
-        integrationId,
-        iframeId,
-      });
-    } catch (err) {
-      await markPaymentFailed(supabase, createdPaymentId);
+    const checkoutResult = await paymob.checkout({
+      amountCents,
+      merchantOrderId: String(orderId),
+      integrationId,
+      iframeId,
+    });
+
+    if (!checkoutResult.ok) {
+      if (createdPaymentId) {
+        await markPaymentFailed(supabase, createdPaymentId, {
+          reason: checkoutResult.message,
+        });
+      }
       return respond(
         502,
         "UPSTREAM_ERROR",
-        err instanceof Error ? err.message : "Paymob upstream error",
+        checkoutResult.message || "Paymob upstream error",
       );
     }
 
@@ -185,11 +179,15 @@ export async function handleRequest(
     });
   } catch (e) {
     console.error("paymob-checkout error", e);
-    return respond(500, "INTERNAL", "Checkout execution failed");
+    return respond(500, "INTERNAL");
   }
 }
 
 if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
+  const paymobApiKey = Deno.env.get("PAYMOB_API_KEY");
+  if (!paymobApiKey) {
+    throw new Error("Missing PAYMOB_API_KEY environment variable.");
+  }
   Deno.serve((req) =>
     handleRequest(req, {
       getClient: () =>
@@ -205,7 +203,7 @@ if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
         return await client.auth.getUser(token);
       },
       fetch,
-      paymobApiKey: Deno.env.get("PAYMOB_API_KEY")!,
+      paymobApiKey,
       integrationId: Number(Deno.env.get("PAYMOB_INTEGRATION_ID") ?? "0"),
       iframeId: Number(Deno.env.get("PAYMOB_IFRAME_ID") ?? "0"),
       amountMultiplier: 100,

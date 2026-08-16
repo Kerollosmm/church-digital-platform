@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "jsr:@std/assert";
+import { assertEquals } from "jsr:@std/assert";
 import { createPaymob, hmacFields } from "../_shared/paymob.ts";
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -19,11 +19,15 @@ Deno.test("paymob adapter: session caches auth token until expiry - 60s", async 
   };
 
   const client = createPaymob({ apiKey: "test_key", fetch: fakeFetch as typeof fetch });
-  const token1 = await client.session();
-  const token2 = await client.session();
+  const res1 = await client.session();
+  const res2 = await client.session();
 
-  assertEquals(token1, "tok_123");
-  assertEquals(token2, "tok_123");
+  assertEquals(res1.ok, true);
+  assertEquals(res2.ok, true);
+  if (res1.ok && res2.ok) {
+    assertEquals(res1.token, "tok_123");
+    assertEquals(res2.token, "tok_123");
+  }
   assertEquals(callCount, 1); // Caching prevents 2nd call
 });
 
@@ -56,12 +60,15 @@ Deno.test("paymob adapter: checkout executes 3-step handshake and returns iframe
     iframeId: 34,
   });
 
-  assertEquals(result.paymobOrderId, 101);
-  assertEquals(result.paymentKey, "pkey_777");
-  assertEquals(
-    result.checkoutUrl,
-    "https://accept.paymob.com/api/acceptance/iframes/34?payment_token=pkey_777",
-  );
+  assertEquals(result.ok, true);
+  if (result.ok) {
+    assertEquals(result.paymobOrderId, 101);
+    assertEquals(result.paymentKey, "pkey_777");
+    assertEquals(
+      result.checkoutUrl,
+      "https://accept.paymob.com/api/acceptance/iframes/34?payment_token=pkey_777",
+    );
+  }
 });
 
 Deno.test("paymob adapter: refund calls void_refund endpoint", async () => {
@@ -83,7 +90,7 @@ Deno.test("paymob adapter: refund calls void_refund endpoint", async () => {
   const client = createPaymob({ apiKey: "test_key", fetch: fakeFetch as typeof fetch });
   const res = await client.refund({ transactionId: "txn_555", amountCents: 2500 });
   assertEquals(refundCalled, true);
-  assertEquals(res.success, true);
+  assertEquals(res.ok, true);
 });
 
 Deno.test("paymob adapter: orderStatus fetches order and transactions", async () => {
@@ -102,31 +109,35 @@ Deno.test("paymob adapter: orderStatus fetches order and transactions", async ()
 
   const client = createPaymob({ apiKey: "test_key", fetch: fakeFetch as typeof fetch });
   const status = await client.orderStatus("ord_123");
-  assertEquals(status.id, 123);
-  assertEquals(status.transactions.length, 1);
-  assertEquals(status.transactions[0].success, true);
+  assertEquals(status.ok, true);
+  if (status.ok) {
+    assertEquals(status.id, 123);
+    assertEquals(status.transactions.length, 1);
+    assertEquals(status.transactions[0].success, true);
+  }
 });
 
-Deno.test("paymob adapter: non-2xx throws UPSTREAM_ERROR", async () => {
+Deno.test("paymob adapter: non-2xx returns typed UPSTREAM_ERROR with status", async () => {
   const fakeFetch = () => Promise.resolve(new Response("Service Unavailable", { status: 503 }));
   const client = createPaymob({ apiKey: "test_key", fetch: fakeFetch as typeof fetch });
 
-  await assertRejects(
-    () => client.session(),
-    Error,
-    "UPSTREAM_ERROR",
-  );
+  const res = await client.session();
+  assertEquals(res.ok, false);
+  if (!res.ok) {
+    assertEquals(res.kind, "UPSTREAM_ERROR");
+    assertEquals(res.status, 503);
+  }
 });
 
-Deno.test("paymob adapter: 2xx with invalid JSON throws UPSTREAM_ERROR", async () => {
+Deno.test("paymob adapter: 2xx with invalid JSON returns typed UPSTREAM_ERROR", async () => {
   const fakeFetch = () => Promise.resolve(new Response("<html>Bad Gateway</html>", { status: 200 }));
   const client = createPaymob({ apiKey: "test_key", fetch: fakeFetch as typeof fetch });
 
-  await assertRejects(
-    () => client.session(),
-    Error,
-    "UPSTREAM_ERROR",
-  );
+  const res = await client.session();
+  assertEquals(res.ok, false);
+  if (!res.ok) {
+    assertEquals(res.kind, "UPSTREAM_ERROR");
+  }
 });
 
 Deno.test("paymob adapter: hmacFields correctly concatenates 20 fields", () => {

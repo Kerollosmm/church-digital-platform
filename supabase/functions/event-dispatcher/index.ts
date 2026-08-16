@@ -133,23 +133,22 @@ export async function triggerPaymobRefund(
   const paymob =
     deps.paymob ??
     createPaymob({ apiKey: deps.paymobApiKey, fetch: deps.fetch });
-  try {
-    const res = await paymob.refund({
-      transactionId: pay.gateway_ref,
-      amountCents: Math.round(Number(amount) * deps.amountMultiplier),
-    });
-    if (res.success) {
-      await client
-        .from("payments")
-        .update({ status: "REFUNDED" })
-        .eq("id", payment_id);
-      return { ok: true, retryable: false };
-    }
-    return { ok: false, retryable: false };
-  } catch (err: any) {
-    const is4xx = String(err?.message ?? "").includes("4");
-    return { ok: false, retryable: !is4xx };
+
+  const res = await paymob.refund({
+    transactionId: pay.gateway_ref,
+    amountCents: Math.round(Number(amount) * deps.amountMultiplier),
+  });
+
+  if (res.ok) {
+    await client
+      .from("payments")
+      .update({ status: "REFUNDED" })
+      .eq("id", payment_id);
+    return { ok: true, retryable: false };
   }
+
+  const is4xx = res.status >= 400 && res.status < 500;
+  return { ok: false, retryable: !is4xx };
 }
 
 let cachedFcmToken: { token: string; expiresAt: number; key: string } | null =
