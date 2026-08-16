@@ -33,5 +33,7 @@
 \ir 0035_concurrency_atomic_test.sql
 \ir 0037_seed_data_test.sql
 \ir 0039_fixes_regression_test.sql
+\ir 0042_social_links_test.sql
 \ir 0043_faq_categories_test.sql
 \ir 0044_storage_buckets_test.sql
+\ir 0045_audit_hardening_test.sql
