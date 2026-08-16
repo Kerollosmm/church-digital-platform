@@ -2,18 +2,37 @@ import { assertEquals } from "jsr:@std/assert";
 import { handleRequest } from "./index.ts";
 import { FakeClient } from "../_shared/fake_supabase.ts";
 
-Deno.test("offline-sync: rejects non-array mutations with HTTP 400", async () => {
+Deno.test("offline-sync: rejects request with missing Authorization header (401) even with deps", async () => {
   const req = new Request("https://x/functions/v1/offline-sync", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mutations: [] }),
+  });
+  const res = await handleRequest(req, {
+    client: new FakeClient([]),
+    getUser: () => Promise.resolve({ data: { user: { id: "u-1" } as any }, error: null }),
+  });
+  assertEquals(res.status, 401);
+  const json = await res.json();
+  assertEquals(json.error, "UNAUTHORIZED");
+});
+
+Deno.test("offline-sync: rejects non-array mutations with HTTP 400 BAD_REQUEST", async () => {
+  const req = new Request("https://x/functions/v1/offline-sync", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer valid-token",
+    },
     body: JSON.stringify({ mutations: "invalid" }),
   });
   const res = await handleRequest(req, {
-    getClient: () => new FakeClient([]),
+    client: new FakeClient([]),
+    getUser: () => Promise.resolve({ data: { user: { id: "u-1" } as any }, error: null }),
   });
   assertEquals(res.status, 400);
   const json = await res.json();
-  assertEquals(json.error, "Invalid payload. 'mutations' must be an array.");
+  assertEquals(json.error, "BAD_REQUEST");
 });
 
 Deno.test("offline-sync: handles CORS preflight OPTIONS with HTTP 200", async () => {
@@ -57,7 +76,8 @@ Deno.test("offline-sync: successfully passes mutations array to sync_offline_mut
   });
 
   const res = await handleRequest(req, {
-    getClient: () => fakeClient as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+    client: fakeClient as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+    getUser: () => Promise.resolve({ data: { user: { id: "u-1" } as any }, error: null }),
   });
 
   assertEquals(res.status, 200);
