@@ -96,6 +96,7 @@ REVOKE ALL ON FUNCTION public.purchase_video(BIGINT, UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.purchase_video(BIGINT, UUID) TO authenticated;
 
 -- 3. video_purchases RLS tenant isolation & grants
+DROP POLICY IF EXISTS "video_purchases own read" ON public.video_purchases;
 DROP POLICY IF EXISTS "p0_video_purchases_own_read" ON public.video_purchases;
 CREATE POLICY "p0_video_purchases_own_read" ON public.video_purchases
   FOR SELECT TO authenticated
