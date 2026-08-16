@@ -37,6 +37,8 @@ C:\church
 ### 1. Backend (`supabase/`)
 - **State Changes**: ALL inside `SECURITY DEFINER` RPCs. No direct client `INSERT`/`UPDATE` on business tables.
 - **Slot Locking**: `SELECT ... FOR UPDATE` on `service_slots` + active booking count check vs `capacity`. No unique partial index on slot capacity.
+- **RLS & Storage Invariants**: Every policy MUST declare explicit `TO authenticated` or `TO anon, authenticated`. Every admin mutation policy on tables or `storage.objects` MUST enforce `public.is_admin()`. Multi-tenant tables MUST default `tenant_id` to `public.tenant_id()` and check `tenant_id = public.tenant_id()`. Use granular DML grants (`SELECT, INSERT, UPDATE, DELETE`)—never `GRANT ALL`. No `CREATE INDEX CONCURRENTLY` in migration files.
+- **SQL & pgTAP Testing Invariants**: RLS `UPDATE` and `DELETE` on hidden rows modify 0 rows silently (no exception thrown)—assert `ROW_COUNT = 0` / `is(...) = 0`. Catch `SQLSTATE '42501'` on `INSERT` violations. User roles live in `public.users` (not `public.profiles`). Always wrap test runs in `BEGIN; ... ROLLBACK;` with isolated fixtures.
 - **Integrations**: Paymob HMAC (SHA512 lowercase hex, param `hmac`), WhatsApp outbox (100 rows/batch, cron 1 min), YouTube video expiry (OAuth2 bearer with refresh token exchange — secrets `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN`).
 - **Webhook & Checkout Invariants**: Enforce positive integer `merchant_order_id`, protect `PAID` records from being overwritten by failure webhooks, require Bearer token auth before DB queries, and catch malformed upstream JSON (502 + mark FAILED).
 - **Migration Discipline**: Any function/schema edit requires both updating base migrations (for `db reset`) AND creating a new forward migration `00XX_*.sql` (for `db push` on existing databases).
