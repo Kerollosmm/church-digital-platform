@@ -5,6 +5,7 @@ import { runReconcilePaymentsVerification } from "./test_real_reconcile_payments
 import { runYoutubeExpiryVerification } from "./test_real_youtube_expiry.ts";
 import { runOfflineSyncVerification } from "./test_real_offline_sync.ts";
 import { runAnalyticsExportVerification } from "./test_real_analytics_export.ts";
+import { runSocialLinksVerification } from "./test_real_social_links.ts";
 
 async function runMasterVerificationSuite() {
   console.log("\x1b[35m###################################################################\x1b[0m");
@@ -21,6 +22,7 @@ async function runMasterVerificationSuite() {
     { name: "YouTube Sermon Video Expiry Sweep", fn: runYoutubeExpiryVerification },
     { name: "Offline Mutation Batch Sync Engine", fn: runOfflineSyncVerification },
     { name: "Admin Analytics & Sanitized CSV Export", fn: runAnalyticsExportVerification },
+    { name: "Church Directory & Social Links RLS", fn: runSocialLinksVerification },
   ];
 
   const results: Array<{ name: string; status: "PASS" | "FAIL"; durationMs: number; error?: string }> = [];
