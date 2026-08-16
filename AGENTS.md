@@ -37,6 +37,9 @@ Planning workspace (docs only, no app code) for Egyptian Coptic church digital p
 - **Function Privilege Hardening**: Every restricted `SECURITY DEFINER` function must explicitly `REVOKE ALL ON FUNCTION public.<func_name>(<args>) FROM PUBLIC, anon, authenticated;` before granting to `service_role`.
 - **Identity Sequences**: Tables using `GENERATED ALWAYS AS IDENTITY` accessible to client inserts must grant `USAGE, SELECT` on their generated sequence to `authenticated`.
 - **Negative Authorization Verification**: SQL tests for restricted functions must assert execution denial for unprivileged roles (`anon`, `authenticated`).
+- **Role Verification Invariant**: Edge function auth seams MUST enforce `users.role` directly from Postgres with service-role privileges. No metadata fallbacks. Role lookup errors fail closed with 403 `FORBIDDEN`.
+- **Zero-Leak Error Contract**: Edge functions must return standard JSON `{"error": CODE}` for all 500 errors with zero `message` payload containing runtime exceptions.
+- **RPC Money Boundaries**: `payments` table status transitions are forbidden from direct DML in edge functions; must call `SECURITY DEFINER` RPCs (`apply_payment`, `mark_payment_refunded`).
 
 ## Commands
 
