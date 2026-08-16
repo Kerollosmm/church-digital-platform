@@ -29,7 +29,7 @@ export function buildCsv(headers: string[], rows: string[][]): string {
 }
 
 export function exportAllowed(role: string | undefined): boolean {
-  return ["ADMIN", "PRIEST", "SUPER_ADMIN"].includes(role?.toUpperCase() ?? "");
+  return role?.toUpperCase() === "ADMIN";
 }
 
 export async function handleRequest(
@@ -55,6 +55,10 @@ export async function handleRequest(
     getUser: deps?.getUser,
   });
   if (authRes instanceof Response) return authRes;
+
+  if (!exportAllowed(authRes.role)) {
+    return respond(403, "FORBIDDEN", "Admin role required");
+  }
 
   const url = new URL(req.url);
   const report = url.searchParams.get("report") ?? "";
