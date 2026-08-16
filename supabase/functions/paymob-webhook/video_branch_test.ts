@@ -1,5 +1,6 @@
 import { assertEquals } from "jsr:@std/assert";
-import { handleRequest, buildHmacPayload, hmacSha512Hex } from "./index.ts";
+import { handleRequest, hmacSha512Hex } from "./index.ts";
+import { hmacFields } from "../_shared/paymob.ts";
 import { FakeClient } from "../_shared/fake_supabase.ts";
 
 Deno.test("webhook routes video payment to apply_video_payment", async () => {
@@ -13,7 +14,7 @@ Deno.test("webhook routes video payment to apply_video_payment", async () => {
     source_data: { pan: "1234", sub_type: "CARD", type: "card" },
   };
   const applied: number[] = [];
-  const req = new Request(`https://x/functions/v1/paymob-webhook?hmac=${await hmacSha512Hex("s", buildHmacPayload(txn))}`, {
+  const req = new Request(`https://x/functions/v1/paymob-webhook?hmac=${await hmacSha512Hex("s", hmacFields(txn))}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(txn),

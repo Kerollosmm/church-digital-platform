@@ -1,5 +1,6 @@
 import { assertEquals } from "jsr:@std/assert";
-import { handleRequest, buildHmacPayload, hmacSha512Hex } from "./index.ts";
+import { handleRequest, hmacSha512Hex } from "./index.ts";
+import { hmacFields } from "../_shared/paymob.ts";
 import { FakeClient } from "../_shared/fake_supabase.ts";
 
 const TXN = {
@@ -13,7 +14,7 @@ const TXN = {
 Deno.test("paymob-webhook: valid HMAC + success -> upsert payment, raw_webhook stored, apply_payment called", async () => {
   const fake = new FakeClient(["payments"]);
   fake.seed("payments", [{ id: 17, booking_id: 7, amount: 50, status: "CREATED", gateway_ref: null, merchant_order_id: "17", raw_webhook: null }]);
-  const hmacPayload = buildHmacPayload(TXN);
+  const hmacPayload = hmacFields(TXN);
   const secret = "hmac_secret_123";
   const signature = await hmacSha512Hex(secret, hmacPayload);
   let appliedId: number | null = null;
@@ -50,7 +51,7 @@ Deno.test("paymob-webhook: invalid HMAC rejected 401", async () => {
 Deno.test("paymob-webhook: missing or undefined merchant_order_id returns 400", async () => {
   const fake = new FakeClient(["payments"]);
   const badTxn = { ...TXN, order: { id: 501, merchant_order_id: "undefined" } };
-  const hmacPayload = buildHmacPayload(badTxn);
+  const hmacPayload = hmacFields(badTxn);
   const secret = "hmac_secret_123";
   const signature = await hmacSha512Hex(secret, hmacPayload);
   const req = new Request(`https://x/functions/v1/paymob-webhook?hmac=${signature}`, {
@@ -67,7 +68,7 @@ Deno.test("paymob-webhook: missing or undefined merchant_order_id returns 400", 
 Deno.test("paymob-webhook: already PAID payment is acknowledged without re-applying", async () => {
   const fake = new FakeClient(["payments"]);
   fake.seed("payments", [{ id: 17, status: "PAID", merchant_order_id: "17" }]);
-  const hmacPayload = buildHmacPayload(TXN);
+  const hmacPayload = hmacFields(TXN);
   const secret = "hmac_secret_123";
   const signature = await hmacSha512Hex(secret, hmacPayload);
   let appliedCalls = 0;
@@ -89,7 +90,7 @@ Deno.test("paymob-webhook: non-positive or non-numeric merchant_order_id returns
   const fake = new FakeClient(["payments"]);
   for (const badId of ["0", "-5", "abc", "12.34"]) {
     const badTxn = { ...TXN, order: { id: 501, merchant_order_id: badId } };
-    const hmacPayload = buildHmacPayload(badTxn);
+    const hmacPayload = hmacFields(badTxn);
     const secret = "hmac_secret_123";
     const signature = await hmacSha512Hex(secret, hmacPayload);
     const req = new Request(`https://x/functions/v1/paymob-webhook?hmac=${signature}`, {
@@ -108,7 +109,7 @@ Deno.test("paymob-webhook: failure webhook on already PAID payment returns alrea
   const fake = new FakeClient(["payments"]);
   fake.seed("payments", [{ id: 17, status: "PAID", merchant_order_id: "17" }]);
   const failedTxn = { ...TXN, success: false };
-  const hmacPayload = buildHmacPayload(failedTxn);
+  const hmacPayload = hmacFields(failedTxn);
   const secret = "hmac_secret_123";
   const signature = await hmacSha512Hex(secret, hmacPayload);
   const req = new Request(`https://x/functions/v1/paymob-webhook?hmac=${signature}`, {
