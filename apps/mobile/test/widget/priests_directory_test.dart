@@ -13,6 +13,9 @@ class FakePriestsPortalRepository implements PortalRepository {
   Future<List<TodayScheduleItem>> todaySchedule() async => [];
 
   @override
+  Future<List<SocialLinkItem>> socialLinks() async => [];
+
+  @override
   Future<List<PriestItem>> priests() async => [
     const PriestItem(
       id: 'p1',

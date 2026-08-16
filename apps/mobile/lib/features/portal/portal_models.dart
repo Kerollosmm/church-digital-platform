@@ -65,3 +65,31 @@ class PriestItem {
     visitationHours: json['visitation_hours'] as String?,
   );
 }
+
+class SocialLinkItem {
+  final int id;
+  final String platform;
+  final String titleAr;
+  final String url;
+  final String? iconName;
+  final int position;
+
+  const SocialLinkItem({
+    required this.id,
+    required this.platform,
+    required this.titleAr,
+    required this.url,
+    this.iconName,
+    this.position = 0,
+  });
+
+  factory SocialLinkItem.fromJson(Map<String, dynamic> json) => SocialLinkItem(
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    platform: json['platform'] as String? ?? '',
+    titleAr: json['title_ar'] as String? ?? '',
+    url: json['url'] as String? ?? '',
+    iconName: json['icon_name'] as String?,
+    position: (json['position'] as num?)?.toInt() ?? 0,
+  );
+}
+

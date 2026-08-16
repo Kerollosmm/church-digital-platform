@@ -7,6 +7,7 @@ abstract class PortalRepository {
   Future<List<TodayScheduleItem>> todaySchedule();
   Future<List<AnnouncementItem>> announcements();
   Future<List<PriestItem>> priests();
+  Future<List<SocialLinkItem>> socialLinks();
 }
 
 class SupabasePortalRepository implements PortalRepository {
@@ -34,6 +35,12 @@ class SupabasePortalRepository implements PortalRepository {
     final rows = await _db.query('v_priests', orderBy: 'name');
     return rows.map(PriestItem.fromJson).toList();
   }
+
+  @override
+  Future<List<SocialLinkItem>> socialLinks() async {
+    final rows = await _db.query('social_links', orderBy: 'position');
+    return rows.map(SocialLinkItem.fromJson).toList();
+  }
 }
 
 class EmptyPortalRepository implements PortalRepository {
@@ -43,4 +50,7 @@ class EmptyPortalRepository implements PortalRepository {
   Future<List<AnnouncementItem>> announcements() async => [];
   @override
   Future<List<PriestItem>> priests() async => [];
+  @override
+  Future<List<SocialLinkItem>> socialLinks() async => [];
 }
+
