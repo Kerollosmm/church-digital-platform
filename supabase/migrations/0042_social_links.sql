@@ -30,6 +30,7 @@ CREATE POLICY "social_links admin all" ON public.social_links
 
 GRANT SELECT ON public.social_links TO anon, authenticated;
 GRANT ALL ON public.social_links TO authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
 DO $$
 DECLARE

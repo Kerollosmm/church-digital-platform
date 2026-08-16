@@ -85,7 +85,13 @@ BEGIN
     RAISE EXCEPTION 'FAIL: admin must be able to update social_links';
   END IF;
 
-  DELETE FROM public.social_links WHERE id = v_link_id;
+  -- 5. Verify sequence privilege for authenticated role
+  RESET ROLE;
+  IF pg_get_serial_sequence('public.social_links', 'id') IS NOT NULL THEN
+    IF NOT has_sequence_privilege('authenticated', pg_get_serial_sequence('public.social_links', 'id'), 'USAGE') THEN
+      RAISE EXCEPTION 'FAIL: authenticated role must have USAGE privilege on social_links identity sequence';
+    END IF;
+  END IF;
 
   RESET ROLE;
   RAISE NOTICE '0042_social_links_test: OK';

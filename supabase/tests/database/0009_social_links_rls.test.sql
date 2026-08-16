@@ -1,6 +1,6 @@
 -- pgTAP test: 0009_social_links_rls.test.sql
 BEGIN;
-SELECT plan(6);
+SELECT plan(7);
 
 -- 1. Table exists
 SELECT has_table('public', 'social_links', 'Table public.social_links exists');
@@ -33,6 +33,13 @@ SELECT is(
   (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'public' AND tablename = 'social_links'),
   2,
   'social_links has exactly 2 RLS policies'
+);
+
+-- 7. Check sequence privileges for authenticated role
+SELECT is(
+  has_sequence_privilege('authenticated', pg_get_serial_sequence('public.social_links', 'id'), 'USAGE'),
+  true,
+  'authenticated role has USAGE privilege on social_links identity sequence'
 );
 
 SELECT * FROM finish();
