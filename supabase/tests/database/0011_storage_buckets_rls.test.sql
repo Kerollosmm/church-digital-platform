@@ -9,6 +9,16 @@ BEGIN;
 
 SELECT plan(9);
 
+-- 0. Declare explicit test fixtures
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES 
+  ('priest_photos', 'priest_photos', false, 524288, ARRAY['image/jpeg', 'image/png', 'image/webp']),
+  ('church_media', 'church_media', false, 524288, ARRAY['image/jpeg', 'image/png', 'image/webp']),
+  ('announcement_images', 'announcement_images', false, 524288, ARRAY['image/jpeg', 'image/png', 'image/webp'])
+ON CONFLICT (id) DO UPDATE SET 
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
 -- Create test users
 SELECT tests.create_supabase_user('admin_storage@example.com', 'member');
 SELECT tests.create_supabase_user('user_storage@example.com', 'member');

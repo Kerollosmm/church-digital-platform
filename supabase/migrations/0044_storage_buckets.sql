@@ -41,14 +41,14 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 4. Enable RLS on storage.objects for all buckets
--- Note: RLS is already enabled on storage.objects by Supabase, but we add policies.
+-- 4. Enable RLS on storage.objects
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
 -- priest_photos bucket policies
 -- =====================================================
 
--- Admins can upload priest photos
+DROP POLICY IF EXISTS "Admins can upload priest photos" ON storage.objects;
 CREATE POLICY "Admins can upload priest photos"
   ON storage.objects
   FOR INSERT
@@ -58,6 +58,7 @@ CREATE POLICY "Admins can upload priest photos"
     AND public.is_admin()
   );
 
+DROP POLICY IF EXISTS "Admins can update priest photos" ON storage.objects;
 CREATE POLICY "Admins can update priest photos"
   ON storage.objects
   FOR UPDATE
@@ -67,6 +68,7 @@ CREATE POLICY "Admins can update priest photos"
     AND public.is_admin()
   );
 
+DROP POLICY IF EXISTS "Admins can delete priest photos" ON storage.objects;
 CREATE POLICY "Admins can delete priest photos"
   ON storage.objects
   FOR DELETE
@@ -76,7 +78,7 @@ CREATE POLICY "Admins can delete priest photos"
     AND public.is_admin()
   );
 
--- Users can read priest photos
+DROP POLICY IF EXISTS "Users can read priest photos" ON storage.objects;
 CREATE POLICY "Users can read priest photos"
   ON storage.objects
   FOR SELECT
@@ -89,7 +91,7 @@ CREATE POLICY "Users can read priest photos"
 -- church_media bucket policies
 -- =====================================================
 
--- Admins can upload church media
+DROP POLICY IF EXISTS "Admins can upload church media" ON storage.objects;
 CREATE POLICY "Admins can upload church media"
   ON storage.objects
   FOR INSERT
@@ -99,6 +101,7 @@ CREATE POLICY "Admins can upload church media"
     AND public.is_admin()
   );
 
+DROP POLICY IF EXISTS "Admins can update church media" ON storage.objects;
 CREATE POLICY "Admins can update church media"
   ON storage.objects
   FOR UPDATE
@@ -108,6 +111,7 @@ CREATE POLICY "Admins can update church media"
     AND public.is_admin()
   );
 
+DROP POLICY IF EXISTS "Admins can delete church media" ON storage.objects;
 CREATE POLICY "Admins can delete church media"
   ON storage.objects
   FOR DELETE
@@ -117,7 +121,7 @@ CREATE POLICY "Admins can delete church media"
     AND public.is_admin()
   );
 
--- Users can read church media
+DROP POLICY IF EXISTS "Users can read church media" ON storage.objects;
 CREATE POLICY "Users can read church media"
   ON storage.objects
   FOR SELECT
@@ -130,7 +134,7 @@ CREATE POLICY "Users can read church media"
 -- announcement_images bucket policies
 -- =====================================================
 
--- Admins can upload announcement images
+DROP POLICY IF EXISTS "Admins can upload announcement images" ON storage.objects;
 CREATE POLICY "Admins can upload announcement images"
   ON storage.objects
   FOR INSERT
@@ -140,6 +144,7 @@ CREATE POLICY "Admins can upload announcement images"
     AND public.is_admin()
   );
 
+DROP POLICY IF EXISTS "Admins can update announcement images" ON storage.objects;
 CREATE POLICY "Admins can update announcement images"
   ON storage.objects
   FOR UPDATE
@@ -149,6 +154,7 @@ CREATE POLICY "Admins can update announcement images"
     AND public.is_admin()
   );
 
+DROP POLICY IF EXISTS "Admins can delete announcement images" ON storage.objects;
 CREATE POLICY "Admins can delete announcement images"
   ON storage.objects
   FOR DELETE
@@ -158,7 +164,7 @@ CREATE POLICY "Admins can delete announcement images"
     AND public.is_admin()
   );
 
--- Users can read announcement images
+DROP POLICY IF EXISTS "Users can read announcement images" ON storage.objects;
 CREATE POLICY "Users can read announcement images"
   ON storage.objects
   FOR SELECT
@@ -171,7 +177,7 @@ CREATE POLICY "Users can read announcement images"
 COMMENT ON TABLE storage.buckets IS 'Supabase Storage buckets (created via SQL migration)';
 COMMENT ON COLUMN storage.objects.bucket_id IS 'Bucket identifier (priest_photos, church_media, announcement_images)';
 
--- 6. Grant usage to authenticated users (for reading)
+-- 6. Grant least-privilege usage to authenticated users
 GRANT USAGE ON SCHEMA storage TO authenticated;
-GRANT ALL ON storage.objects TO authenticated;
-GRANT ALL ON storage.buckets TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated;
+GRANT SELECT ON storage.buckets TO authenticated;
