@@ -13,6 +13,7 @@ export const TEMPLATES: Record<string, { paramCount: number }> = {
   otp_auth: { paramCount: 1 },
   booking_payment_received: { paramCount: 2 },
   booking_offer: { paramCount: 1 },
+  video_ready: { paramCount: 1 },
 };
 export const MAX_ATTEMPTS = 5;
 export const REFUND_MAX_ATTEMPTS = 3;
@@ -52,10 +53,12 @@ async function setStatus(
 
 export async function sendWhatsApp(row: Row, deps: Deps): Promise<Result> {
   const client = deps.getClient();
-  const { phone, template_name, params } = row.payload as {
+  const { phone, template_name, params, video_id, purchase_id } = row.payload as {
     phone?: string;
     template_name?: string;
     params?: Record<string, unknown>;
+    video_id?: number;
+    purchase_id?: number;
   };
   if (!phone || !template_name) return { ok: false, retryable: false };
   const tmpl = TEMPLATES[template_name];
@@ -66,19 +69,34 @@ export async function sendWhatsApp(row: Row, deps: Deps): Promise<Result> {
     .eq("phone", phone)
     .maybeSingle();
   if (!optin) return { ok: false, retryable: false };
+
+  let resolvedParams = params;
+  if (template_name === "video_ready" && (!params || Object.keys(params).length === 0)) {
+    let ytUrl = "";
+    if (video_id) {
+      const { data: vid } = await client
+        .from("videos")
+        .select("yt_url")
+        .eq("id", video_id)
+        .maybeSingle();
+      if (vid?.yt_url) ytUrl = vid.yt_url as string;
+    }
+    resolvedParams = { "1": ytUrl };
+  }
+
   const bodyParams = Array.from({ length: tmpl.paramCount }, (_, idx) => {
     let val = "";
-    if (params) {
-      if (Array.isArray(params)) {
-        val = String(params[idx] ?? "");
+    if (resolvedParams) {
+      if (Array.isArray(resolvedParams)) {
+        val = String(resolvedParams[idx] ?? "");
       } else {
         const key =
-          `param${idx + 1}` in params
+          `param${idx + 1}` in resolvedParams
             ? `param${idx + 1}`
-            : String(idx + 1) in params
+            : String(idx + 1) in resolvedParams
             ? String(idx + 1)
-            : Object.keys(params)[idx];
-        val = String(params[key] ?? Object.values(params)[idx] ?? "");
+            : Object.keys(resolvedParams)[idx];
+        val = String(resolvedParams[key] ?? Object.values(resolvedParams)[idx] ?? "");
       }
     }
     return { type: "text", text: val };
@@ -107,7 +125,15 @@ export async function sendWhatsApp(row: Row, deps: Deps): Promise<Result> {
       }),
     },
   );
-  if (res.ok) return { ok: true, retryable: false };
+  if (res.ok) {
+    if (template_name === "video_ready" && purchase_id) {
+      await client
+        .from("video_purchases")
+        .update({ link_sent_at: new Date().toISOString() })
+        .eq("id", purchase_id);
+    }
+    return { ok: true, retryable: false };
+  }
   return res.status >= 400 && res.status < 500
     ? { ok: false, retryable: false }
     : { ok: false, retryable: true };
