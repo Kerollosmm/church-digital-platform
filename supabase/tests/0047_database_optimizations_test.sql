@@ -24,11 +24,11 @@ SELECT tests.expect(
 
 -- Setup user fixture
 INSERT INTO auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-VALUES ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000',
-        'authenticated', 'authenticated', 'test-user@test.local', '+201000000001',
+VALUES ('00000000-0000-0000-0000-000000000047', '00000000-0000-0000-0000-000000000000',
+        'authenticated', 'authenticated', 'test-user47@test.local', '+201047474747',
         '{}', '{"name":"Test User"}', now(), now())
 ON CONFLICT (id) DO NOTHING;
-UPDATE public.users SET role = 'USER', tenant_id = 1 WHERE id = '00000000-0000-0000-0000-000000000001';
+UPDATE public.users SET role = 'USER', tenant_id = 1 WHERE id = '00000000-0000-0000-0000-000000000047';
 
 -- 3. Multi-seat restoration test
 INSERT INTO public.services (id, title_ar, tenant_id) OVERRIDING SYSTEM VALUE VALUES (99981, 'Test Service', 1) ON CONFLICT DO NOTHING;
@@ -38,7 +38,8 @@ VALUES (99981, 99981, now() + interval '1 day', now() + interval '1 day 2 hours'
 
 INSERT INTO public.bookings (id, slot_id, user_id, status, seat_count, paid_amount, tenant_id)
 OVERRIDING SYSTEM VALUE
-VALUES (99981, 99981, '00000000-0000-0000-0000-000000000001', 'CONFIRMED', 3, 0, 1) ON CONFLICT DO NOTHING;
+VALUES (99981, 99981, '00000000-0000-0000-0000-000000000047', 'CONFIRMED', 3, 0, 1) ON CONFLICT DO NOTHING;
+
 
 UPDATE public.bookings SET status = 'CANCELLED' WHERE id = 99981;
 
