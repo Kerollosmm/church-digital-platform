@@ -261,4 +261,110 @@ $$;
 REVOKE ALL ON FUNCTION public.set_priest_photo(bigint, bigint) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.set_priest_photo(bigint, bigint) TO authenticated;
 
+-- ==============================================================================
+-- 11. View: v_content_backlog
+-- ==============================================================================
+CREATE OR REPLACE VIEW public.v_content_backlog AS
+SELECT
+  'missing_alt_text'::text AS kind,
+  p.created_at AS source_created_at,
+  p.id AS id,
+  ('priest:' || p.name)::text AS label
+FROM public.priests p
+WHERE p.photo_url IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM public.media_assets m
+    WHERE m.bucket = 'priest_photos'
+      AND m.storage_path = p.photo_url
+  )
+UNION ALL
+SELECT
+  'missing_alt_text'::text AS kind,
+  so.created_at AS source_created_at,
+  ('x' || substr(replace(so.id::text, '-', ''), 1, 15))::bit(60)::bigint AS id,
+  (so.bucket_id || '/' || so.name)::text AS label
+FROM storage.objects so
+WHERE so.bucket_id IN ('priest_photos', 'church_media', 'announcement_images')
+  AND NOT EXISTS (
+    SELECT 1 FROM public.media_assets m
+    WHERE m.bucket = so.bucket_id
+      AND m.storage_path = so.name
+  );
+
+REVOKE ALL ON public.v_content_backlog FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.v_content_backlog TO service_role;
+
+-- ==============================================================================
+-- 12. RPC: get_backlog
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.get_backlog(
+  p_before_created_at timestamptz DEFAULT NULL,
+  p_after_id bigint DEFAULT NULL,
+  p_limit int DEFAULT 50
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_limit int;
+  v_items jsonb := '[]'::jsonb;
+  v_next_cursor jsonb := null;
+  v_last_created_at timestamptz;
+  v_last_id bigint;
+  v_count int;
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE = '42501';
+  END IF;
+
+  v_limit := LEAST(COALESCE(p_limit, 50), 100);
+  IF v_limit <= 0 THEN
+    v_limit := 50;
+  END IF;
+
+  WITH filtered AS (
+    SELECT kind, source_created_at, id, label
+    FROM public.v_content_backlog
+    WHERE (
+      p_before_created_at IS NULL
+      OR source_created_at < p_before_created_at
+      OR (source_created_at = p_before_created_at AND id < p_after_id)
+    )
+    ORDER BY source_created_at DESC, id DESC
+    LIMIT v_limit
+  )
+  SELECT
+    COALESCE(jsonb_agg(to_jsonb(f)), '[]'::jsonb),
+    count(*),
+    (ARRAY_AGG(f.source_created_at ORDER BY f.source_created_at DESC, f.id DESC))[count(*)],
+    (ARRAY_AGG(f.id ORDER BY f.source_created_at DESC, f.id DESC))[count(*)]
+  INTO v_items, v_count, v_last_created_at, v_last_id
+  FROM filtered f;
+
+  IF v_count = v_limit AND v_last_created_at IS NOT NULL AND v_last_id IS NOT NULL THEN
+    IF EXISTS (
+      SELECT 1 FROM public.v_content_backlog
+      WHERE source_created_at < v_last_created_at
+         OR (source_created_at = v_last_created_at AND id < v_last_id)
+    ) THEN
+      v_next_cursor := jsonb_build_object(
+        'created_at', to_char(v_last_created_at, 'YYYY-MM-DD"T"HH24:MI:SS.USOF'),
+        'id', v_last_id
+      );
+    END IF;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'items', v_items,
+    'next_cursor', v_next_cursor
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_backlog(timestamptz, bigint, int) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_backlog(timestamptz, bigint, int) TO authenticated, service_role;
+
+
 
