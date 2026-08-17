@@ -35,15 +35,18 @@ begin
   if exists (select 1 from pg_tables where schemaname = 'public' and tablename in ('whatsapp_outbox','refund_requests'))
   then raise exception 'FAIL: legacy outbox tables must be dropped'; end if;
 
-  -- 3. RLS: clients cannot read or write event_outbox (no policies)
+  -- 3. RLS: clients cannot read or write event_outbox (no policies / permission denied)
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000031', 'role', 'authenticated')::text, true);
-  select count(*) into v_n from public.event_outbox;
-  if v_n <> 0 then raise exception 'FAIL: clients must not read event_outbox'; end if;
+  begin
+    select count(*) into v_n from public.event_outbox;
+    if v_n <> 0 then raise exception 'FAIL: clients must not read event_outbox'; end if;
+  exception when insufficient_privilege then null; end;
   begin
     insert into public.event_outbox (handler_type, payload) values ('WHATSAPP', '{}'::jsonb);
     raise exception 'FAIL: client insert must be blocked';
   exception when others then null; end;
+
 
   raise notice 'OK';
 end $$;
