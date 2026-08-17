@@ -112,9 +112,15 @@ BEGIN
       JOIN pg_class t ON t.oid = c.conrelid
       JOIN pg_namespace n ON n.oid = t.relnamespace
       WHERE n.nspname = 'public' AND t.relname = 'media_assets'
-        AND c.contype IN ('u', 'p')
+        AND c.contype = 'u'
+        AND ARRAY(
+          SELECT a.attname::text
+          FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
+          JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = k.attnum
+          ORDER BY k.ord
+        ) = ARRAY['bucket', 'storage_path', 'tenant_id']::text[]
     ),
-    'media_assets must have a UNIQUE constraint on (bucket, storage_path, tenant_id)'
+    'media_assets must have a UNIQUE constraint strictly on (bucket, storage_path, tenant_id)'
   );
 
   -- 1.6 Identity sequence permissions for authenticated
@@ -140,6 +146,11 @@ DECLARE
 BEGIN
   SELECT count(*) INTO v_count FROM public.error_messages;
   PERFORM tests.expect(v_count = 6, 'error_messages must contain exactly 6 rows, found ' || v_count);
+  PERFORM tests.expect(
+    (SELECT count(*) FROM public.error_messages WHERE tenant_id = public.tenant_id()) = 6,
+    'all 6 seeded error_messages must have tenant_id matching public.tenant_id()'
+  );
+
 
   SELECT message_ar INTO v_unauth FROM public.error_messages WHERE code = 'UNAUTHORIZED';
   SELECT message_ar INTO v_forbidden FROM public.error_messages WHERE code = 'FORBIDDEN';

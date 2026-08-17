@@ -141,14 +141,14 @@ GRANT USAGE, SELECT ON SEQUENCE public.media_assets_id_seq TO authenticated;
 -- ==============================================================================
 -- 7. Seed Data: error_messages
 -- ==============================================================================
-INSERT INTO public.error_messages (code, message_ar, tenant_id)
+INSERT INTO public.error_messages (code, message_ar)
 VALUES
-  ('UNAUTHORIZED', 'انتهت الجلسة، من فضلك سجل الدخول مرة أخرى.', 1),
-  ('FORBIDDEN', 'ليس لديك صلاحية للوصول إلى هذه الخدمة.', 1),
-  ('BAD_REQUEST', 'البيانات المرسلة غير صحيحة، يرجى التأكد والمحاولة مرة أخرى.', 1),
-  ('UPSTREAM_ERROR', 'تعذر الاتصال بالخدمة الخارجية، يرجى المحاولة لاحقاً.', 1),
-  ('INTERNAL', 'حدث خطأ في النظام، يرجى المحاولة لاحقاً.', 1),
-  ('FALLBACK', 'حدث خطأ غير متوقع، حاول مرة أخرى.', 1)
+  ('UNAUTHORIZED', 'انتهت الجلسة، من فضلك سجل الدخول مرة أخرى.'),
+  ('FORBIDDEN', 'ليس لديك صلاحية للوصول إلى هذه الخدمة.'),
+  ('BAD_REQUEST', 'البيانات المرسلة غير صحيحة، يرجى التأكد والمحاولة مرة أخرى.'),
+  ('UPSTREAM_ERROR', 'تعذر الاتصال بالخدمة الخارجية، يرجى المحاولة لاحقاً.'),
+  ('INTERNAL', 'حدث خطأ في النظام، يرجى المحاولة لاحقاً.'),
+  ('FALLBACK', 'حدث خطأ غير متوقع، حاول مرة أخرى.')
 ON CONFLICT (code) DO UPDATE
-SET message_ar = EXCLUDED.message_ar,
-    tenant_id = EXCLUDED.tenant_id;
+SET message_ar = EXCLUDED.message_ar;
+
