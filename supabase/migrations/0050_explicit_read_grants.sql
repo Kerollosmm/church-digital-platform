@@ -51,6 +51,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.waiting_list TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.whatsapp_optins TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.roles_permissions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.offline_sync_log TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.audit_log TO authenticated;
+
 
 -- ==============================================================================
 -- 3. Public and authenticated views
