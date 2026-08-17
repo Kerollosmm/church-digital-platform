@@ -56,7 +56,12 @@ begin
   then raise exception 'FAIL: PARISHIONER must not write service_slots'; end if;
 
   reset role;
+  insert into public.payments (id, booking_id, amount, status, tenant_id)
+    overriding system value
+    values (99921, v_other_booking, 50, 'PENDING', 1)
+    on conflict (id) do nothing;
   select sum(amount) into v_sum from public.payments;
+
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_other, 'role','authenticated')::text, true);
