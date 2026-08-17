@@ -366,5 +366,92 @@ $$;
 REVOKE ALL ON FUNCTION public.get_backlog(timestamptz, bigint, int) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.get_backlog(timestamptz, bigint, int) TO authenticated, service_role;
 
+-- ==============================================================================
+-- 13. RPC: deliver_personal_video
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.deliver_personal_video(
+  p_phone text,
+  p_yt_url text,
+  p_title_ar text,
+  p_payment_id bigint
+)
+RETURNS bigint
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_user_id uuid;
+  v_payment public.payments;
+  v_booking_user_id uuid;
+  v_existing_video_id bigint;
+  v_video_id bigint;
+  v_purchase_id bigint;
+BEGIN
+  -- 1. Exact phone match
+  SELECT id INTO v_user_id
+  FROM public.users
+  WHERE phone = p_phone AND deleted_at IS NULL;
+
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'UNKNOWN_PHONE' USING ERRCODE = 'P0002';
+  END IF;
+
+  -- 2. Validate payment is PAID and belongs to this user
+  SELECT * INTO v_payment
+  FROM public.payments
+  WHERE id = p_payment_id;
+
+  IF v_payment IS NULL OR v_payment.status <> 'PAID' THEN
+    RAISE EXCEPTION 'PAYMENT_INVALID' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT user_id INTO v_booking_user_id
+  FROM public.bookings
+  WHERE id = v_payment.booking_id;
+
+  IF v_booking_user_id <> v_user_id THEN
+    RAISE EXCEPTION 'PAYMENT_INVALID' USING ERRCODE = 'P0001';
+  END IF;
+
+  -- 3. Idempotency: return existing video if already delivered for this payment
+  SELECT video_id INTO v_existing_video_id
+  FROM public.video_purchases
+  WHERE payment_id = p_payment_id;
+
+  IF v_existing_video_id IS NOT NULL THEN
+    RETURN v_existing_video_id;
+  END IF;
+
+  -- 4. Create UNLISTED video, purchase record, and queue event_outbox WhatsApp notification
+  INSERT INTO public.videos (title_ar, event_date, yt_url, price, privacy, tenant_id)
+  VALUES (p_title_ar, now(), p_yt_url, 0, 'UNLISTED', public.tenant_id())
+  RETURNING id INTO v_video_id;
+
+  INSERT INTO public.video_purchases (video_id, user_id, payment_id, access_granted_at, tenant_id)
+  VALUES (v_video_id, v_user_id, p_payment_id, now(), public.tenant_id())
+  RETURNING id INTO v_purchase_id;
+
+  INSERT INTO public.event_outbox (handler_type, payload, status, tenant_id)
+  VALUES (
+    'WHATSAPP',
+    jsonb_build_object(
+      'template_name', 'video_ready',
+      'video_id', v_video_id,
+      'purchase_id', v_purchase_id,
+      'phone', p_phone
+    ),
+    'PENDING',
+    public.tenant_id()
+  );
+
+  RETURN v_video_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.deliver_personal_video(text, text, text, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.deliver_personal_video(text, text, text, bigint) TO service_role;
+
+
 
 
