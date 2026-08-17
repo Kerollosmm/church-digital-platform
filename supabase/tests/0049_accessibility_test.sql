@@ -220,6 +220,59 @@ BEGIN
   EXCEPTION
     WHEN check_violation THEN NULL;
   END;
+
+  -- 3.7 Arabic text with Coptic terms stored and returned verbatim
+  INSERT INTO public.media_assets (bucket, storage_path, alt_text_ar, is_decorative, tenant_id)
+  VALUES ('church_media', 'icons/mark.jpg', 'أيقونة القديس مارمرقس الإنجيلي ⲁⲃⲃⲁ ⲙⲁⲣⲕⲟⲥ', false, 1);
+
+  PERFORM tests.expect(
+    (SELECT trim(alt_text_ar) FROM public.media_assets WHERE storage_path = 'icons/mark.jpg' AND bucket = 'church_media') = 'أيقونة القديس مارمرقس الإنجيلي ⲁⲃⲃⲁ ⲙⲁⲣⲕⲟⲥ',
+    'Arabic text with Coptic terms must be stored and returned verbatim'
+  );
+END $$;
+
+-- 3.8 media_assets RLS: anon read within tenant, user insert denied, admin insert allowed
+DO $$
+DECLARE
+  v_initial_count int;
+  v_after_user_count int;
+  v_anon_count int;
+BEGIN
+  -- Test anon can SELECT media_assets within tenant
+  SET LOCAL ROLE anon;
+  PERFORM set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000000","role":"anon","tenant_id":"1"}', true);
+  SELECT count(*) INTO v_anon_count FROM public.media_assets WHERE tenant_id = 1;
+  PERFORM tests.expect(v_anon_count > 0, 'anon must be able to SELECT media_assets within tenant');
+  RESET ROLE;
+
+  -- Test non-admin authenticated INSERT into media_assets denied (0 rows inserted)
+  SELECT count(*) INTO v_initial_count FROM public.media_assets WHERE tenant_id = 1;
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000050', 'role', 'authenticated')::text, true);
+
+  BEGIN
+    INSERT INTO public.media_assets (bucket, storage_path, alt_text_ar, is_decorative, tenant_id)
+    VALUES ('church_media', 'unauthorized/test.jpg', 'وصف غير مصرح', false, 1);
+  EXCEPTION
+    WHEN check_violation OR insufficient_privilege OR SQLSTATE '42501' THEN NULL;
+  END;
+
+  RESET ROLE;
+  SELECT count(*) INTO v_after_user_count FROM public.media_assets WHERE storage_path = 'unauthorized/test.jpg';
+  PERFORM tests.expect(v_after_user_count = 0, 'non-admin authenticated INSERT into media_assets must result in 0 rows inserted');
+
+  -- Test admin authenticated INSERT accepted
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000049', 'role', 'authenticated')::text, true);
+
+  INSERT INTO public.media_assets (bucket, storage_path, alt_text_ar, is_decorative, tenant_id)
+  VALUES ('church_media', 'admin/approved.jpg', 'صورة معتمدة من الإدارة', false, 1);
+
+  RESET ROLE;
+  PERFORM tests.expect(
+    EXISTS (SELECT 1 FROM public.media_assets WHERE storage_path = 'admin/approved.jpg'),
+    'admin authenticated INSERT into media_assets must be accepted'
+  );
 END $$;
 
 ROLLBACK;
