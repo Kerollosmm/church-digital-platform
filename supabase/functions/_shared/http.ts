@@ -1,4 +1,5 @@
 import { makeServiceClient } from "./client.ts";
+import { messageFor } from "./messages.ts";
 
 export const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -38,8 +39,10 @@ export function respond(
   });
 
   if (status >= 400) {
+    const errorCode = typeof codeOrBody === "string" ? codeOrBody : "INTERNAL";
     const errorBody: Record<string, unknown> = {
-      error: typeof codeOrBody === "string" ? codeOrBody : "INTERNAL",
+      error: errorCode,
+      message_ar: messageFor(errorCode),
     };
     if (message !== undefined && message !== null) {
       errorBody.message = message;
