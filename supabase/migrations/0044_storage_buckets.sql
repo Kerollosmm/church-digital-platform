@@ -42,7 +42,15 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- 4. Enable RLS on storage.objects
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- Guarded like 0048: current supabase images own storage.objects as
+-- supabase_storage_admin and ship RLS already enabled; ALTER fails with
+-- insufficient_privilege there and is a no-op on fresh resets.
+DO $$
+BEGIN
+  ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+EXCEPTION
+  WHEN insufficient_privilege THEN NULL;
+END $$;
 
 -- =====================================================
 -- priest_photos bucket policies
@@ -173,9 +181,8 @@ CREATE POLICY "Users can read announcement images"
     bucket_id = 'announcement_images'
   );
 
--- 5. Add comments
-COMMENT ON TABLE storage.buckets IS 'Supabase Storage buckets (created via SQL migration)';
-COMMENT ON COLUMN storage.objects.bucket_id IS 'Bucket identifier (priest_photos, church_media, announcement_images)';
+-- 5. Comments omitted: COMMENT requires storage schema ownership, which
+-- current supabase images assign to supabase_storage_admin.
 
 -- 6. Grant least-privilege usage to authenticated users
 GRANT USAGE ON SCHEMA storage TO authenticated;
