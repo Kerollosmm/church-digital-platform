@@ -372,4 +372,173 @@ BEGIN
   RESET ROLE;
 END $$;
 
+-- ==============================================================================
+-- 5. Backlog & Keyset Pagination + Negative Authorization Tests
+-- ==============================================================================
+DO $$
+DECLARE
+  v_i int;
+  v_res_page1 jsonb;
+  v_res_page2 jsonb;
+  v_res_page3 jsonb;
+  v_cursor1 jsonb;
+  v_cursor2 jsonb;
+  v_items1 jsonb;
+  v_items2 jsonb;
+  v_items3 jsonb;
+  v_c1_created timestamptz;
+  v_c1_id bigint;
+  v_c2_created timestamptz;
+  v_c2_id bigint;
+  v_all_ids bigint[];
+  v_uniq_ids bigint[];
+  v_res_capped jsonb;
+  v_capped_len int;
+BEGIN
+  -- Set role to ADMIN for fixture setup and calling RPC
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000049', 'role', 'authenticated')::text, true);
+
+  -- 5.1 Insert ≥ 25 offender priests (priests with photo_url but no media_assets row)
+  FOR v_i IN 1..30 LOOP
+    INSERT INTO public.priests (id, name, photo_url, created_at, tenant_id)
+    OVERRIDING SYSTEM VALUE
+    VALUES (
+      70000 + v_i,
+      'كاهن تجريبي ' || v_i,
+      'priests/legacy_' || v_i || '.jpg',
+      now() - (v_i || ' minutes')::interval,
+      1
+    );
+  END LOOP;
+
+  -- Page 1: 10 items
+  v_res_page1 := public.get_backlog(NULL, NULL, 10);
+  v_items1 := v_res_page1 -> 'items';
+  v_cursor1 := v_res_page1 -> 'next_cursor';
+  PERFORM tests.expect(jsonb_array_length(v_items1) = 10, 'Backlog page 1 must return exactly 10 items');
+  PERFORM tests.expect(v_cursor1 IS NOT NULL AND v_cursor1 <> 'null'::jsonb, 'Backlog page 1 next_cursor must be non-null');
+
+  v_c1_created := (v_cursor1 ->> 'created_at')::timestamptz;
+  v_c1_id := (v_cursor1 ->> 'id')::bigint;
+
+  -- Page 2: 10 items
+  v_res_page2 := public.get_backlog(v_c1_created, v_c1_id, 10);
+  v_items2 := v_res_page2 -> 'items';
+  v_cursor2 := v_res_page2 -> 'next_cursor';
+  PERFORM tests.expect(jsonb_array_length(v_items2) = 10, 'Backlog page 2 must return exactly 10 items');
+  PERFORM tests.expect(v_cursor2 IS NOT NULL AND v_cursor2 <> 'null'::jsonb, 'Backlog page 2 next_cursor must be non-null');
+
+  v_c2_created := (v_cursor2 ->> 'created_at')::timestamptz;
+  v_c2_id := (v_cursor2 ->> 'id')::bigint;
+
+  -- Page 3: remaining items
+  v_res_page3 := public.get_backlog(v_c2_created, v_c2_id, 10);
+  v_items3 := v_res_page3 -> 'items';
+  PERFORM tests.expect(jsonb_array_length(v_items3) >= 10, 'Backlog page 3 must return remaining items');
+
+  -- Verify no duplicate IDs across pages 1, 2, 3
+  SELECT ARRAY_AGG((elem->>'id')::bigint)
+  INTO v_all_ids
+  FROM jsonb_array_elements(v_items1 || v_items2 || v_items3) AS elem;
+
+  SELECT ARRAY_AGG(DISTINCT id)
+  INTO v_uniq_ids
+  FROM unnest(v_all_ids) AS id;
+
+  PERFORM tests.expect(
+    array_length(v_all_ids, 1) = array_length(v_uniq_ids, 1),
+    'Backlog keyset pages must not contain duplicate items'
+  );
+
+  -- 5.2 Delete 5 mid-range offenders and verify count decreases
+  DELETE FROM public.priests WHERE id BETWEEN 70011 AND 70015;
+
+  v_res_page1 := public.get_backlog(NULL, NULL, 50);
+  PERFORM tests.expect(
+    jsonb_array_length(v_res_page1 -> 'items') >= 25,
+    'After deleting 5 priests, remaining backlog must reflect exact reduction'
+  );
+
+  -- 5.3 Limit capping: p_limit=200 must be capped at 100
+  v_res_capped := public.get_backlog(NULL, NULL, 200);
+  v_capped_len := jsonb_array_length(v_res_capped -> 'items');
+  PERFORM tests.expect(v_capped_len <= 100, 'get_backlog p_limit must be capped at 100');
+
+  RESET ROLE;
+END $$;
+
+-- 5.4 Negative Authorization Tests for RPCs
+DO $$
+BEGIN
+  -- anon execution of publish_announcement denied
+  BEGIN
+    SET LOCAL ROLE anon;
+    PERFORM public.publish_announcement(1);
+    RAISE EXCEPTION 'Negative auth check failed: anon executed publish_announcement';
+  EXCEPTION
+    WHEN insufficient_privilege OR SQLSTATE '42501' OR undefined_function THEN NULL;
+    WHEN OTHERS THEN
+      IF SQLSTATE IN ('42501', '28000') OR SQLERRM LIKE '%FORBIDDEN%' OR SQLERRM LIKE '%AUTH_REQUIRED%' THEN NULL; ELSE RAISE; END IF;
+  END;
+
+  -- anon execution of set_priest_photo denied
+  BEGIN
+    SET LOCAL ROLE anon;
+    PERFORM public.set_priest_photo(1, 1);
+    RAISE EXCEPTION 'Negative auth check failed: anon executed set_priest_photo';
+  EXCEPTION
+    WHEN insufficient_privilege OR SQLSTATE '42501' OR undefined_function THEN NULL;
+    WHEN OTHERS THEN
+      IF SQLSTATE IN ('42501', '28000') OR SQLERRM LIKE '%FORBIDDEN%' OR SQLERRM LIKE '%AUTH_REQUIRED%' THEN NULL; ELSE RAISE; END IF;
+  END;
+
+  -- anon execution of get_backlog denied
+  BEGIN
+    SET LOCAL ROLE anon;
+    PERFORM public.get_backlog(NULL, NULL, 10);
+    RAISE EXCEPTION 'Negative auth check failed: anon executed get_backlog';
+  EXCEPTION
+    WHEN insufficient_privilege OR SQLSTATE '42501' OR undefined_function THEN NULL;
+    WHEN OTHERS THEN
+      IF SQLSTATE IN ('42501', '28000') OR SQLERRM LIKE '%FORBIDDEN%' OR SQLERRM LIKE '%AUTH_REQUIRED%' THEN NULL; ELSE RAISE; END IF;
+  END;
+
+  -- non-admin authenticated execution of publish_announcement denied
+  BEGIN
+    SET LOCAL ROLE authenticated;
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000050', 'role', 'authenticated')::text, true);
+    PERFORM public.publish_announcement(1);
+    RAISE EXCEPTION 'Negative auth check failed: non-admin executed publish_announcement';
+  EXCEPTION
+    WHEN insufficient_privilege OR SQLSTATE '42501' THEN NULL;
+    WHEN OTHERS THEN
+      IF SQLSTATE IN ('42501', '28000') OR SQLERRM LIKE '%FORBIDDEN%' THEN NULL; ELSE RAISE; END IF;
+  END;
+
+  -- non-admin authenticated execution of set_priest_photo denied
+  BEGIN
+    SET LOCAL ROLE authenticated;
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000050', 'role', 'authenticated')::text, true);
+    PERFORM public.set_priest_photo(1, 1);
+    RAISE EXCEPTION 'Negative auth check failed: non-admin executed set_priest_photo';
+  EXCEPTION
+    WHEN insufficient_privilege OR SQLSTATE '42501' THEN NULL;
+    WHEN OTHERS THEN
+      IF SQLSTATE IN ('42501', '28000') OR SQLERRM LIKE '%FORBIDDEN%' THEN NULL; ELSE RAISE; END IF;
+  END;
+
+  -- non-admin authenticated execution of get_backlog denied
+  BEGIN
+    SET LOCAL ROLE authenticated;
+    PERFORM set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000050', 'role', 'authenticated')::text, true);
+    PERFORM public.get_backlog(NULL, NULL, 10);
+    RAISE EXCEPTION 'Negative auth check failed: non-admin executed get_backlog';
+  EXCEPTION
+    WHEN insufficient_privilege OR SQLSTATE '42501' THEN NULL;
+    WHEN OTHERS THEN
+      IF SQLSTATE IN ('42501', '28000') OR SQLERRM LIKE '%FORBIDDEN%' THEN NULL; ELSE RAISE; END IF;
+  END;
+END $$;
+
 ROLLBACK;
