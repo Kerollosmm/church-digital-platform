@@ -29,6 +29,8 @@ begin
   select count(*) into v_n from public.audit_log;
   if v_n = 0 then raise exception 'FAIL: admin must read audit_log'; end if;
 
+
+
   raise notice 'OK';
 end $$;
 
