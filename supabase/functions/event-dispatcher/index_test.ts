@@ -474,4 +474,73 @@ Deno.test("event-dispatcher: FCM_PUSH invalid private key -> FAILED", async () =
   }
 });
 
+Deno.test("event-dispatcher: video_ready template sends WhatsApp and stamps link_sent_at", async () => {
+  const fake = new FakeClient(["event_outbox", "whatsapp_optins", "videos", "video_purchases"]);
+  fake.seed("whatsapp_optins", [{ phone: "+201099990060", source: "BOOKING" }]);
+  fake.seed("videos", [
+    {
+      id: 101,
+      title_ar: "فيديو المعمودية",
+      yt_url: "https://youtu.be/baptism101",
+      privacy: "UNLISTED",
+      price: 0,
+    },
+  ]);
+  fake.seed("video_purchases", [
+    {
+      id: 501,
+      video_id: 101,
+      user_id: "00000000-0000-0000-0000-000000000060",
+      payment_id: 901,
+      access_granted_at: "2026-08-17T00:00:00Z",
+      link_sent_at: null,
+    },
+  ]);
+  fake.seed("event_outbox", [
+    {
+      id: 50,
+      handler_type: "WHATSAPP",
+      payload: {
+        phone: "+201099990060",
+        template_name: "video_ready",
+        video_id: 101,
+        purchase_id: 501,
+      },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  let sentBody: any;
+  const fetchStub = stub(globalThis, "fetch", (_url: RequestInfo | URL, init?: RequestInit) => {
+    sentBody = JSON.parse(String(init?.body));
+    return Promise.resolve(jsonRes({ messages: [{ id: "wamid_video_101" }] }));
+  });
+
+  try {
+    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      phoneId: "123456",
+      paymobApiKey: "pk",
+      amountMultiplier: 100,
+    });
+
+    assertEquals(res.status, 200);
+    assertEquals(sentBody.template.name, "video_ready");
+    assertEquals(sentBody.template.components[0].parameters, [
+      { type: "text", text: "https://youtu.be/baptism101" },
+    ]);
+    const outboxRow = fake.tableRows("event_outbox")[0];
+    assertEquals(outboxRow.status, "SENT");
+
+    const purchaseRow = fake.tableRows("video_purchases")[0];
+    assertNotEquals(purchaseRow.link_sent_at, null);
+  } finally {
+    fetchStub.restore();
+  }
+});
+
+
 
