@@ -152,3 +152,113 @@ VALUES
 ON CONFLICT (code) DO UPDATE
 SET message_ar = EXCLUDED.message_ar;
 
+-- ==============================================================================
+-- 8. Alter announcements to allow draft status (published_at NULL)
+-- ==============================================================================
+ALTER TABLE public.announcements ALTER COLUMN published_at DROP NOT NULL;
+
+-- ==============================================================================
+-- 9. RPC: publish_announcement
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.publish_announcement(p_id bigint)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_ann public.announcements;
+  v_has_images boolean := false;
+  v_linked_count int := 0;
+  v_invalid_count int := 0;
+BEGIN
+  IF NOT public.is_admin_or_priest() THEN
+    RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT * INTO v_ann FROM public.announcements WHERE id = p_id;
+  IF v_ann IS NULL THEN
+    RAISE EXCEPTION 'ANNOUNCEMENT_NOT_FOUND' USING ERRCODE = 'P0002';
+  END IF;
+
+  -- Check if announcement body or storage contains images
+  IF v_ann.body_ar LIKE '%announcement_images%'
+     OR EXISTS (SELECT 1 FROM storage.objects WHERE bucket_id = 'announcement_images' AND (name LIKE 'ann' || p_id || '/%' OR name LIKE p_id || '/%'))
+  THEN
+    v_has_images := true;
+  END IF;
+
+  SELECT count(*) INTO v_linked_count
+  FROM public.media_assets
+  WHERE content_type = 'announcement' AND content_id = p_id;
+
+  IF v_has_images AND v_linked_count = 0 THEN
+    RAISE EXCEPTION 'ALT_TEXT_REQUIRED' USING ERRCODE = 'P0001';
+  END IF;
+
+  SELECT count(*) INTO v_invalid_count
+  FROM public.media_assets
+  WHERE content_type = 'announcement' AND content_id = p_id
+    AND is_decorative = false
+    AND (alt_text_ar IS NULL OR length(trim(alt_text_ar)) = 0);
+
+  IF v_invalid_count > 0 THEN
+    RAISE EXCEPTION 'ALT_TEXT_REQUIRED' USING ERRCODE = 'P0001';
+  END IF;
+
+  UPDATE public.announcements
+  SET published_at = now(),
+      updated_at = now()
+  WHERE id = p_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.publish_announcement(bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.publish_announcement(bigint) TO authenticated;
+
+-- ==============================================================================
+-- 10. RPC: set_priest_photo
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.set_priest_photo(
+  p_priest_id bigint,
+  p_media_asset_id bigint
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_asset public.media_assets;
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM public.priests WHERE id = p_priest_id) THEN
+    RAISE EXCEPTION 'PRIEST_NOT_FOUND' USING ERRCODE = 'P0002';
+  END IF;
+
+  SELECT * INTO v_asset FROM public.media_assets WHERE id = p_media_asset_id;
+  IF v_asset IS NULL OR v_asset.bucket <> 'priest_photos'
+     OR (NOT v_asset.is_decorative AND (v_asset.alt_text_ar IS NULL OR length(trim(v_asset.alt_text_ar)) = 0))
+  THEN
+    RAISE EXCEPTION 'INVALID_MEDIA_ASSET' USING ERRCODE = 'P0001';
+  END IF;
+
+  UPDATE public.priests
+  SET photo_url = v_asset.storage_path,
+      updated_at = now()
+  WHERE id = p_priest_id;
+
+  UPDATE public.media_assets
+  SET content_type = 'priest',
+      content_id = p_priest_id
+  WHERE id = p_media_asset_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.set_priest_photo(bigint, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.set_priest_photo(bigint, bigint) TO authenticated;
+
+
