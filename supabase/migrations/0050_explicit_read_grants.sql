@@ -5,7 +5,7 @@
 -- ==============================================================================
 
 -- ==============================================================================
--- 1. Public catalog tables (SELECT to anon + authenticated, DML to authenticated)
+-- 1. Public catalog and public-read tables
 -- ==============================================================================
 GRANT SELECT ON public.announcements TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.announcements TO authenticated;
@@ -37,21 +37,20 @@ GRANT INSERT, UPDATE, DELETE ON public.video_purchases TO authenticated;
 GRANT SELECT ON public.bookings TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.bookings TO authenticated;
 
+GRANT SELECT ON public.slot_utilization_monthly TO anon, authenticated;
+GRANT SELECT ON public.payments_monthly TO anon, authenticated;
+GRANT SELECT ON public.bookings_monthly TO anon, authenticated;
+
 -- ==============================================================================
 -- 2. Authenticated-only tables (SELECT and/or DML to authenticated)
 -- ==============================================================================
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.payments TO authenticated;
-
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.complaints TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.waiting_list TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.whatsapp_optins TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.roles_permissions TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.offline_sync_log TO authenticated;
-
-GRANT SELECT ON public.slot_utilization_monthly TO authenticated;
-GRANT SELECT ON public.payments_monthly TO authenticated;
-GRANT SELECT ON public.bookings_monthly TO authenticated;
 
 -- ==============================================================================
 -- 3. Public and authenticated views
@@ -61,12 +60,11 @@ GRANT SELECT ON public.v_priests TO anon, authenticated;
 GRANT SELECT ON public.v_faq TO anon, authenticated;
 GRANT SELECT ON public.v_schedule_today TO anon, authenticated;
 GRANT SELECT ON public.v_available_slots TO anon, authenticated;
-
-GRANT SELECT ON public.v_my_videos TO authenticated;
-GRANT SELECT ON public.v_my_bookings TO authenticated;
-GRANT SELECT ON public.v_analytics_utilization TO authenticated;
-GRANT SELECT ON public.v_analytics_payments TO authenticated;
-GRANT SELECT ON public.v_analytics_bookings TO authenticated;
+GRANT SELECT ON public.v_my_videos TO anon, authenticated;
+GRANT SELECT ON public.v_my_bookings TO anon, authenticated;
+GRANT SELECT ON public.v_analytics_utilization TO anon, authenticated;
+GRANT SELECT ON public.v_analytics_payments TO anon, authenticated;
+GRANT SELECT ON public.v_analytics_bookings TO anon, authenticated;
 
 -- ==============================================================================
 -- 4. Identity sequences for client-accessible tables
