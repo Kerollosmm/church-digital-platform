@@ -25,7 +25,7 @@ class FakeAuthSupabaseClient extends FakeClient {
   };
 }
 
-Deno.test("http seam: respond() creates standard error response with CORS headers", async () => {
+Deno.test("http seam: respond() creates standard error response with CORS headers and message_ar", async () => {
   const res = respond(401, "UNAUTHORIZED", "Missing credentials");
   assertEquals(res.status, 401);
   assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
@@ -35,10 +35,11 @@ Deno.test("http seam: respond() creates standard error response with CORS header
   assertEquals(body, {
     error: "UNAUTHORIZED",
     message: "Missing credentials",
+    message_ar: "انتهت الجلسة، من فضلك سجل الدخول مرة أخرى.",
   });
 });
 
-Deno.test("http seam: respond() creates standard error without message if omitted", async () => {
+Deno.test("http seam: respond() creates standard error with message_ar when message is omitted", async () => {
   const res = respond(500, "INTERNAL");
   assertEquals(res.status, 500);
   assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
@@ -46,7 +47,25 @@ Deno.test("http seam: respond() creates standard error without message if omitte
   const body = await res.json();
   assertEquals(body, {
     error: "INTERNAL",
+    message_ar: "حدث خطأ في النظام، يرجى المحاولة لاحقاً.",
   });
+});
+
+Deno.test("http seam: every 4xx/5xx respond() body contains non-empty message_ar", async () => {
+  const codes: ErrorCode[] = ["UNAUTHORIZED", "FORBIDDEN", "BAD_REQUEST", "UPSTREAM_ERROR", "INTERNAL"];
+  for (const code of codes) {
+    const res = respond(400, code);
+    const body = await res.json();
+    assertEquals(typeof body.message_ar, "string");
+    assertEquals(body.message_ar.length > 0, true);
+  }
+});
+
+Deno.test("http seam: unknown error code receives FALLBACK message_ar", async () => {
+  const res = respond(400, "CUSTOM_UNKNOWN_CODE" as any);
+  const body = await res.json();
+  assertEquals(body.error, "CUSTOM_UNKNOWN_CODE");
+  assertEquals(body.message_ar, "حدث خطأ غير متوقع، حاول مرة أخرى.");
 });
 
 Deno.test("http seam: respond() handles success payloads with CORS headers", async () => {
