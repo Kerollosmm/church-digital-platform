@@ -10,6 +10,7 @@ begin
   on conflict (id) do nothing;
   update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id = '00000000-0000-0000-0000-000000000011';
   update public.users set role = 'ADMIN', tenant_id = 1, deleted_at = null where id = '00000000-0000-0000-0000-000000000013';
+  insert into public.audit_log (action, entity_type, entity_id, meta) values ('TEST', 'TEST', 1, '{}');
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000011', 'role', 'authenticated')::text, true);
