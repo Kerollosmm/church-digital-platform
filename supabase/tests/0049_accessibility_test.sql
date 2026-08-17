@@ -275,4 +275,101 @@ BEGIN
   );
 END $$;
 
+-- ==============================================================================
+-- 4. Publish Gates: publish_announcement & set_priest_photo
+-- ==============================================================================
+DO $$
+DECLARE
+  v_ann_id_1 bigint;
+  v_ann_id_2 bigint;
+  v_ann_id_3 bigint;
+  v_priest_id_1 bigint;
+  v_priest_id_2 bigint;
+  v_asset_invalid_bucket bigint;
+  v_asset_valid_priest bigint;
+  v_asset_valid_ann bigint;
+  v_pub_at timestamptz;
+  v_photo text;
+BEGIN
+  -- Set role to ADMIN for calling RPCs
+  SET LOCAL ROLE authenticated;
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000049', 'role', 'authenticated')::text, true);
+
+  -- 4.1 publish_announcement: fixture announcement with unlinked image in storage raises ALT_TEXT_REQUIRED
+  INSERT INTO public.announcements (title_ar, body_ar, published_at, tenant_id)
+  VALUES ('إعلان تجريبي 2', 'محتوى يحتوي على صور announcement_images/ann2/pic.jpg', NULL, 1)
+  RETURNING id INTO v_ann_id_2;
+
+  -- Insert a storage object in announcement_images for ann 2 with no media_assets row
+  INSERT INTO storage.objects (bucket_id, name, owner)
+  VALUES ('announcement_images', 'ann2/pic.jpg', '00000000-0000-0000-0000-000000000049')
+  ON CONFLICT DO NOTHING;
+
+  BEGIN
+    PERFORM public.publish_announcement(v_ann_id_2);
+    RAISE EXCEPTION 'publish_announcement must raise ALT_TEXT_REQUIRED when unlinked images exist';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM LIKE '%ALT_TEXT_REQUIRED%' THEN
+        NULL;
+      ELSE
+        RAISE;
+      END IF;
+  END;
+
+  SELECT published_at INTO v_pub_at FROM public.announcements WHERE id = v_ann_id_2;
+  PERFORM tests.expect(v_pub_at IS NULL, 'announcement published_at must remain NULL after failed publish');
+
+  -- 4.2 publish_announcement: fixture announcement with valid linked media_asset succeeds
+  INSERT INTO public.announcements (title_ar, body_ar, published_at, tenant_id)
+  VALUES ('إعلان تجريبي 3', 'محتوى معتمد', NULL, 1)
+  RETURNING id INTO v_ann_id_3;
+
+  INSERT INTO public.media_assets (bucket, storage_path, alt_text_ar, is_decorative, content_type, content_id, tenant_id)
+  VALUES ('announcement_images', 'ann3/valid.jpg', 'صورة الإعلان الثالث المعتمدة', false, 'announcement', v_ann_id_3, 1)
+  RETURNING id INTO v_asset_valid_ann;
+
+  PERFORM public.publish_announcement(v_ann_id_3);
+
+  SELECT published_at INTO v_pub_at FROM public.announcements WHERE id = v_ann_id_3;
+  PERFORM tests.expect(v_pub_at IS NOT NULL, 'publish_announcement must set published_at to non-null timestamp on success');
+
+  -- 4.3 set_priest_photo: fixture priest + media_asset with wrong bucket raises INVALID_MEDIA_ASSET
+  INSERT INTO public.priests (name, tenant_id)
+  VALUES ('أبونا يوحنا', 1)
+  RETURNING id INTO v_priest_id_1;
+
+  INSERT INTO public.media_assets (bucket, storage_path, alt_text_ar, is_decorative, tenant_id)
+  VALUES ('church_media', 'wrong_bucket/priest.jpg', 'صورة في الوعاء الخطأ', false, 1)
+  RETURNING id INTO v_asset_invalid_bucket;
+
+  BEGIN
+    PERFORM public.set_priest_photo(v_priest_id_1, v_asset_invalid_bucket);
+    RAISE EXCEPTION 'set_priest_photo must raise INVALID_MEDIA_ASSET for asset in wrong bucket';
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF SQLERRM LIKE '%INVALID_MEDIA_ASSET%' THEN
+        NULL;
+      ELSE
+        RAISE;
+      END IF;
+  END;
+
+  -- 4.4 set_priest_photo: fixture priest + media_asset in priest_photos bucket succeeds
+  INSERT INTO public.priests (name, tenant_id)
+  VALUES ('أبونا مرقس', 1)
+  RETURNING id INTO v_priest_id_2;
+
+  INSERT INTO public.media_assets (bucket, storage_path, alt_text_ar, is_decorative, tenant_id)
+  VALUES ('priest_photos', 'priests/markos.jpg', 'صورة أبونا مرقس الرسمية', false, 1)
+  RETURNING id INTO v_asset_valid_priest;
+
+  PERFORM public.set_priest_photo(v_priest_id_2, v_asset_valid_priest);
+
+  SELECT photo_url INTO v_photo FROM public.priests WHERE id = v_priest_id_2;
+  PERFORM tests.expect(v_photo = 'priests/markos.jpg', 'set_priest_photo must update priests.photo_url to storage_path');
+
+  RESET ROLE;
+END $$;
+
 ROLLBACK;
