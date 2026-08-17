@@ -31,6 +31,9 @@ GRANT INSERT, UPDATE, DELETE ON public.social_links TO authenticated;
 GRANT SELECT ON public.videos TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.videos TO authenticated;
 
+GRANT SELECT ON public.video_purchases TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.video_purchases TO authenticated;
+
 GRANT SELECT ON public.bookings TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.bookings TO authenticated;
 
@@ -38,8 +41,8 @@ GRANT INSERT, UPDATE, DELETE ON public.bookings TO authenticated;
 -- 2. Authenticated-only tables (SELECT and/or DML to authenticated)
 -- ==============================================================================
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.users TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.video_purchases TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.payments TO authenticated;
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.complaints TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.waiting_list TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.whatsapp_optins TO authenticated;
