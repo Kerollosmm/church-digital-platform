@@ -367,7 +367,20 @@ REVOKE ALL ON FUNCTION public.get_backlog(timestamptz, bigint, int) FROM PUBLIC,
 GRANT EXECUTE ON FUNCTION public.get_backlog(timestamptz, bigint, int) TO authenticated, service_role;
 
 -- ==============================================================================
--- 13. RPC: deliver_personal_video
+-- 13. Event Outbox WhatsApp Template Check: add video_ready
+-- ==============================================================================
+ALTER TABLE public.event_outbox DROP CONSTRAINT IF EXISTS event_outbox_whatsapp_template_check;
+ALTER TABLE public.event_outbox ADD CONSTRAINT event_outbox_whatsapp_template_check CHECK (
+  handler_type <> 'WHATSAPP'
+  OR payload->>'template_name' IN (
+    'booking_confirmed', 'payment_received', 'booking_cancelled',
+    'booking_rescheduled', 'booking_apology', 'otp_auth',
+    'booking_payment_received', 'booking_offer', 'video_ready'
+  )
+);
+
+-- ==============================================================================
+-- 14. RPC: deliver_personal_video
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION public.deliver_personal_video(
   p_phone text,

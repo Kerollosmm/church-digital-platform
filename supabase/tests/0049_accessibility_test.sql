@@ -539,6 +539,8 @@ BEGIN
     WHEN OTHERS THEN
       IF SQLSTATE IN ('42501', '28000') OR SQLERRM LIKE '%FORBIDDEN%' THEN NULL; ELSE RAISE; END IF;
   END;
+END $$;
+
 -- ==============================================================================
 -- 6. Personal Video Delivery: deliver_personal_video
 -- ==============================================================================
