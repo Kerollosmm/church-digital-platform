@@ -4,17 +4,17 @@
 
 | Component | Status | Test / Gate Outcome | Notes |
 | :--- | :--- | :--- | :--- |
-| **PostgreSQL Schema (0001-0053)** | **100% Passing** | `db reset` clean + 45/45 SQL suites PASS | Security fixes & video removal in 0053 |
-| **Deno Edge Functions** | **100% Passing** | 84/84 unit tests PASS | `youtube-expiry` dropped; IDOR tests restored |
+| **PostgreSQL Schema (0001-0054)** | **100% Passing** | `db reset` clean + 46/46 SQL suites PASS | Security fixes, video dropped, 0054 template check |
+| **Deno Edge Functions** | **100% Passing** | 84/84 unit tests PASS | `youtube-expiry` dropped; IDOR tests passing |
 | **Flutter Mobile App** | **100% Passing** | 82/82 tests PASS, analyze clean | Video purchase screens purged |
 | **Flutter Web Admin App** | **100% Passing** | 45/45 tests PASS, analyze clean | 3-step auth (Phone + OTP + PIN), videos removed |
-| **Diagnostic Engine** | **Operational** | Unit tests passing | Template alert name to be harmonized |
 | **Gate 6 (Auth Perimeter)** | **Verified Live** | Returns 401 with frozen Arabic JSON | Kong port 53321 verified |
 | **Gate 7 (Staging E2E)** | **Blocked / Pending** | Requires staging Paymob secrets | Out-of-band credentials needed |
+| **Git Repository** | **Pushed to Remote** | `origin/007-backend-security-fixes` | Ready for merge / PR review |
 
 ---
 
-## What Works
+## What Works (Completed & Verified)
 
 1. **Sacramental & Trip Slot Booking**:
    - Atomic reservation with `SELECT capacity FOR UPDATE`.
@@ -28,12 +28,15 @@
 3. **Outbox & Notification System**:
    - Atomic enqueue to `event_outbox`.
    - Concurrency-safe drain with `FOR UPDATE SKIP LOCKED`.
-   - Stuck event reaper (`reap_stuck_outbox_events`) and admin resend view/RPC.
+   - Stuck event reaper (`reap_stuck_outbox_events`) and admin resend view/RPC (`v_failed_outbox_events`).
+   - Template check includes `admin_security_alert` (Migration 0054).
 4. **Encrypted Complaints System**:
    - Asymmetric PGP/Vault encryption.
    - Definer-rights view `v_complaints` with strict `is_admin()` filter.
-5. **Video Decommissioning**:
+5. **Video Subsystem Decommissioning**:
    - 100% purged across database tables, RPCs, edge functions, cron jobs, mobile, and admin apps.
+6. **TAP-Verified SQL Test Runner**:
+   - `scripts/test-sql.js` & `scripts/sweep-sql.sh` automatically detect assertion failures inside `DO $$ ... $$` blocks over stdin.
 
 ---
 
@@ -55,20 +58,6 @@
   - `superadmin_*` configuration RPCs for event types and extra services.
 - **WhatsApp Transactional Templates**:
   - Submission received, Booking confirmed, Booking rejected, Payment received / balance statement.
-- **Flutter UI & Clean Architecture**:
+- **Flutter Clean Architecture Rework**:
   - Event reservation workflows on Mobile.
   - Event review, venue assignment, cash receipting, and failed outbox resend queues on Admin Web.
-
----
-
-## Known Traps & Operational Invariants
-
-1. **pgTAP Exit Code 0 Trap**:
-   - `psql` exits with code 0 even on test failures.
-   - Sweep scripts must search for `not ok` and `# Looks like you failed`.
-2. **dblink Isolation**:
-   - `dblink` must always reside in schema `dblink_test` (never `public`) to prevent granting `EXECUTE` to `anon`/`authenticated`.
-3. **Piped SQL Execution**:
-   - `/tests` is not mounted in the Supabase container. Run each SQL suite via stdin piping to `docker exec -i supabase_db_church`.
-4. **Single-Church Deployment**:
-   - Multi-tenant column `tenant_id` defaults to `1` internally. Never expose tenant fields in UI.
