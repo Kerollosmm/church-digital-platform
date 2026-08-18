@@ -18,17 +18,17 @@ begin
 
   insert into public.services (id, title_ar, tenant_id) overriding system value values (99908, 'خدمة 008', 1) on conflict do nothing;
 
-  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, remaining_capacity, price, status, tenant_id)
+  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   overriding system value
-  values (999081, 99908, now() + interval '2 days', now() + interval '2 days 1 hour', 1, 1, 0, 'OPEN', 1)
-  on conflict (id) do update set starts_at = now() + interval '2 days', capacity = 1, remaining_capacity = 1, status = 'OPEN';
+  values (999081, 99908, now() + interval '2 days', now() + interval '2 days 1 hour', 1, 0, 'OPEN', 1)
+  on conflict (id) do update set starts_at = now() + interval '2 days', capacity = 1, status = 'OPEN';
   v_slot := 999081;
 
   -- multi-seat fixture
-  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, remaining_capacity, price, status, tenant_id)
+  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   overriding system value
-  values (999082, 99908, now() + interval '3 days', now() + interval '3 days 1 hour', 2, 2, 50, 'OPEN', 1)
-  on conflict (id) do update set starts_at = now() + interval '3 days', capacity = 2, remaining_capacity = 2, status = 'OPEN';
+  values (999082, 99908, now() + interval '3 days', now() + interval '3 days 1 hour', 2, 50, 'OPEN', 1)
+  on conflict (id) do update set starts_at = now() + interval '3 days', capacity = 2, status = 'OPEN';
   v_slot2 := 999082;
 
   -- Clean slate

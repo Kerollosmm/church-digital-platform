@@ -414,9 +414,6 @@ verify_jwt = false
 [functions.reconcile-payments]
 verify_jwt = false
 
-[functions.youtube-expiry]
-verify_jwt = false
-
 [functions.otp-sms]
 verify_jwt = false
 

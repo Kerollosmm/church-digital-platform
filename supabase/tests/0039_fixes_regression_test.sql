@@ -33,10 +33,10 @@ BEGIN
   SET LOCAL ROLE service_role;
   PERFORM count(*) FROM public.claim_event_outbox_batch(10);
 
-  -- Test 4: Verify trigger tr_restore_slot_capacity exists
+  -- Test 4: Verify trigger tr_restore_slot_capacity is dropped (dynamic slot capacity)
   RESET ROLE;
-  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'tr_restore_slot_capacity') THEN
-    RAISE EXCEPTION 'FAIL: tr_restore_slot_capacity trigger must exist';
+  IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'tr_restore_slot_capacity') THEN
+    RAISE EXCEPTION 'FAIL: tr_restore_slot_capacity trigger must not exist';
   END IF;
 
   RAISE NOTICE '0039_fixes_regression_test: OK';

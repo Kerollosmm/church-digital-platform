@@ -8,15 +8,15 @@ declare
 begin
   -- fixtures
   insert into auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-  values ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u1@test.local', '+201000000241', '{}', '{}', now(), now()),
-         ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u2@test.local', '+201000000242', '{}', '{}', now(), now()),
-         ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u3@test.local', '+201000000243', '{}', '{}', now(), now())
-  on conflict (id) do nothing;
-  update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id in ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003');
-  update public.users set role = 'ADMIN', tenant_id = 1, deleted_at = null where id = '00000000-0000-0000-0000-000000000002';
+  values ('00000000-0000-0000-0000-000000000241', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u241@test.local', '+201000000241', '{}', '{}', now(), now()),
+         ('00000000-0000-0000-0000-000000000242', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u242@test.local', '+201000000242', '{}', '{}', now(), now()),
+         ('00000000-0000-0000-0000-000000000243', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u243@test.local', '+201000000243', '{}', '{}', now(), now())
+  on conflict (id) do update set email = EXCLUDED.email;
+  update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id in ('00000000-0000-0000-0000-000000000241', '00000000-0000-0000-0000-000000000243');
+  update public.users set role = 'ADMIN', tenant_id = 1, deleted_at = null where id = '00000000-0000-0000-0000-000000000242';
 
-  delete from public.payments where booking_id in (select id from public.bookings where user_id in ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000003'));
-  delete from public.bookings where user_id in ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000003');
+  delete from public.payments where booking_id in (select id from public.bookings where user_id in ('00000000-0000-0000-0000-000000000241', '00000000-0000-0000-0000-000000000242', '00000000-0000-0000-0000-000000000243'));
+  delete from public.bookings where user_id in ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000241', '00000000-0000-0000-0000-000000000242', '00000000-0000-0000-0000-000000000243');
 
   insert into public.service_slots (service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   select id, now() + interval '2 days', now() + interval '2 days 1 hour', 2, 50, 'OPEN', 1
@@ -24,8 +24,8 @@ begin
   returning id into v_slot;
 
   set local role authenticated;
-  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000001', 'role', 'authenticated')::text, true);
-  select id into v_book from public.book_slot(v_slot, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000241', 'role', 'authenticated')::text, true);
+  select id into v_book from public.book_slot(p_slot_id => v_slot, p_opt_in => true);
 
   -- 1. count helper: 1 active with live lock
   select public.active_booking_count(v_slot) into v_n;
@@ -55,7 +55,7 @@ begin
 
   -- 5. ownership gate: another parishioner cannot touch the booking (admins may, legacy behavior)
   set local role authenticated;
-  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000003', 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000243', 'role', 'authenticated')::text, true);
   begin
     v_res := public.transition_booking_status(v_book, 'CANCELLED', 'cancel_booking');
     raise exception 'FAIL: non-owner must be FORBIDDEN';
@@ -64,14 +64,14 @@ begin
   end;
 
   -- 6. parishioner cannot CONFIRM (privilege gate); admin can
-  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000001', 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000241', 'role', 'authenticated')::text, true);
   begin
     v_res := public.transition_booking_status(v_book, 'CONFIRMED', 'confirm_booking');
     raise exception 'FAIL: parishioner must not CONFIRM';
   exception when others then
     if sqlerrm not like '%FORBIDDEN%' then raise; end if;
   end;
-  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000002', 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000242', 'role', 'authenticated')::text, true);
   v_res := public.transition_booking_status(v_book, 'CONFIRMED', 'confirm_booking');
   if v_res.status <> 'CONFIRMED' then raise exception 'FAIL: admin must CONFIRM'; end if;
 
@@ -94,7 +94,7 @@ begin
 
   -- 9. count helper unguarded variant + expired lock
   insert into public.bookings (slot_id, user_id, status, locked_until, created_by, tenant_id)
-  values (v_slot, '00000000-0000-0000-0000-000000000002', 'PENDING_PAYMENT', now() - interval '1 minute', 'system', 1)
+  values (v_slot, '00000000-0000-0000-0000-000000000242', 'PENDING_PAYMENT', now() - interval '1 minute', 'system', 1)
   returning id into v_other_book;
   select public.active_booking_count(v_slot) into v_n;
   if v_n <> 0 then raise exception 'FAIL: guarded count must skip expired lock (and completed bookings)'; end if;

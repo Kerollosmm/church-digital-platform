@@ -153,7 +153,7 @@ export async function runRealPaymentVerification(): Promise<void> {
 
   // Test 4.1: Forged HMAC Security Probe (Must fail: 401 BAD_HMAC)
   console.log("  4.1 Probing Webhook handler with forged HMAC (Expect 401 BAD_HMAC)...");
-  const fakeServiceDb = new FakeClient(["payments", "bookings", "video_purchases"]);
+  const fakeServiceDb = new FakeClient(["payments", "bookings"]);
   const badHmacReq = new Request("http://localhost/functions/v1/paymob-webhook?hmac=deadbeefcafebabe0000111122223333444455556666777788889999aaaabbbb", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -163,7 +163,6 @@ export async function runRealPaymentVerification(): Promise<void> {
     getClient: () => fakeServiceDb as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
     hmacKey: PAYMOB_HMAC_KEY,
     applyPayment: async () => {},
-    applyVideoPayment: async () => {},
   });
   if (badHmacRes.status !== 401) {
     throw new Error(`SECURITY VIOLATION: Webhook accepted forged HMAC with HTTP ${badHmacRes.status}`);
@@ -187,7 +186,6 @@ export async function runRealPaymentVerification(): Promise<void> {
     getClient: () => fakeServiceDb as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
     hmacKey: PAYMOB_HMAC_KEY,
     applyPayment: async () => {},
-    applyVideoPayment: async () => {},
   });
 
   if (badOrderRes.status !== 400) {
@@ -201,7 +199,7 @@ export async function runRealPaymentVerification(): Promise<void> {
   // -------------------------------------------------------------------------
   console.log("\n\x1b[36m[Stage 5: Live Paymob Settlement & Idempotency Invariants]\x1b[0m");
 
-  const serviceDb = new FakeClient(["payments", "bookings", "video_purchases"]);
+  const serviceDb = new FakeClient(["payments", "bookings"]);
   serviceDb.seed("bookings", [
     {
       id: 77,
@@ -252,7 +250,6 @@ export async function runRealPaymentVerification(): Promise<void> {
         },
       ]);
     },
-    applyVideoPayment: async () => {},
   });
 
   const settlementBody = await settlementRes.json() as Record<string, unknown>;
@@ -279,7 +276,6 @@ export async function runRealPaymentVerification(): Promise<void> {
     applyPayment: async () => {
       reapplyCalled = true;
     },
-    applyVideoPayment: async () => {},
   });
 
   if (replayRes.status !== 200) {

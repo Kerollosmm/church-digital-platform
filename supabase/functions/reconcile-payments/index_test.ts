@@ -10,6 +10,43 @@ function jsonRes(body: unknown, status = 200): Response {
   });
 }
 
+Deno.test("reconcile: unauthenticated request -> 401 UNAUTHORIZED", async () => {
+  const fake = new FakeClient(["bookings", "payments"]);
+  const res = await handleRequest(
+    new Request("https://x/functions/v1/reconcile-payments", { method: "POST" }),
+    {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch,
+      paymobApiKey: "sk",
+      applyPayment: async () => {},
+      cronSecret: "secret_123",
+    },
+  );
+  assertEquals(res.status, 401);
+  const body = await res.json();
+  assertEquals(body.error, "UNAUTHORIZED");
+});
+
+Deno.test("reconcile: invalid bearer token -> 401 UNAUTHORIZED", async () => {
+  const fake = new FakeClient(["bookings", "payments"]);
+  const res = await handleRequest(
+    new Request("https://x/functions/v1/reconcile-payments", {
+      method: "POST",
+      headers: { Authorization: "Bearer wrong_secret" },
+    }),
+    {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch,
+      paymobApiKey: "sk",
+      applyPayment: async () => {},
+      cronSecret: "secret_123",
+    },
+  );
+  assertEquals(res.status, 401);
+  const body = await res.json();
+  assertEquals(body.error, "UNAUTHORIZED");
+});
+
 Deno.test("reconcile: stale PENDING_PAYMENT found paid on Paymob -> apply_payment", async () => {
   const fake = new FakeClient(["bookings", "payments"]);
   fake.seed("payments", [
@@ -35,7 +72,10 @@ Deno.test("reconcile: stale PENDING_PAYMENT found paid on Paymob -> apply_paymen
   });
   try {
     const res = await handleRequest(
-      new Request("https://x/functions/v1/reconcile-payments", { method: "POST" }),
+      new Request("https://x/functions/v1/reconcile-payments", {
+        method: "POST",
+        headers: { Authorization: "Bearer secret_123" },
+      }),
       {
         getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
         fetch: fetchStub,
@@ -43,6 +83,7 @@ Deno.test("reconcile: stale PENDING_PAYMENT found paid on Paymob -> apply_paymen
         applyPayment: async (id) => {
           applied.push(id);
         },
+        cronSecret: "secret_123",
       },
     );
     assertEquals(res.status, 200);
@@ -77,7 +118,10 @@ Deno.test("reconcile: stale PENDING_PAYMENT unpaid on Paymob -> cancels booking 
   });
   try {
     const res = await handleRequest(
-      new Request("https://x/functions/v1/reconcile-payments", { method: "POST" }),
+      new Request("https://x/functions/v1/reconcile-payments", {
+        method: "POST",
+        headers: { Authorization: "Bearer secret_123" },
+      }),
       {
         getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
         fetch: fetchStub,
@@ -85,6 +129,7 @@ Deno.test("reconcile: stale PENDING_PAYMENT unpaid on Paymob -> cancels booking 
         applyPayment: async (id) => {
           applied.push(id);
         },
+        cronSecret: "secret_123",
       },
     );
     assertEquals(res.status, 200);
@@ -95,7 +140,7 @@ Deno.test("reconcile: stale PENDING_PAYMENT unpaid on Paymob -> cancels booking 
   }
 });
 
-Deno.test("reconcile: upstream error marks payment FAILED with incident logging", async () => {
+Deno.test("reconcile: upstream transient 502 error leaves payment CREATED for next sweep", async () => {
   const fake = new FakeClient(["bookings", "payments"]);
   fake.seed("payments", [
     { id: 3, booking_id: 9, merchant_order_id: "19", status: "CREATED", gateway_ref: null },
@@ -111,21 +156,25 @@ Deno.test("reconcile: upstream error marks payment FAILED with incident logging"
   });
   try {
     const res = await handleRequest(
-      new Request("https://x/functions/v1/reconcile-payments", { method: "POST" }),
+      new Request("https://x/functions/v1/reconcile-payments", {
+        method: "POST",
+        headers: { Authorization: "Bearer secret_123" },
+      }),
       {
         getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
         fetch: fetchStub,
         paymobApiKey: "sk",
         applyPayment: async () => {},
+        cronSecret: "secret_123",
       },
     );
     assertEquals(res.status, 200);
     const body = await res.json();
     assertEquals(body.ok, true);
-    assertEquals(body.resolved, 1);
-    assertEquals(fake.tableRows("payments")[0].status, "FAILED");
+    assertEquals(body.resolved, 0);
+    // T058: Left CREATED
+    assertEquals(fake.tableRows("payments")[0].status, "CREATED");
   } finally {
     fetchStub.restore();
   }
 });
-

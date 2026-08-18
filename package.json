@@ -1,0 +1,11 @@
+{
+  "name": "church-digital-platform",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:sql": "node scripts/test-sql.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1"
+  }
+}

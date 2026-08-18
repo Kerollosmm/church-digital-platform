@@ -16,7 +16,7 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000038', 'role', 'authenticated')::text, true);
-  select id into v_book from public.book_slot(v_slot, true);
+  select id into v_book from public.book_slot(p_slot_id => v_slot, p_opt_in => true);
 
   reset role;
   select paid_amount into v_paid from public.bookings where id = v_book;

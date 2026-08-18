@@ -22,6 +22,7 @@
 \ir 0022_analytics_aggregates_test.sql
 \ir 0023_analytics_views_test.sql
 \ir 0024_transition_engine_test.sql
+\ir 0024_transition_whitelist_test.sql
 \ir 0025_rbac_helpers_test.sql
 \ir 0026_complaints_crypto_test.sql
 \ir 0027_event_outbox_test.sql
@@ -42,6 +43,6 @@
 \ir 0048_role_gates_test.sql
 \ir 0049_accessibility_test.sql
 \ir 0050_read_grants_test.sql
-
-
-
+\ir 0053_security_fixes_test.sql
+\ir 0053_concurrency_test.sql
+\ir 0054_admin_security_alert_test.sql

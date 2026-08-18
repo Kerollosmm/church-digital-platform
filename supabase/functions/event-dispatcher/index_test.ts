@@ -7,6 +7,53 @@ function jsonRes(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
+function authedReq(): Request {
+  return new Request("https://x/functions/v1/event-dispatcher", {
+    method: "POST",
+    headers: { Authorization: "Bearer test_secret" },
+  });
+}
+
+const DEFAULT_DEPS = {
+  phoneId: "123456",
+  paymobApiKey: "pk",
+  amountMultiplier: 100,
+  cronSecret: "test_secret",
+};
+
+Deno.test("event-dispatcher: unauthenticated request -> 401 UNAUTHORIZED", async () => {
+  const fake = new FakeClient(["event_outbox"]);
+  const res = await handleRequest(
+    new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }),
+    {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch,
+      ...DEFAULT_DEPS,
+    },
+  );
+  assertEquals(res.status, 401);
+  const body = await res.json();
+  assertEquals(body.error, "UNAUTHORIZED");
+});
+
+Deno.test("event-dispatcher: invalid bearer token -> 401 UNAUTHORIZED", async () => {
+  const fake = new FakeClient(["event_outbox"]);
+  const res = await handleRequest(
+    new Request("https://x/functions/v1/event-dispatcher", {
+      method: "POST",
+      headers: { Authorization: "Bearer wrong_secret" },
+    }),
+    {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch,
+      ...DEFAULT_DEPS,
+    },
+  );
+  assertEquals(res.status, 401);
+  const body = await res.json();
+  assertEquals(body.error, "UNAUTHORIZED");
+});
+
 Deno.test("event-dispatcher: template param order for booking_payment_received", async () => {
   const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
   fake.seed("whatsapp_optins", [{ phone: "+201000000000", source: "BOOKING" }]);
@@ -28,12 +75,10 @@ Deno.test("event-dispatcher: template param order for booking_payment_received",
   });
 
   try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    const res = await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
     assertEquals(res.status, 200);
     assertEquals(sentBody.template.components[0].parameters, [
@@ -61,12 +106,10 @@ Deno.test("event-dispatcher: no-opt-in -> FAILED", async () => {
   ]);
   const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
   try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    const res = await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
     assertEquals(res.status, 200);
     assertEquals(fetchStub.calls.length, 0);
@@ -91,12 +134,10 @@ Deno.test("event-dispatcher: unknown template -> FAILED", async () => {
   ]);
   const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
   try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    const res = await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
     assertEquals(res.status, 200);
     assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
@@ -119,12 +160,10 @@ Deno.test("event-dispatcher: unknown handler -> FAILED", async () => {
   ]);
   const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
   try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    const res = await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
     assertEquals(res.status, 200);
     assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
@@ -148,12 +187,10 @@ Deno.test("event-dispatcher: 5xx -> backoff PENDING with attempts+1 and next_att
   ]);
   const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({}, 500)));
   try {
-    await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
     const row = fake.tableRows("event_outbox")[0];
     assertEquals(row.status, "PENDING");
@@ -179,12 +216,10 @@ Deno.test("event-dispatcher: 4xx -> FAILED", async () => {
   ]);
   const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({}, 400)));
   try {
-    await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
     assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
   } finally {
@@ -195,12 +230,10 @@ Deno.test("event-dispatcher: 4xx -> FAILED", async () => {
 Deno.test("event-dispatcher: getClient throw -> 500 response", async () => {
   const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
   try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    const res = await handleRequest(authedReq(), {
       getClient: () => { throw new Error("DB error"); },
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
     assertEquals(res.status, 500);
   } finally {
@@ -231,12 +264,10 @@ Deno.test("event-dispatcher: PAYMOB_REFUND success sets payments REFUNDED + even
   });
 
   try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    const res = await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
     assertEquals(res.status, 200);
     assertEquals(fake.tableRows("event_outbox")[0].status, "SENT");
@@ -266,12 +297,10 @@ Deno.test("event-dispatcher: PAYMOB_REFUND 4xx -> FAILED", async () => {
   });
 
   try {
-    await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
     assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
   } finally {
@@ -296,12 +325,10 @@ Deno.test("event-dispatcher: PAYMOB_REFUND missing gateway_ref -> FAILED", async
   const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
 
   try {
-    await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
     assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
     assertEquals(fetchStub.calls.length, 0);
@@ -330,12 +357,10 @@ Deno.test("event-dispatcher: PAYMOB_REFUND capped at 3 attempts (attempt 2 + 1 f
   });
 
   try {
-    await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
     assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
   } finally {
@@ -401,12 +426,10 @@ Deno.test("event-dispatcher: FCM_PUSH exchanges OAuth2 token and sends FCM v1 pa
   });
 
   try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    const res = await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
 
     assertEquals(res.status, 200);
@@ -458,12 +481,10 @@ Deno.test("event-dispatcher: FCM_PUSH invalid private key -> FAILED", async () =
   const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
 
   try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    const res = await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
 
     assertEquals(res.status, 200);
@@ -473,74 +494,3 @@ Deno.test("event-dispatcher: FCM_PUSH invalid private key -> FAILED", async () =
     fetchStub.restore();
   }
 });
-
-Deno.test("event-dispatcher: video_ready template sends WhatsApp and stamps link_sent_at", async () => {
-  const fake = new FakeClient(["event_outbox", "whatsapp_optins", "videos", "video_purchases"]);
-  fake.seed("whatsapp_optins", [{ phone: "+201099990060", source: "BOOKING" }]);
-  fake.seed("videos", [
-    {
-      id: 101,
-      title_ar: "فيديو المعمودية",
-      yt_url: "https://youtu.be/baptism101",
-      privacy: "UNLISTED",
-      price: 0,
-    },
-  ]);
-  fake.seed("video_purchases", [
-    {
-      id: 501,
-      video_id: 101,
-      user_id: "00000000-0000-0000-0000-000000000060",
-      payment_id: 901,
-      access_granted_at: "2026-08-17T00:00:00Z",
-      link_sent_at: null,
-    },
-  ]);
-  fake.seed("event_outbox", [
-    {
-      id: 50,
-      handler_type: "WHATSAPP",
-      payload: {
-        phone: "+201099990060",
-        template_name: "video_ready",
-        video_id: 101,
-        purchase_id: 501,
-      },
-      status: "PENDING",
-      attempts: 0,
-      next_attempt_at: "2026-08-05T00:00:00Z",
-    },
-  ]);
-
-  let sentBody: any;
-  const fetchStub = stub(globalThis, "fetch", (_url: RequestInfo | URL, init?: RequestInit) => {
-    sentBody = JSON.parse(String(init?.body));
-    return Promise.resolve(jsonRes({ messages: [{ id: "wamid_video_101" }] }));
-  });
-
-  try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-
-    assertEquals(res.status, 200);
-    assertEquals(sentBody.template.name, "video_ready");
-    assertEquals(sentBody.template.components[0].parameters, [
-      { type: "text", text: "https://youtu.be/baptism101" },
-    ]);
-    const outboxRow = fake.tableRows("event_outbox")[0];
-    assertEquals(outboxRow.status, "SENT");
-
-    const purchaseRow = fake.tableRows("video_purchases")[0];
-    assertNotEquals(purchaseRow.link_sent_at, null);
-  } finally {
-    fetchStub.restore();
-  }
-});
-
-
-

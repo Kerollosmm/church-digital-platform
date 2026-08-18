@@ -18,10 +18,10 @@ begin
 
   delete from public.bookings where user_id in (v_parishioner, v_other);
   insert into public.services (id, title_ar, tenant_id) overriding system value values (99921, 'خدمة 021', 1) on conflict do nothing;
-  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, remaining_capacity, price, status, tenant_id)
+  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   overriding system value
-  values (999211, 99921, now() + interval '12 days', now() + interval '12 days 1 hour', 5, 5, 50, 'OPEN', 1)
-  on conflict (id) do update set starts_at = now() + interval '12 days', capacity = 5, remaining_capacity = 5, status = 'OPEN';
+  values (999211, 99921, now() + interval '12 days', now() + interval '12 days 1 hour', 5, 50, 'OPEN', 1)
+  on conflict (id) do update set starts_at = now() + interval '12 days', capacity = 5, status = 'OPEN';
 
   -- seed a complaint owned by someone else (as postgres, bypasses RLS; trigger encrypts it)
   insert into public.complaints (user_id, category, body_encrypted, tenant_id)
@@ -65,7 +65,11 @@ begin
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_other, 'role','authenticated')::text, true);
-  update public.payments set amount = amount + 1;
+  begin
+    update public.payments set amount = amount + 1;
+    raise exception 'FAIL: PARISHIONER must not write payments';
+  exception when insufficient_privilege then null;
+  end;
 
   reset role;
   if (select sum(amount) from public.payments) is distinct from v_sum

@@ -7,7 +7,6 @@ export interface Deps {
   getClient(): unknown;
   hmacKey: string;
   applyPayment: (paymentId: number) => Promise<void>;
-  applyVideoPayment: (paymentId: number) => Promise<void>;
 }
 
 export async function hmacSha512Hex(
@@ -78,10 +77,10 @@ export async function handleRequest(
     const paid = Boolean(txn.success);
     const { data: existing } = await supabase
       .from("payments")
-      .select("id, gateway_ref, status, video_id")
+      .select("id, gateway_ref, status")
       .eq("merchant_order_id", merchantOrderId)
       .maybeSingle();
-    let pay: { id: number; status: string; video_id?: number | null };
+    let pay: { id: number; status: string };
     if (existing) {
       // Idempotency: if already processed as PAID, acknowledge without re-invoking state transitions or overwriting with FAILED
       if (existing.status === "PAID") {
@@ -98,7 +97,7 @@ export async function handleRequest(
         .select()
         .single();
       if (uErr) throw uErr;
-      pay = updated as { id: number; status: string; video_id?: number | null };
+      pay = updated as { id: number; status: string };
     } else {
       const { data: created, error: cErr } = await supabase
         .from("payments")
@@ -113,15 +112,11 @@ export async function handleRequest(
         .select()
         .single();
       if (cErr) throw cErr;
-      pay = created as { id: number; status: string; video_id?: number | null };
+      pay = created as { id: number; status: string };
     }
 
     if (paid) {
-      if (pay.video_id) {
-        await deps.applyVideoPayment(pay.id);
-      } else {
-        await deps.applyPayment(pay.id);
-      }
+      await deps.applyPayment(pay.id);
     }
     return respond(200, { ok: true });
   } catch (e) {
@@ -148,14 +143,6 @@ if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
         const { error } = await sb.rpc("apply_payment", { p_payment_id: id });
         if (error) throw error;
       },
-      applyVideoPayment: async (id) => {
-        const sb = makeServiceClient(supabaseUrl, serviceKey);
-        const { error } = await sb.rpc("apply_video_payment", {
-          p_payment_id: id,
-        });
-        if (error) throw error;
-      },
     }),
   );
 }
-

@@ -167,7 +167,7 @@ export async function auth(
   }
 
   if (opts?.requireStaff) {
-    const staffRoles = ["ADMIN", "PRIEST", "SUPER_ADMIN"];
+    const staffRoles = ["ADMIN", "SUPER_ADMIN"];
     if (!role || !staffRoles.includes(role.toUpperCase())) {
       return respond(403, "FORBIDDEN", "Staff role required");
     }
@@ -182,3 +182,57 @@ export async function auth(
 
   return authUser;
 }
+
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+export function verifyCronOrServiceAuth(
+  req: Request,
+  deps?: { cronSecret?: string; serviceRoleKey?: string },
+): Response | null {
+  const authHeader =
+    req.headers.get("Authorization") ?? req.headers.get("authorization");
+  const cronSecretHeader = req.headers.get("x-cron-secret");
+
+  let token = "";
+  if (
+    authHeader &&
+    (authHeader.startsWith("Bearer ") || authHeader.startsWith("bearer "))
+  ) {
+    token = authHeader.slice(7).trim();
+  } else if (cronSecretHeader) {
+    token = cronSecretHeader.trim();
+  }
+
+  if (!token) {
+    return respond(401, "UNAUTHORIZED", "Missing authorization header");
+  }
+
+  const expectedSecrets = [
+    deps?.cronSecret,
+    deps?.serviceRoleKey,
+    typeof Deno !== "undefined" ? Deno.env.get("CRON_SECRET") : undefined,
+    typeof Deno !== "undefined"
+      ? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+      : undefined,
+  ].filter((s): s is string => typeof s === "string" && s.length > 0);
+
+  if (expectedSecrets.length === 0) {
+    console.error("No CRON_SECRET or SUPABASE_SERVICE_ROLE_KEY configured");
+    return respond(500, "INTERNAL");
+  }
+
+  const matches = expectedSecrets.some((secret) => safeCompare(token, secret));
+  if (!matches) {
+    return respond(401, "UNAUTHORIZED", "Invalid authorization token");
+  }
+
+  return null;
+}
+

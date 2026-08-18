@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { SignJWT, importPKCS8 } from "npm:jose@5";
 import { makeServiceClient } from "../_shared/client.ts";
-import { respond } from "../_shared/http.ts";
+import { respond, verifyCronOrServiceAuth } from "../_shared/http.ts";
 import { createPaymob, PaymobAdapter } from "../_shared/paymob.ts";
 
 export const TEMPLATES: Record<string, { paramCount: number }> = {
@@ -13,7 +13,6 @@ export const TEMPLATES: Record<string, { paramCount: number }> = {
   otp_auth: { paramCount: 1 },
   booking_payment_received: { paramCount: 2 },
   booking_offer: { paramCount: 1 },
-  video_ready: { paramCount: 1 },
 };
 export const MAX_ATTEMPTS = 5;
 export const REFUND_MAX_ATTEMPTS = 3;
@@ -32,6 +31,8 @@ export interface Deps {
   fcmClientEmail?: string;
   fcmPrivateKey?: string;
   paymob?: PaymobAdapter;
+  cronSecret?: string;
+  serviceRoleKey?: string;
 }
 
 type Row = {
@@ -40,7 +41,7 @@ type Row = {
   payload: Record<string, unknown>;
   attempts: number;
 };
-type Result = { ok: boolean; retryable: boolean };
+type Result = { ok: boolean; retryable: boolean; error?: string };
 
 async function setStatus(
   client: SupabaseClient,
@@ -53,36 +54,22 @@ async function setStatus(
 
 export async function sendWhatsApp(row: Row, deps: Deps): Promise<Result> {
   const client = deps.getClient();
-  const { phone, template_name, params, video_id, purchase_id } = row.payload as {
+  const { phone, template_name, params } = row.payload as {
     phone?: string;
     template_name?: string;
     params?: Record<string, unknown>;
-    video_id?: number;
-    purchase_id?: number;
   };
-  if (!phone || !template_name) return { ok: false, retryable: false };
+  if (!phone || !template_name) return { ok: false, retryable: false, error: "Missing phone or template_name" };
   const tmpl = TEMPLATES[template_name];
-  if (!tmpl) return { ok: false, retryable: false };
+  if (!tmpl) return { ok: false, retryable: false, error: `Unknown template: ${template_name}` };
   const { data: optin } = await client
     .from("whatsapp_optins")
     .select("phone")
     .eq("phone", phone)
     .maybeSingle();
-  if (!optin) return { ok: false, retryable: false };
+  if (!optin) return { ok: false, retryable: false, error: "No WhatsApp opt-in found" };
 
-  let resolvedParams = params;
-  if (template_name === "video_ready" && (!params || Object.keys(params).length === 0)) {
-    let ytUrl = "";
-    if (video_id) {
-      const { data: vid } = await client
-        .from("videos")
-        .select("yt_url")
-        .eq("id", video_id)
-        .maybeSingle();
-      if (vid?.yt_url) ytUrl = vid.yt_url as string;
-    }
-    resolvedParams = { "1": ytUrl };
-  }
+  const resolvedParams = params;
 
   const bodyParams = Array.from({ length: tmpl.paramCount }, (_, idx) => {
     let val = "";
@@ -126,17 +113,11 @@ export async function sendWhatsApp(row: Row, deps: Deps): Promise<Result> {
     },
   );
   if (res.ok) {
-    if (template_name === "video_ready" && purchase_id) {
-      await client
-        .from("video_purchases")
-        .update({ link_sent_at: new Date().toISOString() })
-        .eq("id", purchase_id);
-    }
     return { ok: true, retryable: false };
   }
   return res.status >= 400 && res.status < 500
-    ? { ok: false, retryable: false }
-    : { ok: false, retryable: true };
+    ? { ok: false, retryable: false, error: `WhatsApp API HTTP ${res.status}` }
+    : { ok: false, retryable: true, error: `WhatsApp API HTTP ${res.status}` };
 }
 
 export async function triggerPaymobRefund(
@@ -148,13 +129,13 @@ export async function triggerPaymobRefund(
     payment_id?: number;
     amount?: number;
   };
-  if (!payment_id || !amount) return { ok: false, retryable: false };
+  if (!payment_id || !amount) return { ok: false, retryable: false, error: "Missing payment_id or amount" };
   const { data: pay } = await client
     .from("payments")
     .select("gateway_ref")
     .eq("id", payment_id)
     .single();
-  if (!pay?.gateway_ref) return { ok: false, retryable: false };
+  if (!pay?.gateway_ref) return { ok: false, retryable: false, error: "Payment missing gateway_ref" };
 
   const paymob =
     deps.paymob ??
@@ -173,7 +154,7 @@ export async function triggerPaymobRefund(
   }
 
   const is4xx = res.status >= 400 && res.status < 500;
-  return { ok: false, retryable: !is4xx };
+  return { ok: false, retryable: !is4xx, error: `Paymob refund HTTP ${res.status}` };
 }
 
 let cachedFcmToken: { token: string; expiresAt: number; key: string } | null =
@@ -202,72 +183,75 @@ async function getFcmAccessToken(deps: Deps): Promise<string | null> {
     return cachedFcmToken.token;
   }
 
-  let jwt: string;
   try {
     const formattedKey = privateKey.replace(/\\n/g, "\n");
-    const key = await importPKCS8(formattedKey, "RS256");
-    jwt = await new SignJWT({
+    const pkcs8Key = await importPKCS8(formattedKey, "RS256");
+
+    const now = Math.floor(Date.now() / 1000);
+    const jwt = await new SignJWT({
       scope: "https://www.googleapis.com/auth/firebase.messaging",
     })
       .setProtectedHeader({ alg: "RS256" })
       .setIssuer(clientEmail)
       .setAudience("https://oauth2.googleapis.com/token")
-      .setExpirationTime("1h")
-      .setIssuedAt()
-      .sign(key);
-  } catch (e) {
-    console.error("FCM JWT signing failed:", e);
+      .setIssuedAt(now)
+      .setExpirationTime(now + 3600)
+      .sign(pkcs8Key);
+
+    const tokenRes = await deps.fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwt,
+      }).toString(),
+    });
+
+    if (!tokenRes.ok) {
+      console.error(
+        "FCM OAuth2 exchange failed:",
+        tokenRes.status,
+        await tokenRes.text(),
+      );
+      return null;
+    }
+
+    const tokenData = await tokenRes.json();
+    cachedFcmToken = {
+      token: tokenData.access_token,
+      expiresAt: Date.now() + (tokenData.expires_in ?? 3600) * 1000,
+      key: privateKey,
+    };
+    return cachedFcmToken.token;
+  } catch (err) {
+    console.error("FCM JWT signing failed:", err);
     return null;
   }
-
-  const tokRes = await deps.fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }).toString(),
-  });
-
-  if (!tokRes.ok) {
-    return null;
-  }
-
-  const tokJson = (await tokRes.json()) as {
-    access_token?: string;
-    expires_in?: number;
-  };
-  if (!tokJson.access_token) {
-    return null;
-  }
-
-  cachedFcmToken = {
-    token: tokJson.access_token,
-    expiresAt: Date.now() + (tokJson.expires_in ?? 3600) * 1000,
-    key: privateKey,
-  };
-  return cachedFcmToken.token;
 }
 
 export async function sendFcmPush(row: Row, deps: Deps): Promise<Result> {
   const payload = row.payload as {
     fcm_token?: string;
+    token?: string;
     title?: string;
     body?: string;
+    notification?: { title: string; body: string };
     data?: Record<string, unknown>;
   };
-  const { fcm_token, title, body, data } = payload;
+  const token = payload.token ?? payload.fcm_token;
+  const title = payload.notification?.title ?? payload.title;
+  const body = payload.notification?.body ?? payload.body;
   const projectId =
     deps.fcmProjectId ??
     (typeof Deno !== "undefined" ? Deno.env.get("FCM_PROJECT_ID") : "");
 
-  if (!fcm_token || !projectId) {
-    return { ok: false, retryable: false };
+  if (!token || !projectId) {
+    return { ok: false, retryable: false, error: "Missing FCM token or FCM_PROJECT_ID" };
   }
 
   const accessToken = await getFcmAccessToken(deps);
   if (!accessToken) {
-    return { ok: false, retryable: false };
+    return { ok: false, retryable: false, error: "Failed to obtain FCM access token" };
   }
 
   const notification: Record<string, string> = {};
@@ -275,15 +259,15 @@ export async function sendFcmPush(row: Row, deps: Deps): Promise<Result> {
   if (body) notification.body = body;
 
   const stringData: Record<string, string> = {};
-  if (data) {
-    for (const [k, v] of Object.entries(data)) {
+  if (payload.data) {
+    for (const [k, v] of Object.entries(payload.data)) {
       stringData[k] = v == null ? "" : String(v);
     }
   }
 
   const fcmPayload: Record<string, unknown> = {
     message: {
-      token: fcm_token,
+      token,
       ...(Object.keys(notification).length > 0 ? { notification } : {}),
       ...(Object.keys(stringData).length > 0 ? { data: stringData } : {}),
     },
@@ -303,8 +287,8 @@ export async function sendFcmPush(row: Row, deps: Deps): Promise<Result> {
 
   if (res.ok) return { ok: true, retryable: false };
   return res.status >= 400 && res.status < 500
-    ? { ok: false, retryable: false }
-    : { ok: false, retryable: true };
+    ? { ok: false, retryable: false, error: `FCM API HTTP ${res.status}` }
+    : { ok: false, retryable: true, error: `FCM API HTTP ${res.status}` };
 }
 
 const HANDLERS: Record<string, (row: Row, deps: Deps) => Promise<Result>> = {
@@ -314,9 +298,17 @@ const HANDLERS: Record<string, (row: Row, deps: Deps) => Promise<Result>> = {
 };
 
 export async function handleRequest(
-  _req: Request,
+  req: Request,
   deps: Deps,
 ): Promise<Response> {
+  const authErr = verifyCronOrServiceAuth(req, {
+    cronSecret: deps.cronSecret,
+    serviceRoleKey: deps.serviceRoleKey,
+  });
+  if (authErr) {
+    return authErr;
+  }
+
   try {
     const client = deps.getClient();
 
@@ -344,17 +336,23 @@ export async function handleRequest(
         rows.slice(i, i + DRAIN_BATCH).map(async (row) => {
           const handler = HANDLERS[row.handler_type];
           if (!handler) {
-            await setStatus(client, row.id, "FAILED");
+            await setStatus(client, row.id, "FAILED", {
+              last_error: `Unknown handler: ${row.handler_type}`,
+            });
             return 0;
           }
           await setStatus(client, row.id, "PROCESSING");
           const outcome = await handler(row as Row, deps);
           if (outcome.ok) {
-            await setStatus(client, row.id, "SENT");
+            await setStatus(client, row.id, "SENT", {
+              last_error: null,
+            });
             return 1;
           }
           if (!outcome.retryable) {
-            await setStatus(client, row.id, "FAILED");
+            await setStatus(client, row.id, "FAILED", {
+              last_error: outcome.error ?? "Non-retryable failure",
+            });
             return 0;
           }
           const attempts = row.attempts + 1;
@@ -364,7 +362,10 @@ export async function handleRequest(
               ? REFUND_MAX_ATTEMPTS
               : MAX_ATTEMPTS)
           ) {
-            await setStatus(client, row.id, "FAILED");
+            await setStatus(client, row.id, "FAILED", {
+              attempts,
+              last_error: outcome.error ?? "Max attempts exceeded",
+            });
           } else {
             const backoff =
               row.handler_type === "PAYMOB_REFUND"
@@ -373,6 +374,7 @@ export async function handleRequest(
             await setStatus(client, row.id, "PENDING", {
               attempts,
               next_attempt_at: new Date(Date.now() + backoff).toISOString(),
+              last_error: outcome.error ?? "Retry scheduled",
             });
           }
           return 0;
@@ -400,6 +402,8 @@ if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
       whatsappToken: Deno.env.get("WHATSAPP_TOKEN"),
       paymobApiKey: Deno.env.get("PAYMOB_API_KEY")!,
       amountMultiplier: 100,
+      cronSecret: Deno.env.get("CRON_SECRET"),
+      serviceRoleKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
     }),
   );
 }

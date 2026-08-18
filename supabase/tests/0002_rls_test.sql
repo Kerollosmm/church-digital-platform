@@ -45,11 +45,11 @@ begin
     (select count(*) from pg_tables t
      where t.schemaname = 'public'
        and t.tablename in ('users','roles_permissions','priests','services','service_slots',
-                           'bookings','payments','waiting_list','videos','video_purchases',
+                           'bookings','payments','waiting_list',
                            'complaints','announcements','audit_log','event_outbox',
                            'whatsapp_optins')
-       and t.rowsecurity) = 15,
-    'RLS must be enabled on all 15 tables');
+       and t.rowsecurity) = 13,
+    'RLS must be enabled on all 13 core tables');
 
   set local role anon;
   perform set_config('request.jwt.claims',

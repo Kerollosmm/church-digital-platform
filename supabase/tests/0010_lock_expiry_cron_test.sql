@@ -19,10 +19,10 @@ begin
 
   insert into public.services (id, title_ar, tenant_id) overriding system value values (99910, 'خدمة 010', 1) on conflict do nothing;
 
-  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, remaining_capacity, price, status, tenant_id)
+  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   overriding system value
-  values (999101, 99910, now() + interval '7 days', now() + interval '7 days 1 hour', 1, 1, 0, 'OPEN', 1)
-  on conflict (id) do update set starts_at = now() + interval '7 days', capacity = 1, remaining_capacity = 1, status = 'OPEN';
+  values (999101, 99910, now() + interval '7 days', now() + interval '7 days 1 hour', 1, 0, 'OPEN', 1)
+  on conflict (id) do update set starts_at = now() + interval '7 days', capacity = 1, status = 'OPEN';
   v_slot := 999101;
 
   set local role authenticated;

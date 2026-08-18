@@ -13,24 +13,24 @@ do $$
 declare t text;
 begin
   foreach t in array array['users','roles_permissions','priests','services','service_slots',
-                          'bookings','payments','waiting_list','videos','video_purchases',
+                          'bookings','payments','waiting_list',
                           'complaints','announcements','audit_log','event_outbox',
                           'whatsapp_optins'] loop
     perform tests.expect(
       exists (select 1 from pg_tables where schemaname = 'public' and tablename = t),
       'table missing: ' || t);
   end loop;
-  foreach t in array array['households','members','attendance','visits','alerts'] loop
+  foreach t in array array['households','members','attendance','visits','alerts','videos','video_purchases'] loop
     perform tests.expect(
       not exists (select 1 from pg_tables where schemaname = 'public' and tablename = t),
-      'CMeeting table must not exist: ' || t);
+      'Table must not exist: ' || t);
   end loop;
 end $$;
 
 do $$
 declare e text; v_count int;
 begin
-  foreach e in array array['app_role','booking_status','payment_status','video_privacy',
+  foreach e in array array['app_role','booking_status','payment_status',
                           'complaint_status','event_handler_type','outbox_status'] loop
     perform tests.expect(
       exists (select 1 from pg_type t join pg_namespace n on n.oid = t.typnamespace
@@ -48,8 +48,8 @@ begin
      from pg_enum e
      join pg_type t on t.oid = e.enumtypid
      join pg_namespace n on n.oid = t.typnamespace
-     where n.nspname = 'public' and t.typname = 'app_role') = array['USER','ADMIN'],
-    'app_role must contain exactly USER and ADMIN in canonical order');
+     where n.nspname = 'public' and t.typname = 'app_role') = array['USER','ADMIN','SUPER_ADMIN'],
+    'app_role must contain USER, ADMIN, SUPER_ADMIN in canonical order');
   select count(*) into v_count from pg_enum e
     join pg_type t on t.oid = e.enumtypid
     join pg_namespace n on n.oid = t.typnamespace

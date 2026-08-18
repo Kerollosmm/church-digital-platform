@@ -13,10 +13,10 @@ begin
   insert into public.services (id, title_ar, tenant_id) overriding system value values (99907, 'خدمة الحجز', 1) on conflict do nothing;
   
   -- Slot 1: AVAILABLE with 9 seats remaining (capacity 10, 1 active booking)
-  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, remaining_capacity, price, status, tenant_id)
+  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   overriding system value
-  values (999071, 99907, now() + interval '2 days', now() + interval '2 days 2 hours', 10, 9, 0, 'OPEN', 1)
-  on conflict (id) do update set starts_at = now() + interval '2 days', capacity = 10, remaining_capacity = 9, status = 'OPEN';
+  values (999071, 99907, now() + interval '2 days', now() + interval '2 days 2 hours', 10, 0, 'OPEN', 1)
+  on conflict (id) do update set starts_at = now() + interval '2 days', capacity = 10, status = 'OPEN';
 
   delete from public.bookings where id = 999071;
   insert into public.bookings (id, slot_id, user_id, status, tenant_id)
@@ -24,10 +24,10 @@ begin
   values (999071, 999071, '33333333-3333-3333-3333-333333333333', 'CONFIRMED', 1);
 
   -- Slot 2: BOOKED (capacity 1, 1 active booking)
-  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, remaining_capacity, price, status, tenant_id)
+  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   overriding system value
-  values (999072, 99907, now() + interval '3 days', now() + interval '3 days 2 hours', 1, 0, 0, 'OPEN', 1)
-  on conflict (id) do update set starts_at = now() + interval '3 days', capacity = 1, remaining_capacity = 0, status = 'OPEN';
+  values (999072, 99907, now() + interval '3 days', now() + interval '3 days 2 hours', 1, 0, 'OPEN', 1)
+  on conflict (id) do update set starts_at = now() + interval '3 days', capacity = 1, status = 'OPEN';
 
   delete from public.bookings where id = 999072;
   insert into public.bookings (id, slot_id, user_id, status, tenant_id)

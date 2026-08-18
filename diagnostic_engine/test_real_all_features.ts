@@ -2,7 +2,6 @@ import { runRealPaymentVerification } from "./test_real_payment_flow.ts";
 import { runHighConcurrencyVerification } from "./test_real_high_concurrency.ts";
 import { runEventDispatcherVerification } from "./test_real_event_dispatcher.ts";
 import { runReconcilePaymentsVerification } from "./test_real_reconcile_payments.ts";
-import { runYoutubeExpiryVerification } from "./test_real_youtube_expiry.ts";
 import { runOfflineSyncVerification } from "./test_real_offline_sync.ts";
 import { runAnalyticsExportVerification } from "./test_real_analytics_export.ts";
 import { runSocialLinksVerification } from "./test_real_social_links.ts";
@@ -19,7 +18,6 @@ async function runMasterVerificationSuite() {
     { name: "High-Concurrency Atomic Booking Engine", fn: runHighConcurrencyVerification },
     { name: "Event Outbox & Multi-Channel Dispatcher", fn: runEventDispatcherVerification },
     { name: "Nightly Payment Reconciliation Cron", fn: runReconcilePaymentsVerification },
-    { name: "YouTube Sermon Video Expiry Sweep", fn: runYoutubeExpiryVerification },
     { name: "Offline Mutation Batch Sync Engine", fn: runOfflineSyncVerification },
     { name: "Admin Analytics & Sanitized CSV Export", fn: runAnalyticsExportVerification },
     { name: "Church Directory & Social Links RLS", fn: runSocialLinksVerification },

@@ -57,32 +57,21 @@ export async function handleRequest(
     if (paymentId > 0) {
       const { data: pay, error: pErr } = await supabase
         .from("payments")
-        .select("id, amount, booking_id, video_id")
+        .select("id, amount, booking_id")
         .eq("id", paymentId)
         .single();
       if (pErr || !pay) {
         return respond(404, "BAD_REQUEST", "Payment not found");
       }
 
-      if (callerUser) {
-        if (pay.booking_id) {
-          const { data: b } = await supabase
-            .from("bookings")
-            .select("user_id")
-            .eq("id", pay.booking_id)
-            .maybeSingle();
-          if (b && b.user_id && b.user_id !== callerUser.id) {
-            return respond(403, "FORBIDDEN");
-          }
-        } else if (pay.video_id) {
-          const { data: vp } = await supabase
-            .from("video_purchases")
-            .select("user_id")
-            .eq("payment_id", paymentId)
-            .maybeSingle();
-          if (vp && vp.user_id && vp.user_id !== callerUser.id) {
-            return respond(403, "FORBIDDEN");
-          }
+      if (callerUser && pay.booking_id) {
+        const { data: b } = await supabase
+          .from("bookings")
+          .select("user_id")
+          .eq("id", pay.booking_id)
+          .maybeSingle();
+        if (b && b.user_id && b.user_id !== callerUser.id) {
+          return respond(403, "FORBIDDEN");
         }
       }
 
@@ -185,9 +174,26 @@ export async function handleRequest(
 
 if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
   const paymobApiKey = Deno.env.get("PAYMOB_API_KEY");
-  if (!paymobApiKey) {
-    throw new Error("Missing PAYMOB_API_KEY environment variable.");
+  const integrationIdStr = Deno.env.get("PAYMOB_INTEGRATION_ID");
+  const iframeIdStr = Deno.env.get("PAYMOB_IFRAME_ID");
+  const hmacSecret = Deno.env.get("PAYMOB_HMAC_SECRET") ?? Deno.env.get("PAYMOB_HMAC_KEY");
+
+  if (!paymobApiKey || paymobApiKey.trim() === "" || paymobApiKey === "0") {
+    throw new Error("Missing or invalid PAYMOB_API_KEY environment variable.");
   }
+  if (!integrationIdStr || integrationIdStr.trim() === "" || integrationIdStr === "0") {
+    throw new Error("Missing or invalid PAYMOB_INTEGRATION_ID environment variable.");
+  }
+  if (!iframeIdStr || iframeIdStr.trim() === "" || iframeIdStr === "0") {
+    throw new Error("Missing or invalid PAYMOB_IFRAME_ID environment variable.");
+  }
+  if (!hmacSecret || hmacSecret.trim() === "" || hmacSecret === "0") {
+    throw new Error("Missing or invalid PAYMOB_HMAC_SECRET environment variable.");
+  }
+
+  const integrationId = Number(integrationIdStr);
+  const iframeId = Number(iframeIdStr);
+
   Deno.serve((req) =>
     handleRequest(req, {
       getClient: () =>
@@ -204,8 +210,8 @@ if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
       },
       fetch,
       paymobApiKey,
-      integrationId: Number(Deno.env.get("PAYMOB_INTEGRATION_ID") ?? "0"),
-      iframeId: Number(Deno.env.get("PAYMOB_IFRAME_ID") ?? "0"),
+      integrationId,
+      iframeId,
       amountMultiplier: 100,
     }),
   );

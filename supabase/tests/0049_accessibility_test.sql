@@ -387,18 +387,14 @@ DECLARE
   v_items2 jsonb;
   v_items3 jsonb;
   v_c1_created timestamptz;
-  v_c1_id bigint;
+  v_c1_id text;
   v_c2_created timestamptz;
-  v_c2_id bigint;
-  v_all_ids bigint[];
-  v_uniq_ids bigint[];
+  v_c2_id text;
+  v_all_ids text[];
+  v_uniq_ids text[];
   v_res_capped jsonb;
   v_capped_len int;
 BEGIN
-  -- Set role to ADMIN for fixture setup and calling RPC
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000049', 'role', 'authenticated')::text, true);
-
   -- 5.1 Insert ≥ 25 offender priests (priests with photo_url but no media_assets row)
   FOR v_i IN 1..30 LOOP
     INSERT INTO public.priests (id, name, photo_url, created_at, tenant_id)
@@ -412,6 +408,13 @@ BEGIN
     );
   END LOOP;
 
+  -- Insert storage objects offenders to verify union coverage
+  INSERT INTO storage.objects (bucket_id, name, owner, created_at)
+  VALUES 
+    ('announcement_images', 'ann_backlog/test1.jpg', '00000000-0000-0000-0000-000000000049', now() - interval '50 minutes'),
+    ('church_media', 'media_backlog/test2.jpg', '00000000-0000-0000-0000-000000000049', now() - interval '55 minutes')
+  ON CONFLICT DO NOTHING;
+
   -- Page 1: 10 items
   v_res_page1 := public.get_backlog(NULL, NULL, 10);
   v_items1 := v_res_page1 -> 'items';
@@ -420,7 +423,7 @@ BEGIN
   PERFORM tests.expect(v_cursor1 IS NOT NULL AND v_cursor1 <> 'null'::jsonb, 'Backlog page 1 next_cursor must be non-null');
 
   v_c1_created := (v_cursor1 ->> 'created_at')::timestamptz;
-  v_c1_id := (v_cursor1 ->> 'id')::bigint;
+  v_c1_id := v_cursor1 ->> 'id';
 
   -- Page 2: 10 items
   v_res_page2 := public.get_backlog(v_c1_created, v_c1_id, 10);
@@ -430,7 +433,7 @@ BEGIN
   PERFORM tests.expect(v_cursor2 IS NOT NULL AND v_cursor2 <> 'null'::jsonb, 'Backlog page 2 next_cursor must be non-null');
 
   v_c2_created := (v_cursor2 ->> 'created_at')::timestamptz;
-  v_c2_id := (v_cursor2 ->> 'id')::bigint;
+  v_c2_id := v_cursor2 ->> 'id';
 
   -- Page 3: remaining items
   v_res_page3 := public.get_backlog(v_c2_created, v_c2_id, 10);
@@ -438,7 +441,7 @@ BEGIN
   PERFORM tests.expect(jsonb_array_length(v_items3) >= 10, 'Backlog page 3 must return remaining items');
 
   -- Verify no duplicate IDs across pages 1, 2, 3
-  SELECT ARRAY_AGG((elem->>'id')::bigint)
+  SELECT ARRAY_AGG(elem->>'id')
   INTO v_all_ids
   FROM jsonb_array_elements(v_items1 || v_items2 || v_items3) AS elem;
 
@@ -449,6 +452,16 @@ BEGIN
   PERFORM tests.expect(
     array_length(v_all_ids, 1) = array_length(v_uniq_ids, 1),
     'Backlog keyset pages must not contain duplicate items'
+  );
+
+  -- Assert full union coverage: both priest: and object: prefixes present
+  PERFORM tests.expect(
+    EXISTS (SELECT 1 FROM unnest(v_all_ids) AS id WHERE id LIKE 'priest:%'),
+    'Backlog must contain priest items with priest: prefix'
+  );
+  PERFORM tests.expect(
+    EXISTS (SELECT 1 FROM unnest(v_all_ids) AS id WHERE id LIKE 'object:%'),
+    'Backlog must contain storage object items with object: prefix'
   );
 
   -- 5.2 Delete 5 mid-range offenders and verify count decreases
@@ -464,8 +477,6 @@ BEGIN
   v_res_capped := public.get_backlog(NULL, NULL, 200);
   v_capped_len := jsonb_array_length(v_res_capped -> 'items');
   PERFORM tests.expect(v_capped_len <= 100, 'get_backlog p_limit must be capped at 100');
-
-  RESET ROLE;
 END $$;
 
 -- 5.4 Negative Authorization Tests for RPCs
@@ -533,200 +544,13 @@ BEGIN
     SET LOCAL ROLE authenticated;
     PERFORM set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000050', 'role', 'authenticated')::text, true);
     PERFORM public.get_backlog(NULL, NULL, 10);
-    RAISE EXCEPTION 'Negative auth check failed: non-admin executed get_backlog';
+    RAISE EXCEPTION 'Negative auth check failed: non-admin authenticated executed get_backlog';
   EXCEPTION
     WHEN insufficient_privilege OR SQLSTATE '42501' THEN NULL;
-    WHEN OTHERS THEN
-      IF SQLSTATE IN ('42501', '28000') OR SQLERRM LIKE '%FORBIDDEN%' THEN NULL; ELSE RAISE; END IF;
-  END;
-END $$;
-
--- ==============================================================================
--- 6. Personal Video Delivery: deliver_personal_video
--- ==============================================================================
-DO $$
-DECLARE
-  v_user_id uuid := '00000000-0000-0000-0000-000000000060';
-  v_other_user_id uuid := '00000000-0000-0000-0000-000000000061';
-  v_slot_id bigint;
-  v_booking_id bigint;
-  v_other_booking_id bigint;
-  v_paid_payment_id bigint;
-  v_unpaid_payment_id bigint;
-  v_other_payment_id bigint;
-  v_video_id bigint;
-  v_retry_video_id bigint;
-  v_vid public.videos;
-  v_vp public.video_purchases;
-  v_outbox_count int;
-  v_outbox_payload jsonb;
-BEGIN
-  -- Seed test users for personal video delivery
-  INSERT INTO auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-  VALUES 
-    (v_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'buyer60@test.local', '+201099990060', '{}', '{}', now(), now()),
-    (v_other_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'buyer61@test.local', '+201099990061', '{}', '{}', now(), now())
-  ON CONFLICT (id) DO NOTHING;
-
-  UPDATE public.users SET phone = '+201099990060', role = 'USER', tenant_id = 1, deleted_at = null WHERE id = v_user_id;
-  UPDATE public.users SET phone = '+201099990061', role = 'USER', tenant_id = 1, deleted_at = null WHERE id = v_other_user_id;
-
-  -- Create service & slot
-  INSERT INTO public.services (id, title_ar, tenant_id) OVERRIDING SYSTEM VALUE
-  VALUES (99960, 'خدمة معمودية تجريبية', 1) ON CONFLICT DO NOTHING;
-
-  INSERT INTO public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
-  OVERRIDING SYSTEM VALUE
-  VALUES (99960, 99960, now() + interval '10 days', now() + interval '10 days 2 hours', 10, 500, 'OPEN', 1)
-  ON CONFLICT (id) DO NOTHING
-  RETURNING id INTO v_slot_id;
-
-  -- Create bookings
-  INSERT INTO public.bookings (slot_id, user_id, status, paid_amount, tenant_id)
-  VALUES (99960, v_user_id, 'CONFIRMED', 500, 1)
-  RETURNING id INTO v_booking_id;
-
-  INSERT INTO public.bookings (slot_id, user_id, status, paid_amount, tenant_id)
-  VALUES (99960, v_other_user_id, 'CONFIRMED', 500, 1)
-  RETURNING id INTO v_other_booking_id;
-
-  -- Create payments
-  INSERT INTO public.payments (booking_id, gateway_ref, amount, status, tenant_id)
-  VALUES (v_booking_id, 'pay_ref_paid_60', 500, 'PAID', 1)
-  RETURNING id INTO v_paid_payment_id;
-
-  INSERT INTO public.payments (booking_id, gateway_ref, amount, status, tenant_id)
-  VALUES (v_booking_id, 'pay_ref_pending_60', 500, 'PENDING', 1)
-  RETURNING id INTO v_unpaid_payment_id;
-
-  INSERT INTO public.payments (booking_id, gateway_ref, amount, status, tenant_id)
-  VALUES (v_other_booking_id, 'pay_ref_other_61', 500, 'PAID', 1)
-  RETURNING id INTO v_other_payment_id;
-
-  -- 6.1 Success Path: deliver personal video
-  v_video_id := public.deliver_personal_video(
-    '+201099990060',
-    'https://youtu.be/personal_baptism_60',
-    'فيديو معمودية تجريبي 60',
-    v_paid_payment_id
-  );
-
-  PERFORM tests.expect(v_video_id IS NOT NULL, 'deliver_personal_video must return a valid video_id');
-
-  SELECT * INTO v_vid FROM public.videos WHERE id = v_video_id;
-  PERFORM tests.expect(v_vid.privacy = 'UNLISTED', 'Personal video privacy must be UNLISTED');
-  PERFORM tests.expect(v_vid.price = 0, 'Personal video price must be 0');
-  PERFORM tests.expect(v_vid.title_ar = 'فيديو معمودية تجريبي 60', 'Personal video title must be preserved verbatim');
-  PERFORM tests.expect(v_vid.yt_url = 'https://youtu.be/personal_baptism_60', 'Personal video yt_url must match');
-
-  SELECT * INTO v_vp FROM public.video_purchases WHERE video_id = v_video_id AND payment_id = v_paid_payment_id;
-  PERFORM tests.expect(v_vp.id IS NOT NULL, 'video_purchases row must be created');
-  PERFORM tests.expect(v_vp.user_id = v_user_id, 'video_purchases user_id must match buyer');
-  PERFORM tests.expect(v_vp.access_granted_at IS NOT NULL, 'video_purchases access_granted_at must be set');
-
-  SELECT count(*) INTO v_outbox_count
-  FROM public.event_outbox
-  WHERE handler_type = 'WHATSAPP'
-    AND payload->>'template_name' = 'video_ready'
-    AND (payload->>'video_id')::bigint = v_video_id;
-
-  PERFORM tests.expect(v_outbox_count = 1, 'Exactly one video_ready event_outbox event must be queued');
-
-  SELECT payload INTO v_outbox_payload
-  FROM public.event_outbox
-  WHERE handler_type = 'WHATSAPP'
-    AND payload->>'template_name' = 'video_ready'
-    AND (payload->>'video_id')::bigint = v_video_id;
-
-  PERFORM tests.expect(v_outbox_payload->>'phone' = '+201099990060', 'Outbox event payload must carry buyer phone');
-  PERFORM tests.expect((v_outbox_payload->>'purchase_id')::bigint = v_vp.id, 'Outbox event payload must carry purchase_id');
-
-  -- 6.2 Idempotent retry: calling again returns same video_id and creates zero duplicate rows
-  v_retry_video_id := public.deliver_personal_video(
-    '+201099990060',
-    'https://youtu.be/personal_baptism_60',
-    'فيديو معمودية تجريبي 60',
-    v_paid_payment_id
-  );
-
-  PERFORM tests.expect(v_retry_video_id = v_video_id, 'Idempotent delivery must return existing video_id');
-
-  SELECT count(*) INTO v_outbox_count
-  FROM public.event_outbox
-  WHERE handler_type = 'WHATSAPP'
-    AND payload->>'template_name' = 'video_ready'
-    AND (payload->>'video_id')::bigint = v_video_id;
-
-  PERFORM tests.expect(v_outbox_count = 1, 'Idempotent delivery must not queue duplicate outbox events');
-
-  -- 6.3 Refusal: UNKNOWN_PHONE
-  BEGIN
-    PERFORM public.deliver_personal_video(
-      '+201000000999',
-      'https://youtu.be/unknown_phone',
-      'فيديو لرقم مجهول',
-      v_paid_payment_id
-    );
-    RAISE EXCEPTION 'deliver_personal_video must reject unknown phone';
-  EXCEPTION
-    WHEN OTHERS THEN
-      IF SQLERRM LIKE '%UNKNOWN_PHONE%' THEN NULL; ELSE RAISE; END IF;
-  END;
-
-  -- 6.4 Refusal: PAYMENT_INVALID (unpaid payment)
-  BEGIN
-    PERFORM public.deliver_personal_video(
-      '+201099990060',
-      'https://youtu.be/unpaid_video',
-      'فيديو بدفعة غير مدفوعة',
-      v_unpaid_payment_id
-    );
-    RAISE EXCEPTION 'deliver_personal_video must reject unpaid payment';
-  EXCEPTION
-    WHEN OTHERS THEN
-      IF SQLERRM LIKE '%PAYMENT_INVALID%' THEN NULL; ELSE RAISE; END IF;
-  END;
-
-  -- 6.5 Refusal: PAYMENT_INVALID (payment belongs to another user)
-  BEGIN
-    PERFORM public.deliver_personal_video(
-      '+201099990060',
-      'https://youtu.be/wrong_user_video',
-      'فيديو بدفعة مستخدم آخر',
-      v_other_payment_id
-    );
-    RAISE EXCEPTION 'deliver_personal_video must reject payment belonging to different user';
-  EXCEPTION
-    WHEN OTHERS THEN
-      IF SQLERRM LIKE '%PAYMENT_INVALID%' THEN NULL; ELSE RAISE; END IF;
-  END;
-END $$;
-
--- 6.6 Negative Authorization Tests: anon and authenticated denied on deliver_personal_video
-DO $$
-BEGIN
-  -- anon execution denied
-  BEGIN
-    SET LOCAL ROLE anon;
-    PERFORM public.deliver_personal_video('+201099990060', 'https://youtu.be/x', 'عنوان', 1);
-    RAISE EXCEPTION 'Negative auth check failed: anon executed deliver_personal_video';
-  EXCEPTION
-    WHEN insufficient_privilege OR SQLSTATE '42501' OR undefined_function THEN NULL;
-    WHEN OTHERS THEN
-      IF SQLSTATE IN ('42501', '28000') OR SQLERRM LIKE '%FORBIDDEN%' OR SQLERRM LIKE '%AUTH_REQUIRED%' THEN NULL; ELSE RAISE; END IF;
-  END;
-
-  -- authenticated execution denied
-  BEGIN
-    SET LOCAL ROLE authenticated;
-    PERFORM set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000049', 'role', 'authenticated')::text, true);
-    PERFORM public.deliver_personal_video('+201099990060', 'https://youtu.be/x', 'عنوان', 1);
-    RAISE EXCEPTION 'Negative auth check failed: authenticated executed deliver_personal_video';
-  EXCEPTION
-    WHEN insufficient_privilege OR SQLSTATE '42501' OR undefined_function THEN NULL;
     WHEN OTHERS THEN
       IF SQLSTATE IN ('42501', '28000') OR SQLERRM LIKE '%FORBIDDEN%' OR SQLERRM LIKE '%AUTH_REQUIRED%' THEN NULL; ELSE RAISE; END IF;
   END;
 END $$;
 
 ROLLBACK;
+

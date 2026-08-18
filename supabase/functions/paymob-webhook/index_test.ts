@@ -26,7 +26,6 @@ Deno.test("paymob-webhook: valid HMAC + success -> upsert payment, raw_webhook s
     getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
     hmacKey: secret,
     applyPayment: async (id) => { appliedId = id; },
-    applyVideoPayment: async () => {},
   });
   assertEquals(res.status, 200);
   assertEquals(appliedId, 17);
@@ -43,7 +42,7 @@ Deno.test("paymob-webhook: invalid HMAC rejected 401", async () => {
   });
   const res = await handleRequest(req, {
     getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-    hmacKey: "other", applyPayment: async () => {}, applyVideoPayment: async () => {},
+    hmacKey: "other", applyPayment: async () => {},
   });
   assertEquals(res.status, 401);
 });
@@ -60,7 +59,7 @@ Deno.test("paymob-webhook: missing or undefined merchant_order_id returns 400", 
   });
   const res = await handleRequest(req, {
     getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-    hmacKey: secret, applyPayment: async () => {}, applyVideoPayment: async () => {},
+    hmacKey: secret, applyPayment: async () => {},
   });
   assertEquals(res.status, 400);
 });
@@ -80,7 +79,6 @@ Deno.test("paymob-webhook: already PAID payment is acknowledged without re-apply
     getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
     hmacKey: secret,
     applyPayment: async () => { appliedCalls++; },
-    applyVideoPayment: async () => { appliedCalls++; },
   });
   assertEquals(res.status, 200);
   assertEquals(appliedCalls, 0);
@@ -99,7 +97,7 @@ Deno.test("paymob-webhook: non-positive or non-numeric merchant_order_id returns
     });
     const res = await handleRequest(req, {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      hmacKey: secret, applyPayment: async () => {}, applyVideoPayment: async () => {},
+      hmacKey: secret, applyPayment: async () => {},
     });
     assertEquals(res.status, 400);
   }
@@ -120,7 +118,6 @@ Deno.test("paymob-webhook: failure webhook on already PAID payment returns alrea
     getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
     hmacKey: secret,
     applyPayment: async () => {},
-    applyVideoPayment: async () => {},
   });
   assertEquals(res.status, 200);
   const body = await res.json() as Record<string, unknown>;

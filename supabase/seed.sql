@@ -34,15 +34,15 @@ begin
     values ('قداس الأحد', 'القداس الأسبوعي', '{"weekly":true,"day":0,"time":"08:00"}'::jsonb, 'الكنيسة الرئيسية', 1),
            ('قداس العيد', 'قداس الأعياد السيدية', '{"special":true}'::jsonb, 'الكنيسة الرئيسية', 1);
 
-    insert into public.service_slots (service_id, starts_at, ends_at, capacity, remaining_capacity, schedule_range, price, tenant_id)
+    insert into public.service_slots (service_id, starts_at, ends_at, capacity, schedule_range, price, tenant_id)
     values ((select id from public.services where title_ar = 'قداس الأحد'),
-            now() + interval '2 days', now() + interval '2 days' + interval '1 hour', 50, 50,
+            now() + interval '2 days', now() + interval '2 days' + interval '1 hour', 50,
             tstzrange(now() + interval '2 days', now() + interval '2 days' + interval '1 hour', '[)'), 0, 1),
            ((select id from public.services where title_ar = 'قداس الأحد'),
-            now() + interval '3 days', now() + interval '3 days' + interval '1 hour', 50, 50,
+            now() + interval '3 days', now() + interval '3 days' + interval '1 hour', 50,
             tstzrange(now() + interval '3 days', now() + interval '3 days' + interval '1 hour', '[)'), 0, 1),
            ((select id from public.services where title_ar = 'قداس العيد'),
-            now() + interval '7 days', now() + interval '7 days' + interval '2 hours', 80, 80,
+            now() + interval '7 days', now() + interval '7 days' + interval '2 hours', 80,
             tstzrange(now() + interval '7 days', now() + interval '7 days' + interval '2 hours', '[)'), 20, 1);
   end if;
 

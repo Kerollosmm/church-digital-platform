@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { makeServiceClient } from "../_shared/client.ts";
-import { respond } from "../_shared/http.ts";
+import { respond, verifyCronOrServiceAuth } from "../_shared/http.ts";
 import { createPaymob, markPaymentFailed } from "../_shared/paymob.ts";
 
 export interface Deps {
@@ -8,12 +8,22 @@ export interface Deps {
   fetch: typeof fetch;
   paymobApiKey: string;
   applyPayment: (paymentId: number) => Promise<void>;
+  cronSecret?: string;
+  serviceRoleKey?: string;
 }
 
 export async function handleRequest(
-  _req: Request,
+  req: Request,
   deps: Deps,
 ): Promise<Response> {
+  const authErr = verifyCronOrServiceAuth(req, {
+    cronSecret: deps.cronSecret,
+    serviceRoleKey: deps.serviceRoleKey,
+  });
+  if (authErr) {
+    return authErr;
+  }
+
   try {
     const supabase = deps.getClient() as SupabaseClient;
     const { data: bookings, error } = await supabase
@@ -49,10 +59,7 @@ export async function handleRequest(
         console.error(
           `[INCIDENT] Upstream Paymob orderStatus failure for payment ${pay.id} (merchant_order_id=${pay.merchant_order_id}): HTTP ${order.status} ${order.message}`,
         );
-        await markPaymentFailed(supabase, pay.id, {
-          reason: `upstream_status_${order.status}`,
-        });
-        resolved++;
+        // T058: Transient failure leaves payment CREATED; do not markPaymentFailed.
         continue;
       }
 
@@ -105,6 +112,8 @@ if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
         const { error } = await sb.rpc("apply_payment", { p_payment_id: id });
         if (error) throw error;
       },
+      cronSecret: Deno.env.get("CRON_SECRET"),
+      serviceRoleKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
     }),
   );
 }

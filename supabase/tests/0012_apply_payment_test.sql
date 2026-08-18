@@ -12,10 +12,10 @@ begin
   delete from public.payments where booking_id in (select id from public.bookings where user_id = v_user);
   delete from public.bookings where user_id = v_user;
   insert into public.services (id, title_ar, tenant_id) overriding system value values (99912, 'خدمة 012', 1) on conflict do nothing;
-  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, remaining_capacity, price, status, tenant_id)
+  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   overriding system value
-  values (999121, 99912, now() + interval '8 days', now() + interval '8 days 1 hour', 1, 1, 50, 'OPEN', 1)
-  on conflict (id) do update set starts_at = now() + interval '8 days', capacity = 1, remaining_capacity = 1, status = 'OPEN';
+  values (999121, 99912, now() + interval '8 days', now() + interval '8 days 1 hour', 1, 50, 'OPEN', 1)
+  on conflict (id) do update set starts_at = now() + interval '8 days', capacity = 1, status = 'OPEN';
   v_slot := 999121;
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_user, 'role','authenticated')::text, true);

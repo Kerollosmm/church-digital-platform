@@ -18,8 +18,15 @@ begin;
   set local role authenticated;
   set local request.jwt.claims to '{"sub":"bbbbbbbb-0000-0000-0000-000000000001"}';
 
-  -- Priest update attempt should update 0 rows or throw error due to RLS
-  update public.complaints set assigned_to = 'bbbbbbbb-0000-0000-0000-000000000001'::uuid where id = 100;
+  -- Priest direct update attempt should fail with permission denial or affect 0 rows
+  do $$
+  begin
+    begin
+      update public.complaints set assigned_to = 'bbbbbbbb-0000-0000-0000-000000000001'::uuid where id = 100;
+    exception when insufficient_privilege or sqlstate '42501' then
+      null; -- Expected: direct table UPDATE revoked in 0053
+    end;
+  end $$;
 
   do $$
   begin

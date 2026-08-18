@@ -85,10 +85,10 @@ Deno.test("paymob-checkout: booking_id creates CREATED payment and returns ifram
 });
 
 Deno.test("paymob-checkout: payment_id uses existing CREATED payment and returns iframe URL", async () => {
-  const fake = new FakeClient(["payments", "video_purchases"]);
-  fake.seed("payments", [{ id: 30, video_id: 5, amount: 30, status: "CREATED" }]);
-  fake.seed("video_purchases", [
-    { id: 1, payment_id: 30, video_id: 5, user_id: "user-123" },
+  const fake = new FakeClient(["payments", "bookings"]);
+  fake.seed("payments", [{ id: 30, booking_id: 7, amount: 30, status: "CREATED" }]);
+  fake.seed("bookings", [
+    { id: 7, user_id: "user-123" },
   ]);
   const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL) => {
     if (String(url).endsWith("/api/auth/tokens")) {
@@ -246,11 +246,13 @@ Deno.test("paymob-checkout: malformed upstream JSON marks created payment as FAI
   }
 });
 
-Deno.test("paymob-checkout: returns 403 FORBIDDEN when user does not own video purchase payment", async () => {
-  const fake = new FakeClient(["payments", "video_purchases"]);
-  fake.seed("payments", [{ id: 30, video_id: 5, amount: 30, status: "CREATED" }]);
-  fake.seed("video_purchases", [
-    { id: 1, payment_id: 30, video_id: 5, user_id: "victim-123" },
+// Guards the payment_id branch, which resolves ownership indirectly via
+// payments.booking_id. The booking_id branch has its own separate guard.
+Deno.test("paymob-checkout: returns 403 FORBIDDEN when user does not own payment's booking", async () => {
+  const fake = new FakeClient(["payments", "bookings"]);
+  fake.seed("payments", [{ id: 30, booking_id: 7, amount: 30, status: "CREATED" }]);
+  fake.seed("bookings", [
+    { id: 7, user_id: "victim-123" },
   ]);
   const res = await handleRequest(
     new Request("https://x/functions/v1/paymob-checkout", {
@@ -276,3 +278,4 @@ Deno.test("paymob-checkout: returns 403 FORBIDDEN when user does not own video p
   const body = await res.json();
   assertEquals(body.error, "FORBIDDEN");
 });
+
