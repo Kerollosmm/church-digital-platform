@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-
 const Object _unsetFilter = Object();
 
 class BookingsState {
@@ -47,14 +46,13 @@ final bookingsFilterProvider = NotifierProvider<BookingsFilterNotifier, String?>
   BookingsFilterNotifier.new,
 );
 
-class BookingsNotifier extends Notifier<BookingsState> {
-  BookingsNotifier(this._db);
-
-  final dynamic _db;
+class BookingsNotifier extends FamilyNotifier<BookingsState, dynamic> {
+  late dynamic _db;
   dynamic _channel;
 
   @override
-  BookingsState build() {
+  BookingsState build(dynamic arg) {
+    _db = arg;
     final filter = ref.watch(bookingsFilterProvider);
 
     _subscribeRealtime();
@@ -100,7 +98,6 @@ class BookingsNotifier extends Notifier<BookingsState> {
     }
   }
 
-
   Future<void> _loadBookings(String? filter) async {
     try {
       var q = _db.from('bookings').select().order('created_at', ascending: false);
@@ -125,6 +122,6 @@ class BookingsNotifier extends Notifier<BookingsState> {
   }
 }
 
-final bookingsProvider = NotifierProvider.family<BookingsNotifier, BookingsState, dynamic>(
-  (db) => BookingsNotifier(db),
+final bookingsProvider = NotifierProviderFamily<BookingsNotifier, BookingsState, dynamic>(
+  BookingsNotifier.new,
 );
