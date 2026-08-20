@@ -12,7 +12,7 @@
 3. `supabase db push --db-url $PROD_DB_URL` (all migrations 0001-0020) then run Task 16 ops step (vault secrets SUPABASE_URL + SERVICE_ROLE_KEY).
 4. Deploy edge functions: `supabase functions deploy --project-ref $PROD_REF`.
 5. Register webhook in Paymob dashboard → prod edge URL `/functions/v1/paymob-webhook` and set the same `PAYMOB_HMAC_KEY` there (digest arrives as the `?hmac=` query param on callbacks).
-6. Point cron jobs: verify `cron.job` rows in prod (expire-bookings, whatsapp-drain, refund-drain, reconcile-payments, youtube-expiry).
+6. Point cron jobs: verify `cron.job` rows in prod (expire-bookings, whatsapp-drain, refund-drain, reconcile-payments).
 7. Dry-run with one priest: book (real EGP 1 test slot) → pay Vodafone Cash → confirm → WhatsApp.
 8. Verify refund path: emergency_override with refund on the test booking → Paymob dashboard shows refund within 2 min.
 9. Archive the sandbox checkout URL in staging; keep staging for e2e only.

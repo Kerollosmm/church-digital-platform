@@ -15,7 +15,6 @@ supabase/
     whatsapp-sender/   index.ts
     reconcile-payments/ index.ts
     fcm-push/          index.ts
-    youtube-expiry/    index.ts
     otp-sms/           index.ts (optional custom SMS provider)
   seed/                (seed.sql — RBAC matrix, demo content)
   config.toml          (supabase CLI local config)
@@ -34,7 +33,7 @@ docs/
 
 ## Backend Logic Conventions (SQL first, Edge Functions for HTTP)
 
-**Rule of thumb:** anything that touches money, bookings, or state lives in SQL (RPCs/triggers/constraints). Anything that touches the outside world (Paymob, Meta, FCM, YouTube) lives in an Edge Function. PostgREST exposes:
+**Rule of thumb:** anything that touches money, bookings, or state lives in SQL (RPCs/triggers/constraints). Anything that touches the outside world (Paymob, Meta, FCM) lives in an Edge Function. PostgREST exposes:
 - `GET /rest/v1/<table|view>` — reads (RLS-filtered)
 - `POST /rest/v1/rpc/<function>` — state changes (SECURITY DEFINER functions)
 
@@ -61,7 +60,6 @@ booking_status   = 'PENDING_PAYMENT' | 'AWAITING_CALL' | 'CONFIRMED' | 'COMPLETE
 payment_status   = 'CREATED' | 'PAID' | 'FAILED' | 'REFUNDED' | 'REFUND_PENDING' | 'PENDING'
 slot_status      = 'AVAILABLE' | 'BOOKED' | 'CLOSED'   -- view output; fully-locked slot reads BOOKED
 role             = 'USER' | 'ADMIN'
-video_privacy    = 'UNLISTED' | 'PRIVATE'      -- production flow always UNLISTED
 complaint_status = 'NEW' | 'ASSIGNED' | 'RESOLVED'
 whatsapp_outbox_status = 'PENDING' | 'SENT' | 'FAILED'
 waiting_list_status    = 'WAITING' | 'PROMOTED' | 'EXPIRED' | 'CANCELLED'
@@ -81,7 +79,6 @@ outbox_status     = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED'
 
 - **Paymob:** Edge Function `paymob-webhook` receives POST (HMAC-verified), upserts payments, calls `apply_payment()` SQL to transition booking; refund via `paymob-refund` logic inside `reconcile-payments` or a dedicated RPC-triggered function
 - **WhatsApp:** Edge Function `whatsapp-sender` uses Meta Graph API `POST /v20.0/<phone-id>/messages` with template payloads; every send requires an opt-in row in `whatsapp_optins`; templates: `booking_confirmed`, `payment_received` ({{1}}=link), `booking_cancelled`, `booking_rescheduled`, `booking_apology`, `otp_auth`
-- **YouTube:** media team uploads manually; `youtube-expiry` edge fn calls `videos.update` (privacy change, 50 quota units) after `expires_after_days`; **OAuth2 only** — refresh-token exchange for a bearer token each run (`GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN` secrets), API keys are rejected for write ops; uploads via API are OUT of scope for v1
 
 ## Auth & Security (Supabase)
 

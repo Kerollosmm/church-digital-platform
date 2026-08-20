@@ -16,7 +16,6 @@ import 'features/content/content_repository.dart';
 import 'features/content/faq_admin_screen.dart';
 import 'features/payments/payments_admin_screen.dart';
 import 'features/slots/slots_admin_screen.dart';
-import 'features/videos/videos_admin_screen.dart';
 
 class AdminShell extends StatelessWidget {
   const AdminShell({super.key, required this.child});
@@ -98,12 +97,6 @@ class AdminShell extends StatelessWidget {
                     selected: location == '/analytics',
                     onTap: () => context.go('/analytics'),
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.video_library),
-                    title: const Text('الفيديوهات'),
-                    selected: location == '/videos',
-                    onTap: () => context.go('/videos'),
-                  ),
                 ],
               ),
             ),
@@ -116,7 +109,7 @@ class AdminShell extends StatelessWidget {
   }
 }
 
-const allowedAdminRoles = {'ADMIN'};
+const allowedAdminRoles = {'ADMIN', 'SUPER_ADMIN'};
 
 GoRouter createAdminRouter({
   bool Function()? isAuthenticated,
@@ -216,11 +209,6 @@ GoRouter createAdminRouter({
               return AnalyticsAdminScreen(client: database is SupabaseClient ? database : Supabase.instance.client);
             },
           ),
-          GoRoute(
-            path: '/videos',
-            name: 'videos',
-            builder: (context, state) => VideosAdminScreen(db: resolveDb()),
-          ),
         ],
       ),
     ],
@@ -249,5 +237,3 @@ final adminRouterProvider = Provider<GoRouter>((ref) {
 });
 
 final appRouter = createAdminRouter();
-
-

@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>منظومة إدارة الكنيسة — لوحة التحكم العليا والحوكمة (SuperAdmin)</title>
+  
+  <!-- Shared Design System & Cairo Typography -->
+  <link rel="stylesheet" href="../shared/styles.css">
+  
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Shared Infrastructure Helpers -->
+  <script src="../shared/supabase-client.js"></script>
+  <script src="../shared/test-accounts.js"></script>
+
+  <style>
+    /* SuperAdmin specific custom accent & micro-interactions */
+    .superadmin-badge {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(245, 158, 11, 0.2));
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .stat-card-glow {
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card-glow::after {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: -20px;
+      width: 80px;
+      height: 80px;
+      background: var(--primary-glow);
+      filter: blur(25px);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .json-tree {
+      background: #080c14;
+      border: 1px solid #1e293b;
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      font-size: 0.78rem;
+      color: #38bdf8;
+      max-height: 220px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .json-expand-btn {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      padding: 2px 8px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .json-expand-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--primary);
+    }
+
+    .progress-bar-bg {
+      background: #1e293b;
+      border-radius: var(--radius-pill);
+      height: 8px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: var(--radius-pill);
+      background: linear-gradient(90deg, var(--primary), var(--gold));
+      transition: width 0.3s ease;
+    }
+
+    .probe-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      transition: all 0.2s;
+    }
+    .probe-card.passed {
+      border-right: 4px solid var(--success);
+    }
+    .probe-card.failed {
+      border-right: 4px solid var(--danger);
+    }
+
+    .filter-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      margin-bottom: var(--spacing-md);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Portal Header -->
+  <header class="portal-header">
+    <div class="container portal-nav">
+      <div class="flex items-center gap-3">
+        <a href="../index.html" class="brand-badge" title="العودة لبوابة الاختبارات الرئيسية">
+          <div class="brand-icon">⚡</div>
+          <div style="display:flex; flex-direction:column;">
+            <span>لوحة التحكم العليا والحوكمة</span>
+            <span style="font-size:0.7rem; color:var(--text-muted); font-weight:normal;">SuperAdmin Control Plane</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a href="../index.html" class="btn btn-sm btn-outline">🏠 بوابة التطبيقات</a>
+        <div id="user-status-container"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="container">
+
+      <!-- =================================================================== -->
+      <!-- VIEW 1: AUTH & ROLE GATE (Shown if not logged in or role != SUPER_ADMIN) -->
+      <!-- =================================================================== -->
+      <section id="gate-container" style="display:none; max-width:580px; margin: 40px auto 0;">
+        <div class="card" style="text-align:center; padding: var(--spacing-xl);">
+          <div style="width:64px; height:64px; border-radius:50%; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); display:flex; align-items:center; justify-content:center; margin:0 auto var(--spacing-md); font-size:2rem; color:#f87171;">
+            🔒
+          </div>
+          <h2 style="margin-bottom:8px;">منطقة مقيدة — تتطلب صلاحية مدير أعلى</h2>
+          <p id="gate-message" style="margin-bottom: var(--spacing-lg); font-size:0.9rem;">
+            هذه البوابة مخصصة حصرياً لإدارة المنظومة العليا والرقابة والتدقيق الأمني. يرجى تسجيل الدخول بحساب <code class="text-gold">SUPER_ADMIN</code>.
+          </p>
+
+          <div id="gate-mismatch-warning" class="alert alert-warning" style="display:none; text-align:right;">
+            <div style="font-weight:bold; margin-bottom:4px;">⚠️ الصلاحية الحالية غير كافية</div>
+            <div id="gate-current-role-text" style="font-size:0.8rem;">أنت مسجل حالياً بحساب عادي أو إداري قياسي ولا يمكنك الوصول لهذه الصفحة.</div>
+          </div>
+
+          <!-- Quick 1-Click SuperAdmin Login Button -->
+          <div class="card" style="background:var(--bg-elevated); border:1px dashed var(--gold); padding:16px; margin-bottom:var(--spacing-lg); text-align:right;">
+            <div style="font-weight:700; color:var(--text-primary); margin-bottom:4px; display:flex; align-items:center; justify-content:space-between;">
+              <span>⚡ تسجيل دخول فوري بحساب المدير الأعلى:</span>
+              <span class="badge badge-role-superadmin">SUPER_ADMIN</span>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+              البريد: <code style="color:var(--gold);">superadmin@church.local</code> | كلمة المرور: <code style="color:var(--gold);">password123</code>
+            </div>
+            <button id="btn-quick-login-superadmin" class="btn btn-warning btn-block font-bold">
+              ⚡ الدخول الفوري كمدير أعلى (كيرلس)
+            </button>
+          </div>
+
+          <!-- Manual Password Login Accordion -->
+          <details style="text-align:right; font-size:0.85rem; color:var(--text-secondary); cursor:pointer;">
+            <summary style="font-weight:600; margin-bottom:10px; color:var(--primary);">أو تسجيل الدخول اليدوي ببيانات أخرى...</summary>
+            <form id="form-manual-login" style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">البريد الإلكتروني:</label>
+                <input type="email" id="input-login-email" class="form-input" placeholder="superadmin@church.local" required>
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">كلمة المرور:</label>
+                <input type="password" id="input-login-password" class="form-input" placeholder="••••••••" required>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block" style="margin-top:6px;">تسجيل الدخول</button>
+            </form>
+          </details>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- VIEW 2: AUTHENTICATED SUPERADMIN DASHBOARD                          -->
+      <!-- =================================================================== -->
+      <section id="dashboard-container" style="display:none;">
+
+        <!-- Top Overview Metric Tiles -->
+        <div class="grid grid-4" style="margin-bottom: var(--spacing-lg);">
+          <div class="stat-tile stat-card-glow">
+            <span class="stat-label">💰 إجمالي الإيرادات المحصلة</span>
+            <div class="stat-value text-gold" id="stat-total-revenue">0.00 <span style="font-size:0.9rem; font-weight:normal;">ج.م</span></div>
+            <span style="font-size:0.75rem; color:var(--text-muted);" id="stat-revenue-subtitle">المدفوعات الناجحة المسجلة</span>
+          </div>
+
+          <div class="stat-tile stat-card-glow">
+            <span class="stat-label">💳 المعاملات المالية المكتملة</span>
+            <div class="stat-value text-success" id="stat-paid-count">0</div>
+            <span style="font-size:0.75rem; color:var(--text-muted);">معاملة إلكترونية ناجحة</span>
+          </div>
+
+          <div class="stat-tile stat-card-glow">
+            <span class="stat-label">🔄 إجمالي المبالغ المستردة</span>
+            <div class="stat-value text-danger" id="stat-refunded-amount">0.00 <span style="font-size:0.9rem; font-weight:normal;">ج.م</span></div>
+            <span style="font-size:0.75rem; color:var(--text-muted);" id="stat-refunded-subtitle">عمليات الاسترداد المنفذة</span>
+          </div>
+
+          <div class="stat-tile stat-card-glow">
+            <span class="stat-label">📈 متوسط نسبة إشغال المواعيد</span>
+            <div class="stat-value text-info" id="stat-avg-utilization">0%</div>
+            <span style="font-size:0.75rem; color:var(--text-muted);" id="stat-utilization-subtitle">متوسط الخدمات للشهر الحالي</span>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="tab-users">👥 إدارة المستخدمين والصلاحيات</button>
+          <button class="tab-btn" data-tab="tab-audit">📜 سجل التدقيق والأمان</button>
+          <button class="tab-btn" data-tab="tab-analytics">📊 التحليلات والتقارير المالية</button>
+          <button class="tab-btn" data-tab="tab-diagnostics">🛠️ تشخيص النظام وصحة البيئة</button>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- TAB 1: USERS & ROLE GOVERNANCE                                  -->
+        <!-- =============================================================== -->
+        <div id="tab-users" class="tab-pane">
+          <!-- Filter & Action Bar -->
+          <div class="filter-bar">
+            <div class="flex items-center gap-2 flex-1" style="min-width:280px;">
+              <input type="text" id="filter-users-search" class="form-input" placeholder="🔍 بحث بالاسم، البريد أو الهاتف..." style="max-width:320px;">
+              <select id="filter-users-role" class="form-select" style="max-width:180px;">
+                <option value="ALL">كل الصلاحيات</option>
+                <option value="SUPER_ADMIN">مدير أعلى (SUPER_ADMIN)</option>
+                <option value="ADMIN">إداري / كاهن (ADMIN)</option>
+                <option value="USER">مخدوم / رعية (USER)</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2">
+              <span id="users-count-badge" class="badge badge-info" style="font-size:0.8rem;">0 مستخدم</span>
+              <button id="btn-refresh-users" class="btn btn-sm btn-outline">🔄 تحديث القائمة</button>
+            </div>
+          </div>
+
+          <!-- Users Table -->
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>المستخدم</th>
+                  <th>الهاتف</th>
+                  <th>البريد الإلكتروني</th>
+                  <th>الصلاحية الحالية</th>
+                  <th>تاريخ الإنشاء</th>
+                  <th style="text-align:left;">إجراءات الحوكمة</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body">
+                <tr>
+                  <td colspan="6" style="text-align:center; padding:30px; color:var(--text-muted);">
+                    <div class="spinner"></div> جاري تحميل قائمة المستخدمين...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- TAB 2: AUDIT & SECURITY LOG INSPECTOR                           -->
+        <!-- =============================================================== -->
+        <div id="tab-audit" class="tab-pane" style="display:none;">
+          <!-- Filter & Search Bar -->
+          <div class="filter-bar">
+            <div class="flex items-center gap-2 flex-wrap flex-1">
+              <input type="text" id="filter-audit-search" class="form-input" placeholder="🔍 بحث في الحدث أو البيانات..." style="min-width:200px; max-width:260px;">
+              
+              <select id="filter-audit-entity" class="form-select" style="max-width:150px;">
+                <option value="ALL">كل الكيانات</option>
+                <option value="bookings">حجوزات (bookings)</option>
+                <option value="payments">مدفوعات (payments)</option>
+                <option value="complaints">شكاوى (complaints)</option>
+                <option value="service_slots">مواعيد (service_slots)</option>
+                <option value="users">مستخدمين (users)</option>
+                <option value="event_outbox">outbox</option>
+                <option value="admin_pins">admin_pins</option>
+              </select>
+
+              <select id="filter-audit-action" class="form-select" style="max-width:150px;">
+                <option value="ALL">كل الإجراءات</option>
+                <option value="INSERT">إضافة (INSERT)</option>
+                <option value="UPDATE">تعديل (UPDATE)</option>
+                <option value="DELETE">حذف (DELETE)</option>
+                <option value="book_slot">حجز موعد (book_slot)</option>
+                <option value="cancel_booking">إلغاء حجز (cancel_booking)</option>
+                <option value="confirm_booking">تأكيد حجز (confirm_booking)</option>
+                <option value="expire_lock">انتهاء قفل (expire_lock)</option>
+                <option value="manual_book">حجز نقدي (manual_book)</option>
+                <option value="role_modified">تعديل صلاحية (role_modified)</option>
+                <option value="pin_reset">إعادة ضبط PIN</option>
+              </select>
+
+              <select id="filter-audit-limit" class="form-select" style="max-width:110px;">
+                <option value="25">25 سجل</option>
+                <option value="50" selected>50 سجل</option>
+                <option value="100">100 سجل</option>
+                <option value="250">250 سجل</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button id="btn-toggle-all-json" class="btn btn-sm btn-outline">📂 توسيع كل البيانات</button>
+              <button id="btn-refresh-audit" class="btn btn-sm btn-primary">🔄 تحديث السجل</button>
+            </div>
+          </div>
+
+          <!-- Audit Log Table -->
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th style="width:70px;"># ID</th>
+                  <th style="width:160px;">التوقيت</th>
+                  <th>الإجراء (Action)</th>
+                  <th>الكيان (Entity)</th>
+                  <th>معرّف الهدف</th>
+                  <th>المستخدم / الفاعل</th>
+                  <th>تفاصيل البيانات (Payload / Meta)</th>
+                </tr>
+              </thead>
+              <tbody id="audit-table-body">
+                <tr>
+                  <td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">
+                    <div class="spinner"></div> جاري استعلام سجل التدقيق غير القابل للتعديل...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- TAB 3: FINANCIAL & SLOT ANALYTICS                               -->
+        <!-- =============================================================== -->
+        <div id="tab-analytics" class="tab-pane" style="display:none;">
+          <!-- Action Control Bar -->
+          <div class="filter-bar">
+            <div class="flex items-center gap-2">
+              <span style="font-weight:700; color:var(--text-primary);">📊 إدارة التحليلات والتجميعات المالية الشهرية</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="btn-recalculate-rollups" class="btn btn-sm btn-warning">
+                ⚡ إعادة احتساب التجميعات الشهرية (materialize_analytics)
+              </button>
+              <button id="btn-open-export-modal" class="btn btn-sm btn-primary">
+                📥 تصدير تقرير CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- Grid: Monthly Payments & Slot Utilization -->
+          <div class="grid grid-2" style="margin-bottom: var(--spacing-lg);">
+            
+            <!-- Panel 1: Payments Monthly -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">💰 التجميعات المالية الشهرية (payments_monthly)</div>
+                <span class="badge badge-info">v_analytics_payments</span>
+              </div>
+              <div class="table-responsive">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>الشهر</th>
+                      <th>إجمالي المحصل</th>
+                      <th>إجمالي المسترد</th>
+                      <th>عدد العمليات</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analytics-payments-body">
+                    <tr>
+                      <td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">جاري التحميل...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Panel 2: Slot Utilization -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">📈 نسب إشغال الخدمات (slot_utilization_monthly)</div>
+                <span class="badge badge-info">v_analytics_utilization</span>
+              </div>
+              <div class="table-responsive">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>الخدمة</th>
+                      <th>الشهر</th>
+                      <th>المواعيد / المحجوز</th>
+                      <th>نسبة الإشغال</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analytics-utilization-body">
+                    <tr>
+                      <td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">جاري التحميل...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Panel 3: Bookings Monthly by Status -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">📅 توزيع الحجوزات الشهرية حسب الحالة (bookings_monthly)</div>
+              <span class="badge badge-info">v_analytics_bookings</span>
+            </div>
+            <div class="table-responsive">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>الخدمة</th>
+                    <th>الشهر</th>
+                    <th>إجمالي الحجوزات</th>
+                    <th>التوزيع حسب الحالات (Status Breakdown)</th>
+                  </tr>
+                </thead>
+                <tbody id="analytics-bookings-body">
+                  <tr>
+                    <td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">جاري التحميل...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- TAB 4: SYSTEM DIAGNOSTICS & HEALTH CONTROL                      -->
+        <!-- =============================================================== -->
+        <div id="tab-diagnostics" class="tab-pane" style="display:none;">
+          
+          <div class="grid grid-2" style="margin-bottom: var(--spacing-lg);">
+
+            <!-- Panel 1: Security Probes (Diagnostic Engine) -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">🛡️ محرك الفحص الأمني المباشر (Security Probes)</div>
+                <button id="btn-run-probes" class="btn btn-sm btn-primary">🚀 تشغيل الفحص الآن</button>
+              </div>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+                ينفذ مسبارات أمنية حقيقية عبر <code>/functions/v1/diagnostic-engine</code> للتحقق من صرامة RLS وسياسات الحماية:
+              </div>
+              <div id="probes-results-container" class="flex flex-col gap-2">
+                <div style="text-align:center; padding:20px; color:var(--text-muted);">
+                  اضغط على زر "تشغيل الفحص الآن" لتنفيذ المسبارات الثلاثة.
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel 2: Outbox Reaper -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">📬 معالج أحداث الـ Outbox العالقة (Outbox Reaper)</div>
+                <span class="badge badge-warning">reap_stuck_outbox_events</span>
+              </div>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+                يقوم بمسح الأحداث العالقة في حالة <code>PROCESSING</code> وإعادتها لقيد الانتظار أو تسجيل فشلها:
+              </div>
+              
+              <div class="flex items-center gap-2" style="margin-bottom:14px;">
+                <label class="form-label" style="margin-bottom:0; white-space:nowrap;">مهلة التعليق:</label>
+                <select id="select-reaper-timeout" class="form-select" style="max-width:160px;">
+                  <option value="1 minute">دقيقة واحدة (1 min)</option>
+                  <option value="5 minutes" selected>5 دقائق (5 min)</option>
+                  <option value="15 minutes">15 دقيقة (15 min)</option>
+                  <option value="1 hour">ساعة واحدة (1 hr)</option>
+                </select>
+                <button id="btn-trigger-reaper" class="btn btn-sm btn-warning">⚡ تشغيل الـ Reaper</button>
+              </div>
+
+              <div id="reaper-result-box" class="alert alert-info" style="display:none; font-size:0.85rem;"></div>
+            </div>
+
+          </div>
+
+          <div class="grid grid-2">
+
+            <!-- Panel 3: Vault Preflight -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">🔐 فحص أسرار الخزينة (Vault Preflight)</div>
+                <button id="btn-run-vault-preflight" class="btn btn-sm btn-outline">🔍 فحص الخزينة</button>
+              </div>
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+                يتحقق من وجود المفاتيح الحساسة في <code>vault.decrypted_secrets</code> عبر <code>vault_preflight()</code>:
+              </div>
+              <div id="vault-results-box" class="flex flex-col gap-2">
+                <div style="text-align:center; padding:15px; color:var(--text-muted);">
+                  اضغط على زر "فحص الخزينة" للاختبار.
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel 4: Database & Infrastructure Health -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">🌐 سلامة الاتصال ومكونات المنظومة</div>
+                <button id="btn-refresh-infra" class="btn btn-sm btn-outline">🔄 فحص الاتصال</button>
+              </div>
+              <div class="flex flex-col gap-2" id="infra-health-list">
+                <div class="flex items-center justify-between" style="padding:8px 12px; background:var(--bg-elevated); border-radius:var(--radius-sm);">
+                  <span>🔌 PostgREST API (البوابة 54321)</span>
+                  <span id="health-postgrest" class="badge badge-open">جاري الفحص...</span>
+                </div>
+                <div class="flex items-center justify-between" style="padding:8px 12px; background:var(--bg-elevated); border-radius:var(--radius-sm);">
+                  <span>🗄️ PostgreSQL Database (البوابة 54323)</span>
+                  <span id="health-postgres" class="badge badge-open">متصل</span>
+                </div>
+                <div class="flex items-center justify-between" style="padding:8px 12px; background:var(--bg-elevated); border-radius:var(--radius-sm);">
+                  <span>🔑 GoTrue Authentication Service</span>
+                  <span id="health-gotrue" class="badge badge-open">متصل</span>
+                </div>
+                <div class="flex items-center justify-between" style="padding:8px 12px; background:var(--bg-elevated); border-radius:var(--radius-sm);">
+                  <span>⚡ Deno Edge Functions Engine</span>
+                  <span id="health-edge" class="badge badge-open">متصل</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: EDIT USER ROLE                                                 -->
+  <!-- ===================================================================== -->
+  <div id="modal-role-edit" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ تعديل الصلاحية للمستخدم</div>
+        <button class="modal-close" data-close-modal="modal-role-edit">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-user-id">
+        
+        <div class="form-group">
+          <label class="form-label">المستخدم المستهدف:</label>
+          <input type="text" id="edit-user-name" class="form-input" readonly style="opacity:0.8;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">البريد الإلكتروني / الهاتف:</label>
+          <input type="text" id="edit-user-contact" class="form-input font-mono" readonly style="opacity:0.8;">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">الصلاحية الجديدة:</label>
+          <select id="edit-user-role-select" class="form-select">
+            <option value="USER">مخدوم / رعية (USER)</option>
+            <option value="ADMIN">إداري / كاهن (ADMIN)</option>
+            <option value="SUPER_ADMIN">مدير أعلى للمنظومة (SUPER_ADMIN)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">سبب التعديل (يسجل في سجل التدقيق):</label>
+          <input type="text" id="edit-user-reason" class="form-input" placeholder="مثال: ترقية إدارية / تغيير تكليف الخدمة">
+        </div>
+
+        <div class="alert alert-warning" style="font-size:0.8rem; margin-bottom:0;">
+          ⚠️ تعديل الصلاحية سيتم تنفيذه مباشرة عبر قناة الأمان المركزية (Service Role Seam) مع توثيق العملية في سجل التدقيق.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close-modal="modal-role-edit">إلغاء</button>
+        <button id="btn-save-user-role" class="btn btn-primary">حفظ وتطبيق الصلاحية</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: EXPORT CSV ANALYTICS                                           -->
+  <!-- ===================================================================== -->
+  <div id="modal-export-analytics" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">📥 تصدير تقارير التحليلات (CSV Export)</div>
+        <button class="modal-close" data-close-modal="modal-export-analytics">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">نوع التقرير:</label>
+          <select id="export-report-type" class="form-select">
+            <option value="payments">💰 تقرير المدفوعات الشهرية (payments)</option>
+            <option value="utilization">📈 تقرير نسب إشغال المواعيد (utilization)</option>
+            <option value="bookings">📅 تقرير الحجوزات وحالاتها (bookings)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">الشهر المستهدف:</label>
+          <input type="month" id="export-month-input" class="form-input" value="2026-08">
+        </div>
+
+        <div class="alert alert-info" style="font-size:0.8rem; margin-bottom:0;">
+          💡 يتم تصدير الملف بصيغة CSV مشفرة بـ UTF-8 مع حماية الخلايا من حقن الصيغ (Formula Injection Sanitization).
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" data-close-modal="modal-export-analytics">إلغاء</button>
+        <button id="btn-download-csv-action" class="btn btn-success">📥 تحميل ملف CSV</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="portal-footer">
+    <div class="container">
+      منظومة الكنيسة الرقمية — لوحة التحكم العليا والحوكمة &copy; 2026 | بيئة الاختبار المحلية (Local Development Test Harness)
+    </div>
+  </footer>
+
+  <!-- SuperAdmin Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

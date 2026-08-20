@@ -66,7 +66,6 @@ void main() {
       'announcements': [],
       'faq': [],
       'payments': [],
-      'videos': [],
     });
 
     await tester.pumpWidget(buildTestApp(fake));
@@ -82,7 +81,6 @@ void main() {
     expect(find.text('الأسئلة الشائعة'), findsOneWidget);
     expect(find.text('المدفوعات'), findsOneWidget);
     expect(find.text('التحليلات'), findsOneWidget);
-    expect(find.text('الفيديوهات'), findsWidgets);
 
     // Navigate to 'حجز يدوي'
     await tester.tap(find.text('حجز يدوي'));
@@ -131,11 +129,5 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(AnalyticsAdminScreen), findsOneWidget);
-
-    // Navigate to 'الفيديوهات'
-    await tester.tap(find.text('الفيديوهات'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('الفيديوهات'), findsWidgets);
   });
 }

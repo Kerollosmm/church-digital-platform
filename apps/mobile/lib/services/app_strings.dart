@@ -29,23 +29,15 @@ class AppStrings {
   static const quickMass = 'مواعيد القداسات';
   static const quickConfession = 'الآباء والاعترافات';
   static const quickBooking = 'حجز المناسبات';
-  static const quickVideos = 'مكتبة الفيديو';
   static const quickComplaints = 'صندوق الشكاوى';
   static const meditationToday = 'تأمل اليوم';
   static const verseText = '"الرَّبُّ نُورِي وَخَلاَصِي، مِمَّنْ أَخَافُ؟"';
   static const verseRef = '(مزمور 27: 1)';
   static const tabHome = 'الرئيسية';
   static const tabBooking = 'الحجز';
-  static const tabVideos = 'الفيديوهات';
   static const tabComplaints = 'الشكاوى';
   static const tabProfile = 'حسابي';
   static const comingSoon = 'قريباً';
-
-  static const videosStoreTitle = 'متجر الفيديوهات';
-  static const videosLibraryTitle = 'مكتبة الفيديوهات';
-  static const buyVideo = 'شراء';
-  static const purchasedLabel = 'تم الشراء';
-  static const videosEmpty = 'لا توجد فيديوهات';
 
   static const authTitle = 'الكنيسة القبطية الأرثوذكسية';
   static const authSubtitle = 'أهلاً بك في منصة الكنيسة Digital Platform';

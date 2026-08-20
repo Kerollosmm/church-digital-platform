@@ -8,7 +8,7 @@ The administrative web portal for church priests and system administrators, buil
 - **Booking Management**: Manual booking (cash), emergency override (reschedule + apology + refund), refund queue.
 - **Financial Reconciliation**: Live view of Paymob transaction logs, pending refund requests, and capacity reports.
 - **Analytics Dashboard**: Slot utilization, payment/refund trends, and booking volume charts with CSV export.
-- **Role-Based Navigation**: View restrictions powered by Supabase Auth RLS claims (`ADMIN`, `PRIEST`, `SUPER_ADMIN`).
+- **Role-Based Navigation**: View restrictions powered by Supabase Auth RLS claims (`ADMIN`, `SUPER_ADMIN`).
 
 ## 📁 Repository Structure
 

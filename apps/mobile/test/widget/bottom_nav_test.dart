@@ -4,7 +4,6 @@ import 'package:mobile/features/booking/my_bookings_screen.dart';
 import 'package:mobile/features/booking/services_list_screen.dart';
 import 'package:mobile/features/complaints/complaints_screen.dart';
 import 'package:mobile/features/portal/portal_repository.dart';
-import 'package:mobile/features/video/video_purchase_screen.dart';
 import 'package:mobile/screens/home_hub_screen.dart';
 import 'package:mobile/services/app_strings.dart';
 import 'package:mobile/theme/app_colors.dart';
@@ -19,7 +18,6 @@ void main() {
   ) async {
     final emptyFake = FakeSupabase({'announcements': []});
     final bookingRepo = FakeBookingRepository();
-    final videosRepo = FakeVideosRepository();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -27,7 +25,6 @@ void main() {
         home: BottomNavScaffold(
           homeTab: HomeHubScreen(repository: PortalRepository(emptyFake)),
           bookingRepository: bookingRepo,
-          videosRepository: videosRepo,
         ),
       ),
     );
@@ -56,17 +53,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ServicesListScreen), findsOneWidget);
 
-    // Tap Tab 2: Videos (VideoPurchaseScreen)
-    await tester.tap(find.text(AppStrings.tabVideos));
-    await tester.pumpAndSettle();
-    expect(find.byType(VideoPurchaseScreen), findsOneWidget);
-
-    // Tap Tab 3: Complaints (ComplaintsScreen)
+    // Tap Tab 2: Complaints (ComplaintsScreen)
     await tester.tap(find.text(AppStrings.tabComplaints));
     await tester.pumpAndSettle();
     expect(find.byType(ComplaintsScreen), findsOneWidget);
 
-    // Tap Tab 4: MyBookings (MyBookingsScreen)
+    // Tap Tab 3: MyBookings (MyBookingsScreen)
     await tester.tap(find.text(AppStrings.tabProfile));
     await tester.pumpAndSettle();
     expect(find.byType(MyBookingsScreen), findsOneWidget);

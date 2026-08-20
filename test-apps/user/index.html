@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بوابة المخدومين والرعية — المنظومة الرقمية للكنيسة</title>
+  
+  <!-- Shared Styles & Google Fonts Cairo -->
+  <link rel="stylesheet" href="../shared/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Shared Modules -->
+  <script src="../shared/supabase-client.js"></script>
+  <script src="../shared/paymob-simulator.js"></script>
+  <script src="../shared/test-accounts.js"></script>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="app-header">
+    <div class="header-container" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div style="width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, var(--gold), var(--gold-dark)); display:flex; align-items:center; justify-content:center; font-size:1.6rem; color:var(--bg-card); font-weight:900; box-shadow:0 4px 12px rgba(217, 119, 6, 0.3);">
+          ✝
+        </div>
+        <div>
+          <h1 style="font-size:1.25rem; margin:0; font-weight:800; color:var(--text-primary);">كنيسة الشهيد مارجرجس والأنبا بيشوي</h1>
+          <p style="font-size:0.8rem; margin:0; color:var(--text-secondary);">بوابة المخدومين — حجز القداسات والخدمات والشكاوى المؤمنة</p>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px;">
+        <a href="../index.html" class="btn btn-sm btn-outline" style="display:flex; align-items:center; gap:6px;">
+          <span>🌐</span>
+          <span>بوابة البوابات</span>
+        </a>
+        <div id="top-user-banner"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container" style="padding-top:24px; padding-bottom:60px;">
+
+    <!-- Auth Wall / Quick Login Section (shown if not logged in) -->
+    <section id="auth-section" class="card" style="margin-bottom:28px; display:none;">
+      <div class="card-header" style="border-bottom:1px solid var(--border-color); padding-bottom:14px; margin-bottom:16px;">
+        <h2 style="font-size:1.15rem; margin:0; display:flex; align-items:center; gap:8px;">
+          <span>🔐</span>
+          <span>تسجيل الدخول / إنشاء حساب مخدوم</span>
+        </h2>
+      </div>
+
+      <!-- Quick 1-Click Login for Seed Accounts -->
+      <div style="margin-bottom:24px;">
+        <div id="quick-accounts-container"></div>
+      </div>
+
+      <div class="divider" style="text-align:center; position:relative; margin:24px 0; border-top:1px dashed var(--border-color);">
+        <span style="position:relative; top:-12px; background:var(--bg-card); padding:0 12px; font-size:0.8rem; color:var(--text-muted);">أو سجل الدخول ببياناتك</span>
+      </div>
+
+      <!-- Auth Form Tabs -->
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button id="btn-tab-email" class="btn btn-sm btn-primary">بالبريد الإلكتروني</button>
+        <button id="btn-tab-phone" class="btn btn-sm btn-outline">برقم الهاتف (OTP)</button>
+        <button id="btn-tab-register" class="btn btn-sm btn-outline">حساب جديد</button>
+      </div>
+
+      <!-- Email Login Form -->
+      <form id="form-email-login" style="display:flex; flex-direction:column; gap:14px; max-width:480px;">
+        <div class="form-group">
+          <label for="login-email">البريد الإلكتروني:</label>
+          <input type="email" id="login-email" class="input" placeholder="mariam@church.test" required dir="ltr">
+        </div>
+        <div class="form-group">
+          <label for="login-password">كلمة المرور:</label>
+          <input type="password" id="login-password" class="input" placeholder="••••••••" required dir="ltr">
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:6px;">دخول بالبريد</button>
+      </form>
+
+      <!-- Phone OTP Form -->
+      <form id="form-phone-login" style="display:none; flex-direction:column; gap:14px; max-width:480px;">
+        <div class="form-group">
+          <label for="login-phone">رقم الهاتف (المسجل مسبقاً):</label>
+          <input type="tel" id="login-phone" class="input" placeholder="+201000000002" required dir="ltr">
+          <small style="color:var(--text-muted); font-size:0.75rem;">يدعم أرقام الاختبار: 01000000002 أو 01000000003</small>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" id="btn-send-otp" class="btn btn-outline" style="white-space:nowrap;">إرسال الرمز (OTP)</button>
+        </div>
+        <div id="otp-verify-group" class="form-group" style="display:none;">
+          <label for="login-otp">رمز التحقق (افتراضي 123456):</label>
+          <input type="text" id="login-otp" class="input" placeholder="123456" maxlength="6" dir="ltr" value="123456">
+          <button type="submit" class="btn btn-primary" style="margin-top:8px;">تأكيد الرمز والدخول</button>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form id="form-register" style="display:none; flex-direction:column; gap:14px; max-width:480px;">
+        <div class="form-group">
+          <label for="reg-name">الاسم الثلاثي:</label>
+          <input type="text" id="reg-name" class="input" placeholder="مينا سمير يوسف" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-phone">رقم الهاتف المحمول:</label>
+          <input type="tel" id="reg-phone" class="input" placeholder="+201000000006" required dir="ltr">
+        </div>
+        <div class="form-group">
+          <label for="reg-email">البريد الإلكتروني:</label>
+          <input type="email" id="reg-email" class="input" placeholder="newuser@church.test" required dir="ltr">
+        </div>
+        <div class="form-group">
+          <label for="reg-password">كلمة المرور:</label>
+          <input type="password" id="reg-password" class="input" placeholder="••••••••" required dir="ltr" minlength="6">
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:6px;">إنشاء الحساب الآن</button>
+      </form>
+    </section>
+
+    <!-- Active User Dashboard Navigation Tabs -->
+    <div class="tab-nav" style="display:flex; gap:10px; margin-bottom:24px; overflow-x:auto; border-bottom:2px solid var(--border-color); padding-bottom:6px;">
+      <button class="tab-btn active" data-tab="tab-today">
+        <span>📅</span>
+        <span>اليوم والخدمات</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-booking">
+        <span>🎟</span>
+        <span>حجز القداسات والمواعيد</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-my-bookings">
+        <span>📋</span>
+        <span>حجوزاتي وقائمة الانتظار</span>
+        <span id="my-bookings-count-badge" class="badge badge-awaiting-call" style="margin-right:6px; display:none;">0</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-community">
+        <span>⛪</span>
+        <span>الكنيسة والآباء الكهنة</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-recruitment">
+        <span>🤝</span>
+        <span>التقديم على خدمة</span>
+      </button>
+      <button class="tab-btn" data-tab="tab-complaints">
+        <span>🔒</span>
+        <span>الشكاوى والمقترحات المؤمنة</span>
+      </button>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- TAB 1: TODAY & SERVICES -->
+    <!-- ================================================================= -->
+    <section id="tab-today" class="tab-content active">
+      <!-- Announcements Banner -->
+      <div id="announcements-container" style="margin-bottom:24px;"></div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px;">
+        <!-- Today's Schedule -->
+        <div class="card">
+          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="font-size:1.05rem; margin:0; display:flex; align-items:center; gap:8px;">
+              <span>⏰</span>
+              <span>جدول صلوات وخدمات اليوم</span>
+            </h3>
+            <button id="btn-refresh-today" class="btn btn-sm btn-outline">تحديث</button>
+          </div>
+          <div id="today-schedule-list" style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">
+            <div style="text-align:center; padding:20px; color:var(--text-muted);">جاري تحميل جدول اليوم...</div>
+          </div>
+        </div>
+
+        <!-- Available Services Catalog -->
+        <div class="card">
+          <div class="card-header">
+            <h3 style="font-size:1.05rem; margin:0; display:flex; align-items:center; gap:8px;">
+              <span>✨</span>
+              <span>دليل الخدمات الكنسية المتاحة</span>
+            </h3>
+          </div>
+          <div id="services-catalog-list" style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">
+            <div style="text-align:center; padding:20px; color:var(--text-muted);">جاري تحميل دليل الخدمات...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ Section -->
+      <div class="card" style="margin-top:24px;">
+        <div class="card-header">
+          <h3 style="font-size:1.05rem; margin:0; display:flex; align-items:center; gap:8px;">
+            <span>❓</span>
+            <span>الأسئلة الشائعة والإرشادات</span>
+          </h3>
+        </div>
+        <div id="faq-accordion-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+          <!-- Injected dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB 2: SLOT BROWSING & BOOKING -->
+    <!-- ================================================================= -->
+    <section id="tab-booking" class="tab-content" style="display:none;">
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <h3 style="font-size:1.1rem; margin:0; display:flex; align-items:center; gap:8px;">
+            <span>🔍</span>
+            <span>استعراض وحجز المواعيد المتاحة</span>
+          </h3>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button id="btn-refresh-slots" class="btn btn-sm btn-outline">تحديث المواعيد</button>
+          </div>
+        </div>
+
+        <!-- Filters Bar -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-top:16px; padding-top:14px; border-top:1px solid var(--border-color);">
+          <div class="form-group">
+            <label for="filter-service">نوع الخدمة:</label>
+            <select id="filter-service" class="input">
+              <option value="ALL">جميع الخدمات</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="filter-date">التاريخ:</label>
+            <input type="date" id="filter-date" class="input">
+          </div>
+          <div class="form-group">
+            <label for="filter-status">الحالة:</label>
+            <select id="filter-status" class="input">
+              <option value="ALL">الكل (المتاح والممتلئ)</option>
+              <option value="AVAILABLE" selected>المتاح فقط للحجز</option>
+              <option value="BOOKED">الممتلئ (قائمة الانتظار)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slots Grid List -->
+      <div id="slots-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+        <div style="text-align:center; padding:30px; color:var(--text-muted); grid-column:1/-1;">
+          جاري استعلام المواعيد المتاحة من الخادم...
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB 3: MY BOOKINGS & WAITLIST -->
+    <!-- ================================================================= -->
+    <section id="tab-my-bookings" class="tab-content" style="display:none;">
+      <!-- Active Lock Countdown Alert Banner -->
+      <div id="lock-alert-container"></div>
+
+      <!-- My Bookings Card -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="font-size:1.1rem; margin:0; display:flex; align-items:center; gap:8px;">
+            <span>📋</span>
+            <span>سجل حجوزاتي</span>
+          </h3>
+          <button id="btn-refresh-my-bookings" class="btn btn-sm btn-outline">تحديث السجل</button>
+        </div>
+
+        <div class="table-responsive" style="margin-top:14px;">
+          <table class="table" id="table-my-bookings">
+            <thead>
+              <tr>
+                <th>رقم الحجز</th>
+                <th>الخدمة / الموعد</th>
+                <th>التاريخ والوقت</th>
+                <th>المكان</th>
+                <th>المبلغ</th>
+                <th>حالة الحجز</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="my-bookings-tbody">
+              <tr>
+                <td colspan="7" style="text-align:center; color:var(--text-muted); padding:20px;">
+                  يرجى تسجيل الدخول لعرض حجوزاتك
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- My Waitlist Card -->
+      <div class="card">
+        <div class="card-header">
+          <h3 style="font-size:1.05rem; margin:0; display:flex; align-items:center; gap:8px;">
+            <span>⏳</span>
+            <span>قوائم الانتظار المشترك بها</span>
+          </h3>
+        </div>
+        <div class="table-responsive" style="margin-top:14px;">
+          <table class="table" id="table-my-waitlist">
+            <thead>
+              <tr>
+                <th>رقم الطلب</th>
+                <th>الخدمة / الموعد</th>
+                <th>التاريخ والوقت</th>
+                <th>ترتيبك في القائمة</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody id="my-waitlist-tbody">
+              <tr>
+                <td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">
+                  لا توجد طلبات انتظار حالية
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB 4: COMMUNITY & PRIESTS -->
+    <!-- ================================================================= -->
+    <section id="tab-community" class="tab-content" style="display:none;">
+      <!-- Priests Directory -->
+      <div class="card" style="margin-bottom:24px;">
+        <div class="card-header">
+          <h3 style="font-size:1.1rem; margin:0; display:flex; align-items:center; gap:8px;">
+            <span>✝</span>
+            <span>الآباء كهنة الكنيسة ومواعيد المقابلات والاعترافات</span>
+          </h3>
+        </div>
+        <div id="priests-directory-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:16px;">
+          <div style="text-align:center; padding:20px; color:var(--text-muted); grid-column:1/-1;">
+            جاري تحميل دليل الآباء الكهنة...
+          </div>
+        </div>
+      </div>
+
+      <!-- Church Info & Channels -->
+      <div class="card">
+        <div class="card-header">
+          <h3 style="font-size:1.05rem; margin:0; display:flex; align-items:center; gap:8px;">
+            <span>📍</span>
+            <span>معلومات الكنيسة والتواصل</span>
+          </h3>
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px; margin-top:14px;">
+          <div style="background:var(--bg-surface); padding:14px; border-radius:8px; border:1px solid var(--border-color);">
+            <div style="font-weight:700; color:var(--gold); margin-bottom:4px;">العنوان</div>
+            <div style="font-size:0.85rem; color:var(--text-secondary);">شارع الكنيسة المرقسية - شبرا، القاهرة، مصر</div>
+          </div>
+          <div style="background:var(--bg-surface); padding:14px; border-radius:8px; border:1px solid var(--border-color);">
+            <div style="font-weight:700; color:var(--gold); margin-bottom:4px;">مكتب السكرتارية</div>
+            <div style="font-size:0.85rem; color:var(--text-secondary); direction:ltr; text-align:right;">+20 2 2456 7890</div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">يومياً من 9:00 ص إلى 9:00 م</div>
+          </div>
+          <div style="background:var(--bg-surface); padding:14px; border-radius:8px; border:1px solid var(--border-color);">
+            <div style="font-weight:700; color:var(--gold); margin-bottom:4px;">البث المباشر والمنصات</div>
+            <div style="font-size:0.85rem; color:var(--text-secondary);">قناة اليوتيوب الرسمية وصفحة الفيسبوك</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB 5: MINISTRY RECRUITMENT -->
+    <!-- ================================================================= -->
+    <section id="tab-recruitment" class="tab-content" style="display:none;">
+      <div class="card" style="max-width:700px; margin:0 auto;">
+        <div class="card-header" style="border-bottom:1px solid var(--border-color); padding-bottom:14px; margin-bottom:16px;">
+          <h3 style="font-size:1.15rem; margin:0; display:flex; align-items:center; gap:8px;">
+            <span>🤝</span>
+            <span>استمارة التقديم على خدمة كنسية تطوعية</span>
+          </h3>
+          <p style="font-size:0.85rem; color:var(--text-secondary); margin:6px 0 0 0;">
+            «أَمَّا أَنَا وَبَيْتِي فَنَعْبُدُ الرَّبَّ» — يسعدنا انضمامك لأحد مجالات الخدمة في كنيستنا.
+          </p>
+        </div>
+
+        <form id="form-recruitment" style="display:flex; flex-direction:column; gap:16px;">
+          <div class="form-group">
+            <label for="recruit-name">الاسم الرباعي:</label>
+            <input type="text" id="recruit-name" class="input" placeholder="بيتر سمير يوسف إبراهيم" required>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label for="recruit-phone">رقم الهاتف المحمول (واتساب):</label>
+              <input type="tel" id="recruit-phone" class="input" placeholder="+201000000003" required dir="ltr">
+            </div>
+            <div class="form-group">
+              <label for="recruit-email">البريد الإلكتروني:</label>
+              <input type="email" id="recruit-email" class="input" placeholder="peter@church.test" required dir="ltr">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div class="form-group">
+              <label for="recruit-ministry">المجال الراغب في الخدمة به:</label>
+              <select id="recruit-ministry" class="input" required>
+                <option value="">-- اختر مجال الخدمة --</option>
+                <option value="SUNDAY_SCHOOL">مدارس الأحد والتربية الكنسية</option>
+                <option value="SCOUTS">الكشافة والمرشدات</option>
+                <option value="VISITATION">الافتقاد ورعاية إخوة الرب</option>
+                <option value="ORGANIZATION">التنظيم والاستقبال وإدارة الصلوات</option>
+                <option value="MEDIA_AUDIO">الميديا والتغطية الإعلامية والصوتيات</option>
+                <option value="MEDICAL_CONVOYS">القوافل الطبية والرعاية الصحية</option>
+                <option value="TECHNICAL_IT">التطوير التقني والدعم الفني للمنظومة</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="recruit-priest">أب الاعتراف:</label>
+              <select id="recruit-priest" class="input">
+                <option value="">-- اختر أب الاعتراف --</option>
+                <option value="القمص بيشوي كامل">القمص بيشوي كامل</option>
+                <option value="القس بولس جورج">القس بولس جورج</option>
+                <option value="القس داود لمعي">القس داود لمعي</option>
+                <option value="كاهن آخر">كاهن من كنيسة أخرى</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="recruit-skills">الخبرات والمهارات السابقة أو ملاحظات إضافية:</label>
+            <textarea id="recruit-skills" class="input" rows="3" placeholder="المؤهل الدراسي، مواهب سابقة، أوقات التفرغ المتاحة..."></textarea>
+          </div>
+
+          <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="recruit-consent" required style="width:18px; height:18px;">
+            <label for="recruit-consent" style="font-size:0.85rem; cursor:pointer;">
+              أقر بصحة البيانات وأرغب في التواصل معي لتحديد موعد المقابلة الشخصية.
+            </label>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="padding:10px 18px; font-weight:700;">
+            إرسال طلب الانضمام للخدمة
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- TAB 6: ENCRYPTED COMPLAINTS -->
+    <!-- ================================================================= -->
+    <section id="tab-complaints" class="tab-content" style="display:none;">
+      <!-- Security / Confidentiality Notice -->
+      <div style="background:linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)); border:1px solid rgba(217, 119, 6, 0.4); border-radius:12px; padding:18px; margin-bottom:24px; display:flex; align-items:center; gap:16px;">
+        <div style="font-size:2rem; color:var(--gold);">🔐</div>
+        <div>
+          <h4 style="margin:0 0 4px 0; color:var(--gold); font-size:1rem;">خصوصية وسرية تامة بموجب التشفير العسكري (PGP In-Database)</h4>
+          <p style="margin:0; font-size:0.8rem; color:var(--text-secondary);">
+            يتم تشفير نص الشكوى أو المقترح مباشرة في قاعدة البيانات بواسطة مفتاح Vault المحمي ولا يمكن لأي شخص الاطلاع عليه باستثناء الآباء الكهنة المفوضين بعد تسجيل دخولهم الرسمي.
+          </p>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px;">
+        <!-- Submit Complaint Form -->
+        <div class="card">
+          <div class="card-header" style="border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:14px;">
+            <h3 style="font-size:1.05rem; margin:0; display:flex; align-items:center; gap:8px;">
+              <span>✍</span>
+              <span>تقديم شكوى أو مقترح جديد</span>
+            </h3>
+          </div>
+
+          <form id="form-submit-complaint" style="display:flex; flex-direction:column; gap:14px;">
+            <div class="form-group">
+              <label for="complaint-category">تصنيف الموضوع:</label>
+              <select id="complaint-category" class="input" required>
+                <option value="GENERAL">عام / مقترح تطوير</option>
+                <option value="SPIRITUAL">رعاية روحية وافتقاد</option>
+                <option value="ORGANIZATIONAL">تنظيم الصلوات والخدمات</option>
+                <option value="FINANCIAL">مساعدات وإخوة الرب</option>
+                <option value="CONFIDENTIAL">أمر شخصي سري للغاية</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="complaint-body">نص الشكوى / المقترح:</label>
+              <textarea id="complaint-body" class="input" rows="6" maxlength="4000" placeholder="اكتب تفاصيل الشكوى أو المقترح هنا بكل حرية وسرية..." required></textarea>
+              <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+                <span>الحد الأقصى 4000 حرف</span>
+                <span id="complaint-char-count">0 / 4000</span>
+              </div>
+            </div>
+
+            <button type="submit" id="btn-submit-complaint" class="btn btn-primary" style="padding:10px;">
+              تشفير وإرسال الشكوى
+            </button>
+          </form>
+        </div>
+
+        <!-- My Complaints History -->
+        <div class="card">
+          <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="font-size:1.05rem; margin:0; display:flex; align-items:center; gap:8px;">
+              <span>📜</span>
+              <span>سجل شكاواي السابقة</span>
+            </h3>
+            <button id="btn-refresh-complaints" class="btn btn-sm btn-outline">تحديث</button>
+          </div>
+
+          <div class="table-responsive" style="margin-top:14px;">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>الرقم</th>
+                  <th>التصنيف</th>
+                  <th>الحالة</th>
+                  <th>تاريخ الإرسال</th>
+                </tr>
+              </thead>
+              <tbody id="my-complaints-tbody">
+                <tr>
+                  <td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">
+                    سجل الدخول للاطلاع على شكاواك
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Booking Confirmation Modal Dialog -->
+  <div id="booking-modal" class="modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div class="card modal-content" style="max-width:500px; width:90%; padding:24px; position:relative; box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:1.15rem; color:var(--gold); display:flex; align-items:center; gap:8px;">
+          <span>🎟</span>
+          <span>تأكيد حجز الموعد</span>
+        </h3>
+        <button id="btn-close-modal" style="background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <div id="modal-slot-details" style="margin-bottom:18px; display:flex; flex-direction:column; gap:10px;">
+        <!-- Injected dynamically -->
+      </div>
+
+      <div class="form-group" style="margin-bottom:18px; background:var(--bg-surface); padding:12px; border-radius:8px; border:1px solid var(--border-color);">
+        <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; font-size:0.85rem;">
+          <input type="checkbox" id="modal-opt-in" checked style="margin-top:3px; width:18px; height:18px;">
+          <span>
+            <strong>تفعيل إشعارات الواتساب (WhatsApp Notifications)</strong><br>
+            <span style="color:var(--text-muted); font-size:0.75rem;">تلقي رسالة تأكيد الحجز وإشعار الدفع وتذكير الموعد على رقم هاتفك.</span>
+          </span>
+        </label>
+      </div>
+
+      <div style="background:rgba(217, 119, 6, 0.1); border:1px solid rgba(217, 119, 6, 0.3); border-radius:8px; padding:10px 12px; font-size:0.78rem; color:var(--gold); margin-bottom:20px;">
+        ⏱ <strong>تنبيه قفل المقعد:</strong> بمجرد الضغط على تأكيد، يتم حجز المقعد لك مؤقتاً لمدة <strong>20 دقيقة</strong> لحين إتمام التأكيد أو الدفع.
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button id="btn-cancel-modal" class="btn btn-outline">إلغاء</button>
+        <button id="btn-confirm-book" class="btn btn-primary" style="padding:8px 20px;">تأكيد وحجز الموعد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Main App Script -->
+  <script src="app.js"></script>
+</body>
+</html>

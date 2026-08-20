@@ -4,9 +4,7 @@ import 'core/auth/auth_gateway.dart';
 import 'features/booking/payment_redirect_screen.dart';
 import 'features/complaints/complaints_repository.dart';
 import 'features/portal/portal_repository.dart';
-import 'features/video/video_purchase_screen.dart';
 import 'repositories/supabase_booking_repository.dart';
-import 'repositories/videos_repository.dart';
 import 'services/app_routes.dart';
 import 'services/app_supabase.dart';
 import 'widgets/bottom_nav_scaffold.dart';
@@ -18,38 +16,14 @@ GoRoute paymentRedirectRoute(AppSupabase db) {
     name: AppRoutes.paymentRedirect,
     builder: (context, state) {
       final extra = state.extra;
-      if (extra is Map && extra['video'] == true) {
-        // Video checkout is out of scope for this pass and still a write leak.
-        final paymentId = extra['payment_id'];
-        if (paymentId is! int) {
-          throw StateError('payment_id missing or not int');
-        }
-        return PaymentRedirectScreen(
-          bookingId: paymentId,
-          fetchCheckoutUrl: (_) async {
-            final data = await db.invokeFunction(
-              'paymob-checkout',
-              body: {'payment_id': paymentId},
-            );
-            final url = data['checkout_url'] as String?;
-            if (url == null || url.isEmpty) {
-              throw StateError('checkout_url missing');
-            }
-            return url;
-          },
-        );
-      }
       if (extra is Map) {
-        final bookingId = (extra['bookingId'] ?? extra['booking_id']) as int?;
-        if (bookingId != null) {
-          final checkoutUrl =
-              (extra['checkoutUrl'] ?? extra['checkout_url']) as String?;
-          return PaymentRedirectScreen(
-            bookingId: bookingId,
-            checkoutUrl: checkoutUrl,
-            onRetryCheckout: (id) => bookings.retryCheckout(id),
-          );
-        }
+        final bookingId = (extra['bookingId'] ?? extra['booking_id'] ?? extra['payment_id'] ?? 0) as int;
+        final checkoutUrl = (extra['checkoutUrl'] ?? extra['checkout_url']) as String?;
+        return PaymentRedirectScreen(
+          bookingId: bookingId,
+          checkoutUrl: checkoutUrl,
+          onRetryCheckout: (id) => bookings.retryCheckout(id),
+        );
       }
       if (extra is int) {
         return PaymentRedirectScreen(
@@ -65,7 +39,6 @@ GoRoute paymentRedirectRoute(AppSupabase db) {
 
 GoRouter buildRouter({
   required AppSupabase db,
-  required VideosRepository videos,
   AuthGateway? authGateway,
   bool Function()? isUserLoggedIn,
 }) => GoRouter(
@@ -76,14 +49,8 @@ GoRouter buildRouter({
       builder: (context, state) => BottomNavScaffold(
         portalRepository: PortalRepository(db),
         bookingRepository: SupabaseBookingRepository(db),
-        videosRepository: videos,
         complaintsRepository: SupabaseComplaintsRepository(db),
       ),
-    ),
-    GoRoute(
-      path: '/videos',
-      name: 'videos',
-      builder: (_, _) => VideoPurchaseScreen(repository: videos),
     ),
     paymentRedirectRoute(db),
   ],
@@ -91,5 +58,4 @@ GoRouter buildRouter({
 
 final appRouter = buildRouter(
   db: SupabaseAppSupabase(Supabase.instance.client),
-  videos: SupabaseVideosRepository(Supabase.instance.client),
 );

@@ -149,8 +149,8 @@ void main() {
       expect(supabaseClient.auth.currentUser, isNull);
     });
 
-    testWidgets('Deprecated role PRIEST receives "Access Denied / غير مصرح" and is signed out', (tester) async {
-      final supabaseClient = createMockSupabaseClient('PRIEST');
+    testWidgets('SUPER_ADMIN user with SET pin enters 3-step login successfully', (tester) async {
+      final supabaseClient = createMockSupabaseClient('SUPER_ADMIN', pinStatus: 'SET', pinValid: true);
 
       await tester.pumpWidget(createTestApp(supabaseClient));
       await tester.pumpAndSettle();
@@ -165,8 +165,7 @@ void main() {
       await tester.tap(find.text('تأكيد الرمز'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Access Denied / غير مصرح'), findsOneWidget);
-      expect(supabaseClient.auth.currentUser, isNull);
+      expect(find.text('أدخل رمز PIN'), findsOneWidget);
     });
 
     testWidgets('ADMIN user with SET pin enters 3-step login successfully', (tester) async {

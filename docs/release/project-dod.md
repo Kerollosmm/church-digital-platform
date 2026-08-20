@@ -23,7 +23,6 @@ This document tracks project-level Definition of Done (DoD) verification against
 |---|---|---|---|
 | **Payment Gateway** | Paymob Account & Webhook Secret | Church Charity Association Committee | Pending Account Verification |
 | **WhatsApp Notifications** | Meta WhatsApp Business API & Templates | Church IT Administrator | Templates Submitted |
-| **Video Platform** | YouTube Channel (Unlisted OAuth2 Integration) | Media Ministry Lead | Credentials Configured |
 | **Backend & Database** | Supabase Cloud Instance (`qksgphryemrdrkwaqnxp`) | Lead Backend Engineer | Active Staging |
 | **Domain & DNS** | Church Domain Name & SSL Certificates | Church IT Administrator | Configured |
 | **Mobile App Stores** | Google Play Console & Apple Developer Account | Mobile Release Engineer | Account Setup Ready |

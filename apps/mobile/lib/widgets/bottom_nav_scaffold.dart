@@ -6,15 +6,12 @@ import '../features/complaints/complaints_repository.dart';
 import '../features/complaints/complaints_screen.dart';
 import '../features/portal/portal_repository.dart';
 import '../features/portal/priests_directory_sheet.dart';
-import '../features/video/video_purchase_screen.dart';
 import '../repositories/booking_repository.dart';
-import '../repositories/videos_repository.dart';
 import '../screens/home_hub_screen.dart';
 import '../services/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_typography.dart';
-import 'coming_soon_tab.dart';
 import 'top_bar.dart';
 
 class BottomNavScaffold extends StatefulWidget {
@@ -22,7 +19,6 @@ class BottomNavScaffold extends StatefulWidget {
     super.key,
     this.homeTab,
     required this.bookingRepository,
-    this.videosRepository,
     this.complaintsRepository,
     this.portalRepository,
     this.complaintsTab,
@@ -32,7 +28,6 @@ class BottomNavScaffold extends StatefulWidget {
 
   final Widget? homeTab;
   final BookingRepository bookingRepository;
-  final VideosRepository? videosRepository;
   final ComplaintsRepository? complaintsRepository;
   final PortalRepository? portalRepository;
   final Widget? complaintsTab;
@@ -64,8 +59,7 @@ class _BottomNavScaffoldState extends State<BottomNavScaffold> {
       onTapMass: () => _switchTab(1),
       onTapConfession: () => PriestsDirectorySheet.show(context, portalRepo),
       onTapBooking: () => _switchTab(1),
-      onTapVideos: () => _switchTab(2),
-      onTapComplaints: () => _switchTab(3),
+      onTapComplaints: () => _switchTab(2),
     );
   }
 
@@ -85,9 +79,6 @@ class _BottomNavScaffoldState extends State<BottomNavScaffold> {
         children: [
           _buildHomeTab(),
           ServicesListScreen(repository: widget.bookingRepository),
-          widget.videosRepository != null
-              ? VideoPurchaseScreen(repository: widget.videosRepository!)
-              : const ComingSoonTab(),
           _buildComplaintsTab(),
           widget.myBookingsTab ??
               MyBookingsScreen(repository: widget.bookingRepository),
@@ -124,18 +115,12 @@ class _BottomNavScaffoldState extends State<BottomNavScaffold> {
                 ),
                 _buildNavItem(
                   index: 2,
-                  label: AppStrings.tabVideos,
-                  activeIcon: Icons.movie,
-                  inactiveIcon: Icons.movie_outlined,
-                ),
-                _buildNavItem(
-                  index: 3,
                   label: AppStrings.tabComplaints,
                   activeIcon: Icons.edit_note,
                   inactiveIcon: Icons.edit_note_outlined,
                 ),
                 _buildNavItem(
-                  index: 4,
+                  index: 3,
                   label: AppStrings.tabProfile,
                   activeIcon: Icons.person,
                   inactiveIcon: Icons.person_outlined,

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>منصة الكنيسة الرقمية - لوحة الإطلاق والاختبار الشامل</title>
+  <link rel="stylesheet" href="app.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo-area">
+      <div class="logo-badge">⛪ منصة الكنيسة الرقمية</div>
+      <span class="badge badge-blue">بيئة الاختبار والتطوير المحلي (Local Stack)</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-btn active">الرئيسية</a>
+      <a href="user.html" class="nav-btn">المستخدم</a>
+      <a href="admin.html" class="nav-btn">المسؤول (Admin)</a>
+      <a href="superadmin.html" class="nav-btn">مسؤول النظام (SuperAdmin)</a>
+    </div>
+    <div class="header-actions">
+      <div class="auth-badge" id="backend-status-badge">
+        <span class="auth-dot" id="backend-dot"></span>
+        <span id="backend-status-text">فحص الاتصال بـ Supabase...</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Hero Banner -->
+    <div class="card" style="background: linear-gradient(135deg, #1e293b, #0f172a); border-color: var(--primary); padding: 2rem;">
+      <h1 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 0.5rem; color: #60a5fa;">
+        ✨ مركز تشغيل واختبار تطبيقات منصة الكنيسة الرقمية
+      </h1>
+      <p style="color: #cbd5e1; line-height: 1.6; max-width: 800px;">
+        تم بناء هذه البوابات الثلاث لتشغيل واختبار كافة وظائف الباك اند المعتمدة (قواعد البيانات، دوال الأمان، طابور المراجعة الهاتفية، قيود حجز السعة، التشفير، وإدارة الصلاحيات) بالكامل على Supabase المحلي.
+      </p>
+    </div>
+
+    <!-- Live System Health Metrics -->
+    <div class="grid-4" style="margin: 1.5rem 0;">
+      <div class="stat-card">
+        <div class="stat-number" id="m-services-count" style="color:#60a5fa;">-</div>
+        <div class="stat-label">الخدمات والقداسات</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="m-slots-count" style="color:#34d399;">-</div>
+        <div class="stat-label">المواعيد المتاحة للحجز</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="m-bookings-count" style="color:#fbbf24;">-</div>
+        <div class="stat-label">إجمالي الحجوزات</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="m-users-count" style="color:#c084fc;">-</div>
+        <div class="stat-label">المستخدمين المسجلين</div>
+      </div>
+    </div>
+
+    <!-- 3 Dedicated Application Portals -->
+    <div class="grid-3" style="margin-top: 1rem;">
+
+      <!-- 1. USER APP -->
+      <div class="card" style="border-top: 4px solid #3b82f6; display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h2 style="font-size:1.3rem; font-weight:800; color:#93c5fd;">👤 تطبيق المستخدم (User App)</h2>
+            <span class="portal-tag user">شعب الكنيسة</span>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.88rem; line-height:1.6; margin-bottom:12px;">
+            واجهة مخصصة لشعب الكنيسة لحجز مواعيد القداسات والخدمات، تتبع حالة الحجز (AWAITING_CALL / CONFIRMED)، تقديم الشكاوى المشفرة، وقراءة الإعلانات.
+          </p>
+          <div style="background:#0f172a; padding:10px; border-radius:8px; font-size:0.8rem; margin-bottom:12px;">
+            <div style="font-weight:700; color:#93c5fd; margin-bottom:4px;">الميزات المتاحة:</div>
+            <ul style="padding-right:16px; color:var(--text-muted); line-height:1.5;">
+              <li>حجز المقاعد بالتزامن الآمن (Slot Lock)</li>
+              <li>سجل الحجوزات وإلغاء الحجز</li>
+              <li>الشكاوى المشفرة بـ PGCrypto</li>
+              <li>الإعلانات والأسئلة الشائعة</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:6px;">حسابات تجريبية سريعة:</div>
+          <div style="display:flex; gap:6px; margin-bottom:12px;">
+            <button class="btn btn-sm btn-outline btn-quick-launch" data-email="mariam@church.test" data-target="user.html">مريم جورج</button>
+            <button class="btn btn-sm btn-outline btn-quick-launch" data-email="peter@church.test" data-target="user.html">بيتر عادل</button>
+          </div>
+          <a href="user.html" class="btn btn-primary" style="width:100%; text-decoration:none;">🚀 فتح تطبيق المستخدم</a>
+        </div>
+      </div>
+
+      <!-- 2. ADMIN APP -->
+      <div class="card" style="border-top: 4px solid #d97706; display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h2 style="font-size:1.3rem; font-weight:800; color:#fde68a;">⛪ تطبيق الخدام (Admin Portal)</h2>
+            <span class="portal-tag admin">الخدام والكهنة</span>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.88rem; line-height:1.6; margin-bottom:12px;">
+            لوحة الإدارة والتشغيل للخدام والكهنة لمعالجة الحجوزات بعد الاتصال التليفوني، الحجز اليدوي، جدولة المواعيد، ونشر الإعلانات.
+          </p>
+          <div style="background:#0f172a; padding:10px; border-radius:8px; font-size:0.8rem; margin-bottom:12px;">
+            <div style="font-weight:700; color:#fde68a; margin-bottom:4px;">الميزات المتاحة:</div>
+            <ul style="padding-right:16px; color:var(--text-muted); line-height:1.5;">
+              <li>طابور مراجعة الحجوزات هاتفياً (Order Processing)</li>
+              <li>التحقق من رمز المرور الإداري (Admin PIN)</li>
+              <li>الحجز اليدوي وتوسيع السعة الطارئ</li>
+              <li>إدارة المواعيد والإعلانات وصندوق الشكاوى</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:6px;">حسابات تجريبية سريعة:</div>
+          <div style="display:flex; gap:6px; margin-bottom:12px;">
+            <button class="btn btn-sm btn-outline btn-quick-launch" data-email="admin@church.test" data-target="admin.html">مدير النظام</button>
+            <button class="btn btn-sm btn-outline btn-quick-launch" data-email="priest@church.test" data-target="admin.html">أب كيرلس</button>
+          </div>
+          <a href="admin.html" class="btn btn-primary" style="background:#d97706; width:100%; text-decoration:none;">🚀 فتح لوحة المسؤول (Admin)</a>
+        </div>
+      </div>
+
+      <!-- 3. SUPER ADMIN APP -->
+      <div class="card" style="border-top: 4px solid #8b5cf6; display:flex; flex-direction:column; justify-content:space-between;">
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h2 style="font-size:1.3rem; font-weight:800; color:#e9d5ff;">🛡️ مسؤول النظام (Super Admin)</h2>
+            <span class="portal-tag superadmin">مسؤول النظام العام</span>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.88rem; line-height:1.6; margin-bottom:12px;">
+            لوحة الإشراف العليا للتحكم الكامل في أدوار المستخدمين (RBAC)، مراقبة طوابير WhatsApp و FCM، فحص أسرار الخزنة ودوال Edge Functions.
+          </p>
+          <div style="background:#0f172a; padding:10px; border-radius:8px; font-size:0.8rem; margin-bottom:12px;">
+            <div style="font-weight:700; color:#e9d5ff; margin-bottom:4px;">الميزات المتاحة:</div>
+            <ul style="padding-right:16px; color:var(--text-muted); line-height:1.5;">
+              <li>تعديل الأدوار (USER / ADMIN / SUPER_ADMIN)</li>
+              <li>إعادة تعيين رموز PIN الإدارية</li>
+              <li>مراقبة وإعادة إرسال أحداث Outbox المتعثرة</li>
+              <li>فحص أسرار Vault واختبار دوال Edge Functions</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:6px;">حساب مسؤول النظام العام:</div>
+          <div style="display:flex; gap:6px; margin-bottom:12px;">
+            <button class="btn btn-sm btn-outline btn-quick-launch" data-email="superadmin@church.local" data-target="superadmin.html">مسؤول النظام العام</button>
+          </div>
+          <a href="superadmin.html" class="btn btn-primary" style="background:#7c3aed; width:100%; text-decoration:none;">🚀 فتح لوحة Super Admin</a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- System Architecture & Config Reference -->
+    <div class="card" style="margin-top:1.5rem;">
+      <div class="card-title">⚙️ معلومات الربط والبيئة المحلية (Local Stack Configuration)</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>المكون</th>
+              <th>الرابط المحلي</th>
+              <th>الحالة</th>
+              <th>ملاحظات</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Supabase API Gateway</strong></td>
+              <td><code>http://127.0.0.1:54321</code></td>
+              <td><span class="badge badge-green">متصل</span></td>
+              <td>REST, Auth, Realtime WebSocket</td>
+            </tr>
+            <tr>
+              <td><strong>Supabase Studio Dashboard</strong></td>
+              <td><a href="http://127.0.0.1:54334" target="_blank" style="color:#60a5fa;">http://127.0.0.1:54334</a></td>
+              <td><span class="badge badge-green">متاح</span></td>
+              <td>إدارة قاعدة البيانات والجداول والخزنة</td>
+            </tr>
+            <tr>
+              <td><strong>InBucket / Mailpit (Email Dev)</strong></td>
+              <td><a href="http://127.0.0.1:54335" target="_blank" style="color:#60a5fa;">http://127.0.0.1:54335</a></td>
+              <td><span class="badge badge-green">متاح</span></td>
+              <td>صندوق رسائل البريد الإلكتروني وOTP المحلي</td>
+            </tr>
+            <tr>
+              <td><strong>Deno Edge Functions</strong></td>
+              <td><code>http://127.0.0.1:54321/functions/v1</code></td>
+              <td><span class="badge badge-green">مفعل</span></td>
+              <td>diagnostic-engine, otp-sms, paymob, etc.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    منصة الكنيسة الرقمية &copy; 2026 — تم بناء واجهات الاختبار الموحدة لتشغيل وفحص النظام محلياً.
+  </footer>
+
+  <script type="module">
+    import {
+      supabase,
+      SUPABASE_URL,
+      showToast,
+      parseError
+    } from './supabase-client.js';
+
+    // Quick launch handler
+    document.querySelectorAll('.btn-quick-launch').forEach(btn => {
+      btn.onclick = async (e) => {
+        e.preventDefault();
+        const email = btn.dataset.email;
+        const target = btn.dataset.target;
+        btn.style.opacity = '0.5';
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: 'password123'
+        });
+        btn.style.opacity = '1';
+        if (error) {
+          showToast(`خطأ في الدخول: ${parseError(error)}`, 'error');
+        } else {
+          showToast(`تم تسجيل الدخول كـ ${email}، جاري التوجيه...`, 'success');
+          setTimeout(() => {
+            window.location.href = target;
+          }, 400);
+        }
+      };
+    });
+
+    // Check backend health & metrics
+    async function checkHealth() {
+      const dot = document.getElementById('backend-dot');
+      const text = document.getElementById('backend-status-text');
+
+      try {
+        const { count: sCount, error: sErr } = await supabase.from('services').select('*', { count: 'exact', head: true });
+        const { count: slotCount } = await supabase.from('service_slots').select('*', { count: 'exact', head: true });
+        const { count: bCount } = await supabase.from('bookings').select('*', { count: 'exact', head: true });
+        const { count: uCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+
+        if (!sErr) {
+          dot.className = 'auth-dot';
+          text.textContent = 'Supabase المحلي متصل وجاهز (54321)';
+          document.getElementById('m-services-count').textContent = sCount ?? 0;
+          document.getElementById('m-slots-count').textContent = slotCount ?? 0;
+          document.getElementById('m-bookings-count').textContent = bCount ?? 0;
+          document.getElementById('m-users-count').textContent = uCount ?? 0;
+        } else {
+          dot.className = 'auth-dot offline';
+          text.textContent = 'خطأ في الاتصال: ' + parseError(sErr);
+        }
+      } catch (err) {
+        dot.className = 'auth-dot offline';
+        text.textContent = 'فشل الاتصال بـ ' + SUPABASE_URL;
+      }
+    }
+
+    checkHealth();
+  </script>
+</body>
+</html>

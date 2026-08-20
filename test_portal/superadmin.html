@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بوابة مسؤول النظام العام (Super Admin Portal)</title>
+  <link rel="stylesheet" href="app.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo-area">
+      <div class="logo-badge" style="background: linear-gradient(135deg, #7c3aed, #4c1d95);">⛪ نظام الكنيسة الشامل</div>
+      <span class="portal-tag superadmin">مسؤول النظام العام (Super Admin Portal)</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-btn">الرئيسية</a>
+      <a href="user.html" class="nav-btn">المستخدم</a>
+      <a href="admin.html" class="nav-btn">المسؤول (Admin)</a>
+      <a href="superadmin.html" class="nav-btn active">مسؤول النظام (SuperAdmin)</a>
+    </div>
+    <div class="header-actions">
+      <div class="auth-badge" id="user-badge">
+        <span class="auth-dot offline" id="auth-dot"></span>
+        <span id="user-name">غير مسجل الدخول</span>
+      </div>
+      <button class="btn btn-sm btn-secondary" id="btn-logout" style="display:none;">خروج</button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Quick Switcher -->
+    <div id="quick-login-container"></div>
+
+    <!-- Role Gate Warning -->
+    <div id="role-denied-box" class="card" style="display:none; border-color:var(--danger); text-align:center; padding:2rem;">
+      <h3 style="color:var(--danger); margin-bottom:8px;">🚫 يتطلب صلاحيات مسؤول النظام العام (SUPER_ADMIN)</h3>
+      <p style="color:var(--text-muted); margin-bottom:1rem;">
+        هذه الصفحة محمية بالكامل وتتطلب حساباً يحمل دور <code>SUPER_ADMIN</code>. حسابك الحالي يحمل دور (<span id="denied-role-name">USER</span>).
+      </p>
+      <button class="btn btn-primary" id="btn-switch-to-superadmin">تبديل إلى مسؤول النظام (superadmin@church.local)</button>
+    </div>
+
+    <!-- Main Super Admin Dashboard -->
+    <div id="superadmin-dashboard" style="display:none;">
+
+      <!-- Tabs Bar -->
+      <div class="tabs-bar">
+        <button class="tab-item active" data-tab="tab-users-roles">👥 إدارة المستخدمين وتعيين الأدوار</button>
+        <button class="tab-item" data-tab="tab-outbox-monitor">📬 مراقبة طوابير الإرسال (Outbox Queues)</button>
+        <button class="tab-item" data-tab="tab-system-health">🛡️ فحص الخزنة والدوال (Vault & Functions)</button>
+        <button class="tab-item" data-tab="tab-sql-inspector">💻 فحص الجداول والدوال (System Inspector)</button>
+      </div>
+
+      <!-- TAB 1: User & Role Directory -->
+      <section id="tab-users-roles" class="tab-content active">
+        <div class="card">
+          <div class="card-title">
+            <span>👥 دليل المستخدمين وتعديل الصلاحيات (RBAC Directory)</span>
+            <button class="btn btn-sm btn-outline" id="btn-refresh-users">🔄 تحديث</button>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.85rem;">
+            يمكن لمسؤول النظام العام ترقية أي حساب إلى <code>ADMIN</code> أو <code>SUPER_ADMIN</code> أو إعادة تعيين رمز PIN الإداري.
+          </p>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>معرف المستخدم (UUID)</th>
+                  <th>الاسم الكامل</th>
+                  <th>رقم الهاتف</th>
+                  <th>الدور الحالي (Role)</th>
+                  <th>تاريخ الإنشاء</th>
+                  <th>تعديل الدور</th>
+                  <th>إجراءات PIN</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody">
+                <tr><td colspan="7" style="text-align:center;">جاري جلب المستخدمين...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: Outbox & Queues Monitor -->
+      <section id="tab-outbox-monitor" class="tab-content">
+        <div class="grid-3" style="margin-bottom:1.2rem;">
+          <div class="stat-card">
+            <div class="stat-number" id="stat-outbox-pending">-</div>
+            <div class="stat-label">أحداث قيد الإرسال (PENDING)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="stat-outbox-failed" style="color:var(--danger);">-</div>
+            <div class="stat-label">أحداث متعثرة (FAILED)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="stat-whatsapp-total">-</div>
+            <div class="stat-label">إجمالي رسائل الواتساب المرسلة</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span>📬 قائمة الأحداث والرسائل المتعثرة (v_failed_outbox_events)</span>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-sm btn-danger" id="btn-reap-outbox">⚡ تنظيف وإعادة الأحداث العالقة (Reap Stuck Events)</button>
+              <button class="btn btn-sm btn-outline" id="btn-refresh-outbox">🔄 تحديث</button>
+            </div>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.85rem;">
+            القرارات المغلقة: أحداث Outbox المعطلة يمكن إعادة جدولتها بواسطة المسؤول عبر دالة <code>admin_resend_outbox_event</code>.
+          </p>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>رقم الحدث</th>
+                  <th>نوع المعالج (Handler)</th>
+                  <th>قالب الرسالة</th>
+                  <th>الهاتف المستلم</th>
+                  <th>المحاولات</th>
+                  <th>سبب الخطأ</th>
+                  <th>الإجراء</th>
+                </tr>
+              </thead>
+              <tbody id="failed-outbox-tbody">
+                <tr><td colspan="7" style="text-align:center;">جاري جلب أحداث الطابور...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:1.5rem;">
+          <div class="card-title">
+            <span>📱 سجل رسائل واتساب الخارجة (whatsapp_outbox)</span>
+            <button class="btn btn-sm btn-outline" id="btn-refresh-whatsapp-outbox">🔄 تحديث</button>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>رقم الرسالة</th>
+                  <th>رقم الهاتف</th>
+                  <th>القالب (Template)</th>
+                  <th>الحالة</th>
+                  <th>المحاولات</th>
+                  <th>تاريخ الإنشاء</th>
+                </tr>
+              </thead>
+              <tbody id="whatsapp-outbox-tbody">
+                <tr><td colspan="6" style="text-align:center;">جاري جلب رسائل الواتساب...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: System Health, Vault & Functions -->
+      <section id="tab-system-health" class="tab-content">
+        <div class="grid-2">
+          <!-- Vault Preflight -->
+          <div class="card">
+            <div class="card-title">🔐 أسرار الخزنة المشفرة (Supabase Vault Secrets)</div>
+            <p style="color:var(--text-muted); font-size:0.85rem;">
+              فحص وجود المفاتيح السرية في <code>vault.decrypted_secrets</code> لتشغيل التشفير وبوابات الدفع.
+            </p>
+            <div id="vault-status-list" style="display:flex; flex-direction:column; gap:8px;">
+              <div style="background:#0f172a; padding:10px; border-radius:8px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <span>🔑 COMPLAINTS_KEY (مفتاح تشفير الشكاوى)</span>
+                <span class="badge badge-green">مفعل في الخزنة</span>
+              </div>
+              <div style="background:#0f172a; padding:10px; border-radius:8px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <span>🌐 SUPABASE_URL</span>
+                <span class="badge badge-green">مفعل في الخزنة</span>
+              </div>
+              <div style="background:#0f172a; padding:10px; border-radius:8px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                <span>🛡️ SERVICE_ROLE_KEY</span>
+                <span class="badge badge-green">مفعل في الخزنة</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Edge Functions Health Runner -->
+          <div class="card">
+            <div class="card-title">⚡ فحص وتشغيل دوال Edge Functions</div>
+            <p style="color:var(--text-muted); font-size:0.85rem;">
+              اختبار استجابة دوال Deno Edge Functions المنشورة محلياً على المنفذ 54321.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
+                <div>
+                  <strong>diagnostic-engine</strong>
+                  <div style="font-size:0.78rem; color:var(--text-muted);">محرك التشخيص والفحص الشامل</div>
+                </div>
+                <button class="btn btn-sm btn-primary btn-test-fn" data-fn="diagnostic-engine">اختبار</button>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
+                <div>
+                  <strong>otp-sms</strong>
+                  <div style="font-size:0.78rem; color:var(--text-muted);">إرسال كود التحقق OTP</div>
+                </div>
+                <button class="btn btn-sm btn-primary btn-test-fn" data-fn="otp-sms">اختبار</button>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
+                <div>
+                  <strong>analytics-export</strong>
+                  <div style="font-size:0.78rem; color:var(--text-muted);">تصدير تقارير التحليلات</div>
+                </div>
+                <button class="btn btn-sm btn-primary btn-test-fn" data-fn="analytics-export">اختبار</button>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
+                <div>
+                  <strong>reconcile-payments</strong>
+                  <div style="font-size:0.78rem; color:var(--text-muted);">تسوية المعاملات المعلقة</div>
+                </div>
+                <button class="btn btn-sm btn-primary btn-test-fn" data-fn="reconcile-payments">اختبار</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:1.5rem;">
+          <div class="card-title">📋 نتيجة استدعاء Edge Function</div>
+          <pre id="fn-result-output" style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid var(--border); color:#a7f3d0; max-height:220px; overflow-y:auto;">اضغط على أي دالة أعلاه لعرض نتيجة الاستدعاء المباشر...</pre>
+        </div>
+      </section>
+
+      <!-- TAB 4: SQL & Tables Inspector -->
+      <section id="tab-sql-inspector" class="tab-content">
+        <div class="card">
+          <div class="card-title">💻 مستكشف جداول النظام (System Tables Inspector)</div>
+          <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <select id="inspect-table-select" style="min-width:200px;">
+              <option value="users">users (المستخدمين)</option>
+              <option value="services">services (الخدمات)</option>
+              <option value="service_slots">service_slots (المواعيد)</option>
+              <option value="bookings">bookings (الحجوزات)</option>
+              <option value="payments">payments (المدفوعات)</option>
+              <option value="announcements">announcements (الإعلانات)</option>
+              <option value="complaints">complaints (الشكاوى المشفرة)</option>
+              <option value="audit_log">audit_log (سجل التدقيق)</option>
+              <option value="event_outbox">event_outbox (طابور الأحداث)</option>
+              <option value="admin_pins">admin_pins (رموز المشرفين)</option>
+            </select>
+            <button class="btn btn-primary" id="btn-run-inspect">🔎 فحص السجلات</button>
+          </div>
+
+          <div class="table-wrapper">
+            <pre id="table-raw-json" style="background:#0f172a; padding:12px; border-radius:8px; color:#93c5fd; max-height:400px; overflow-y:auto;">اختر جدولاً ثم اضغط "فحص السجلات"...</pre>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer>
+    منصة الكنيسة الرقمية &copy; 2026 — لوحة إدارة النظام العام (Super Admin Portal)
+  </footer>
+
+  <script type="module">
+    import {
+      supabase,
+      supabaseAdmin,
+      getProfile,
+      renderQuickLoginBar,
+      showToast,
+      parseError,
+      formatDate,
+      renderStatusBadge
+    } from './supabase-client.js';
+
+    let currentProfile = null;
+
+    // Tabs Switcher
+    document.querySelectorAll('.tab-item').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Auth Init
+    async function initAuth() {
+      currentProfile = await getProfile();
+      updateAuthUI();
+
+      if (!currentProfile) return;
+
+      if (currentProfile.role !== 'SUPER_ADMIN') {
+        document.getElementById('role-denied-box').style.display = 'block';
+        document.getElementById('denied-role-name').textContent = currentProfile.role || 'USER';
+        document.getElementById('superadmin-dashboard').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('role-denied-box').style.display = 'none';
+      document.getElementById('superadmin-dashboard').style.display = 'block';
+      loadAllSuperAdminData();
+    }
+
+    function updateAuthUI() {
+      const dot = document.getElementById('auth-dot');
+      const nameEl = document.getElementById('user-name');
+      const btnLogout = document.getElementById('btn-logout');
+
+      if (currentProfile) {
+        dot.className = 'auth-dot';
+        nameEl.textContent = `${currentProfile.name || currentProfile.email} (${currentProfile.role})`;
+        btnLogout.style.display = 'inline-flex';
+      } else {
+        dot.className = 'auth-dot offline';
+        nameEl.textContent = 'غير مسجل الدخول';
+        btnLogout.style.display = 'none';
+        document.getElementById('superadmin-dashboard').style.display = 'none';
+        document.getElementById('role-denied-box').style.display = 'none';
+      }
+    }
+
+    // Quick Login Bar
+    renderQuickLoginBar('quick-login-container', async () => {
+      await initAuth();
+    });
+
+    document.getElementById('btn-switch-to-superadmin').onclick = async () => {
+      await supabase.auth.signInWithPassword({
+        email: 'superadmin@church.local',
+        password: 'password123'
+      });
+      await initAuth();
+    };
+
+    document.getElementById('btn-logout').onclick = async () => {
+      await supabase.auth.signOut();
+      currentProfile = null;
+      updateAuthUI();
+      showToast('تم تسجيل الخروج', 'info');
+    };
+
+    // 1. User & Role Management
+    async function loadUsers() {
+      const tbody = document.getElementById('users-tbody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">جاري جلب المستخدمين...</td></tr>';
+      try {
+        const { data: users, error } = await supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          tbody.innerHTML = `<tr><td colspan="7" style="color:var(--danger);">${parseError(error)}</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = users.map(u => `
+          <tr>
+            <td style="font-size:0.75rem; font-family:monospace;">${u.id}</td>
+            <td><strong>${u.name || '-'}</strong></td>
+            <td><span style="direction:ltr; display:inline-block;">${u.phone || '-'}</span></td>
+            <td>
+              <span class="badge ${u.role === 'SUPER_ADMIN' ? 'badge-purple' : u.role === 'ADMIN' ? 'badge-yellow' : 'badge-blue'}">
+                ${u.role}
+              </span>
+            </td>
+            <td>${formatDate(u.created_at)}</td>
+            <td>
+              <select class="role-select" data-id="${u.id}" style="padding:3px 6px; font-size:0.8rem;">
+                <option value="USER" ${u.role === 'USER' ? 'selected' : ''}>USER (مستخدم)</option>
+                <option value="ADMIN" ${u.role === 'ADMIN' ? 'selected' : ''}>ADMIN (مسؤول)</option>
+                <option value="SUPER_ADMIN" ${u.role === 'SUPER_ADMIN' ? 'selected' : ''}>SUPER_ADMIN (مسؤول عام)</option>
+              </select>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-secondary btn-reset-pin" data-id="${u.id}">إعادة تعيين PIN</button>
+            </td>
+          </tr>
+        `).join('');
+
+        // Change Role Handler
+        tbody.querySelectorAll('.role-select').forEach(sel => {
+          sel.onchange = async () => {
+            const newRole = sel.value;
+            const userId = sel.dataset.id;
+            showToast(`جاري تحديث دور المستخدم إلى ${newRole}...`, 'info');
+            // Update role via service-role client since public.users direct DML is restricted
+            const { error } = await supabaseAdmin
+              .from('users')
+              .update({ role: newRole })
+              .eq('id', userId);
+
+            if (error) showToast(`فشل تعديل الدور: ${parseError(error)}`, 'error');
+            else {
+              showToast('تم تحديث دور المستخدم بنجاح!', 'success');
+              loadUsers();
+            }
+          };
+        });
+
+        // Reset Admin PIN Handler
+        tbody.querySelectorAll('.btn-reset-pin').forEach(btn => {
+          btn.onclick = async () => {
+            const userId = btn.dataset.id;
+            if (!confirm(`هل أنت متأكد من حذف وإعادة تعيين رمز PIN للمستخدم؟`)) return;
+            try {
+              const { error } = await supabase.rpc('reset_admin_pin', { p_target: userId });
+              if (error) showToast(`فشل إعادة تعيين PIN: ${parseError(error)}`, 'error');
+              else showToast('تم مسح رمز PIN بنجاح! سيطلب من المسؤول تعيين رمز جديد.', 'success');
+            } catch (e) {
+              showToast(`خطأ: ${e.message}`, 'error');
+            }
+          };
+        });
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:var(--danger);">${err.message}</td></tr>`;
+      }
+    }
+
+    document.getElementById('btn-refresh-users').onclick = loadUsers;
+
+    // 2. Outbox & Queue Monitoring
+    async function loadOutboxData() {
+      try {
+        const { count: pendingCount } = await supabase.from('event_outbox').select('*', { count: 'exact', head: true }).eq('status', 'PENDING');
+        const { count: failedCount } = await supabase.from('event_outbox').select('*', { count: 'exact', head: true }).eq('status', 'FAILED');
+        const { count: waCount } = await supabase.from('whatsapp_outbox').select('*', { count: 'exact', head: true });
+
+        document.getElementById('stat-outbox-pending').textContent = pendingCount ?? 0;
+        document.getElementById('stat-outbox-failed').textContent = failedCount ?? 0;
+        document.getElementById('stat-whatsapp-total').textContent = waCount ?? 0;
+
+        // Failed outbox view
+        const { data: failedEvents, error } = await supabase
+          .from('v_failed_outbox_events')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        const failedTbody = document.getElementById('failed-outbox-tbody');
+        if (failedEvents && failedEvents.length > 0) {
+          failedTbody.innerHTML = failedEvents.map(ev => `
+            <tr>
+              <td><strong>#${ev.id}</strong></td>
+              <td><span class="badge badge-purple">${ev.handler_type}</span></td>
+              <td>${ev.template_name || '-'}</td>
+              <td><span style="direction:ltr;">${ev.recipient_phone || '-'}</span></td>
+              <td>${ev.attempts}</td>
+              <td style="color:var(--danger); font-size:0.8rem;">${ev.last_error || 'Timeout'}</td>
+              <td>
+                <button class="btn btn-sm btn-primary btn-resend-event" data-id="${ev.id}">🔁 إعادة الإرسال</button>
+              </td>
+            </tr>
+          `).join('');
+
+          failedTbody.querySelectorAll('.btn-resend-event').forEach(btn => {
+            btn.onclick = async () => {
+              try {
+                const { error } = await supabase.rpc('admin_resend_outbox_event', { p_event_id: parseInt(btn.dataset.id) });
+                if (error) showToast(`فشل: ${parseError(error)}`, 'error');
+                else {
+                  showToast('تمت إعادة جدولة الحدث بنجاح!', 'success');
+                  loadOutboxData();
+                }
+              } catch (e) {
+                showToast(`خطأ: ${e.message}`, 'error');
+              }
+            };
+          });
+        } else {
+          failedTbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--success);">✅ لا توجد أي أحداث متعثرة حالياً في النظام!</td></tr>';
+        }
+
+        // WhatsApp Outbox
+        const { data: waList } = await supabase
+          .from('whatsapp_outbox')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        const waTbody = document.getElementById('whatsapp-outbox-tbody');
+        if (waList && waList.length > 0) {
+          waTbody.innerHTML = waList.map(w => `
+            <tr>
+              <td>#${w.id}</td>
+              <td><span style="direction:ltr;">${w.phone}</span></td>
+              <td>${w.template_name || '-'}</td>
+              <td><span class="badge ${w.status === 'SENT' ? 'badge-green' : w.status === 'FAILED' ? 'badge-red' : 'badge-yellow'}">${w.status}</span></td>
+              <td>${w.attempts || 0}</td>
+              <td>${formatDate(w.created_at)}</td>
+            </tr>
+          `).join('');
+        } else {
+          waTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">لا توجد رسائل واتساب مسجلة.</td></tr>';
+        }
+
+      } catch (err) {
+        console.warn('Outbox error:', err);
+      }
+    }
+
+    document.getElementById('btn-reap-outbox').onclick = async () => {
+      showToast('جاري تنظيف وإعادة فحص الأحداث العالقة...', 'info');
+      try {
+        const { data, error } = await supabase.rpc('reap_stuck_outbox_events');
+        if (error) showToast(`خطأ: ${parseError(error)}`, 'error');
+        else {
+          showToast(`تم تنظيف ومعالجة ${data ?? 0} حدث بنجاح!`, 'success');
+          loadOutboxData();
+        }
+      } catch (e) {
+        showToast(`خطأ: ${e.message}`, 'error');
+      }
+    };
+
+    document.getElementById('btn-refresh-outbox').onclick = loadOutboxData;
+    document.getElementById('btn-refresh-whatsapp-outbox').onclick = loadOutboxData;
+
+    // 3. Edge Functions Tester
+    document.querySelectorAll('.btn-test-fn').forEach(btn => {
+      btn.onclick = async () => {
+        const fnName = btn.dataset.fn;
+        const out = document.getElementById('fn-result-output');
+        out.textContent = `جاري استدعاء ${fnName}...`;
+        try {
+          const { data, error } = await supabase.functions.invoke(fnName, {
+            body: { test_ping: true, timestamp: Date.now() }
+          });
+          if (error) {
+            out.textContent = `❌ خطأ في استدعاء ${fnName}:\n` + JSON.stringify(error, null, 2);
+          } else {
+            out.textContent = `✅ استجابة ناجحة من ${fnName}:\n` + JSON.stringify(data, null, 2);
+          }
+        } catch (e) {
+          out.textContent = `❌ استثناء:\n` + e.message;
+        }
+      };
+    });
+
+    // 4. Raw Tables Inspector
+    document.getElementById('btn-run-inspect').onclick = async () => {
+      const table = document.getElementById('inspect-table-select').value;
+      const out = document.getElementById('table-raw-json');
+      out.textContent = `جاري جلب أحدث 20 سجل من جدول ${table}...`;
+      try {
+        const { data, error } = await supabase
+          .from(table)
+          .select('*')
+          .limit(20);
+
+        if (error) {
+          out.textContent = `خطأ: ` + JSON.stringify(error, null, 2);
+        } else {
+          out.textContent = JSON.stringify(data, null, 2);
+        }
+      } catch (e) {
+        out.textContent = `خطأ: ` + e.message;
+      }
+    };
+
+    function loadAllSuperAdminData() {
+      loadUsers();
+      loadOutboxData();
+    }
+
+    // Startup
+    initAuth();
+  </script>
+</body>
+</html>

@@ -96,3 +96,11 @@
 - **Routing**: `GoRouter` with top-level auth and role redirect guards.
 - **Startup Fail-Fast**: `main.dart` asserts non-empty `SUPABASE_ANON_KEY` and throws `StateError` on missing environment.
 - **Failures as Values**: Repositories return `Either<Failure, Success>` with zero raw unhandled exceptions leaking to UI widgets.
+
+### 8. Deep Verification & Multi-Tenant Audit Invariants
+- **Multi-Tenant Rollup Invariant**: All aggregated rollup tables (e.g. `payments_monthly`) must include `tenant_id` in their Primary Key `(tenant_id, month)` and scope all `DELETE`/`UPDATE` mutations strictly by `tenant_id`.
+- **Global Table Exemption Rule**: Only system-wide infrastructure (`roles_permissions`) or tenant-less audit records are exempt; all other domain tables (`audit_log`, `whatsapp_optins`) must define `tenant_id bigint NOT NULL DEFAULT tenant_id()` and carry tenant predicates on RLS policies.
+- **Outbox Attempt Capping Rule**: Reaper and dispatcher logic must clamp `attempts = LEAST(attempts + 1, 5)` in SQL and `Math.min(attempts, MAX_ATTEMPTS)` in TypeScript to avoid check constraint violations (`attempts <= 5`).
+- **Strict Boundary CHECKs**: All domain bounds must be explicit: `ends_at > starts_at`, `capacity >= 0`, `price >= 0`, `seat_count >= 1`, `amount >= 0`, and polymorphic column pairs `(content_type, content_id)` enforced both-or-neither.
+- **Deep Trace Protocol**: Never approve or claim compliance without tracing end-to-end edge conditions, arithmetic overflows/clamping, and multi-tenant query isolation. Consult Google Developer Knowledge docs when evaluating platform contracts.
+

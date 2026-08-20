@@ -8,7 +8,6 @@ import 'package:mobile/screens/home_hub_screen.dart';
 import 'package:mobile/services/app_routes.dart';
 import 'package:mobile/services/app_supabase.dart';
 import '../helpers/fake_supabase.dart';
-import '../helpers/fakes.dart';
 
 class FakeAppSupabase implements AppSupabase {
   final List<String> rpcCalls = [];
@@ -55,7 +54,6 @@ void main() {
       final fakeDb = FakeAppSupabase();
       final router = buildRouter(
         db: fakeDb,
-        videos: FakeVideosRepository(),
         isUserLoggedIn: () => true,
       );
 
@@ -77,7 +75,6 @@ void main() {
       final fakeDb = FakeAppSupabase();
       final router = buildRouter(
         db: fakeDb,
-        videos: FakeVideosRepository(),
         isUserLoggedIn: () => true,
       );
 
@@ -97,12 +94,11 @@ void main() {
   );
 
   testWidgets(
-    'T2: payment-redirect route with video map extra renders PaymentRedirectScreen with payment id',
+    'T2: payment-redirect route with payment_id map extra renders PaymentRedirectScreen with payment id',
     (tester) async {
       final fakeDb = FakeAppSupabase();
       final router = buildRouter(
         db: fakeDb,
-        videos: FakeVideosRepository(),
         isUserLoggedIn: () => true,
       );
 
@@ -112,7 +108,7 @@ void main() {
       final BuildContext context = tester.element(find.byType(HomeHubScreen));
       context.pushNamed(
         AppRoutes.paymentRedirect,
-        extra: {'video': true, 'payment_id': 30},
+        extra: {'payment_id': 30},
       );
       await tester.pumpAndSettle();
 
@@ -127,7 +123,6 @@ void main() {
       final fakeDb = FakeAppSupabase();
       final router = buildRouter(
         db: fakeDb,
-        videos: FakeVideosRepository(),
         isUserLoggedIn: () => true,
       );
 
@@ -146,7 +141,6 @@ void main() {
     final fakeDb = FakeAppSupabase();
     final router = buildRouter(
       db: fakeDb,
-      videos: FakeVideosRepository(),
       isUserLoggedIn: () => true,
     );
 
@@ -162,7 +156,6 @@ void main() {
       final fakeDb = FakeAppSupabase();
       final router = buildRouter(
         db: fakeDb,
-        videos: FakeVideosRepository(),
         isUserLoggedIn: () => false,
       );
 

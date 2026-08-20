@@ -4,7 +4,6 @@ import 'package:mobile/models/available_slot.dart';
 import 'package:mobile/models/booking.dart';
 import 'package:mobile/models/booking_checkout_session.dart';
 import 'package:mobile/repositories/booking_repository.dart';
-import 'package:mobile/repositories/videos_repository.dart';
 
 class FakeBookingRepository implements BookingRepository {
   FakeBookingRepository({
@@ -114,16 +113,3 @@ final fakeBooking = Booking(
   paidAmount: 0,
 );
 
-class FakeVideosRepository implements VideosRepository {
-  FakeVideosRepository({this.videos = const [], this.payment});
-  final List<Map<String, dynamic>> videos;
-  final Map<String, dynamic>? payment;
-  final List<int> purchaseCalls = [];
-  @override
-  Future<List<Map<String, dynamic>>> fetchVideos() async => videos;
-  @override
-  Future<Map<String, dynamic>?> purchaseVideo(int videoId) async {
-    purchaseCalls.add(videoId);
-    return payment;
-  }
-}

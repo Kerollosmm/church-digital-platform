@@ -13,7 +13,6 @@ class HomeHubScreen extends StatefulWidget {
     this.onTapMass,
     this.onTapConfession,
     this.onTapBooking,
-    this.onTapVideos,
     this.onTapComplaints,
   });
 
@@ -21,7 +20,6 @@ class HomeHubScreen extends StatefulWidget {
   final VoidCallback? onTapMass;
   final VoidCallback? onTapConfession;
   final VoidCallback? onTapBooking;
-  final VoidCallback? onTapVideos;
   final VoidCallback? onTapComplaints;
 
   @override
@@ -207,17 +205,11 @@ class _HomeHubScreenState extends State<HomeHubScreen> {
                 onTap: widget.onTapBooking,
               ),
               _buildQuickCard(
-                label: AppStrings.quickVideos,
-                icon: Icons.movie,
-                onTap: widget.onTapVideos,
+                label: AppStrings.quickComplaints,
+                icon: Icons.edit_note,
+                onTap: widget.onTapComplaints,
               ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _buildQuickCard(
-            label: AppStrings.quickComplaints,
-            icon: Icons.edit_note,
-            onTap: widget.onTapComplaints,
           ),
 
           const SizedBox(height: AppSpacing.lg),

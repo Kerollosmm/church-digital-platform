@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بوابة شعب الكنيسة - تطبيق المستخدم</title>
+  <link rel="stylesheet" href="app.css">
+  <!-- Supabase JS Client v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo-area">
+      <div class="logo-badge">⛪ منصة الكنيسة</div>
+      <span class="portal-tag user">بوابة المستخدم (User App)</span>
+    </div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-btn">الرئيسية</a>
+      <a href="user.html" class="nav-btn active">المستخدم</a>
+      <a href="admin.html" class="nav-btn">المسؤول (Admin)</a>
+      <a href="superadmin.html" class="nav-btn">مسؤول النظام (SuperAdmin)</a>
+    </div>
+    <div class="header-actions">
+      <div class="auth-badge" id="user-badge">
+        <span class="auth-dot offline" id="auth-dot"></span>
+        <span id="user-name">غير مسجل الدخول</span>
+      </div>
+      <button class="btn btn-sm btn-secondary" id="btn-logout" style="display:none;">خروج</button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Quick User Switcher -->
+    <div id="quick-login-container"></div>
+
+    <!-- Payment Modal Dialog -->
+    <div id="payment-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:300; align-items:center; justify-content:center;">
+      <div class="card" style="max-width:440px; width:90%; margin:auto; border-color:var(--primary);">
+        <div class="card-title" style="color:#60a5fa;">
+          <span>💳 سداد قيمة الحجز الإلكتروني</span>
+          <button style="background:none; border:none; color:var(--text-muted); font-size:1.2rem; cursor:pointer;" id="btn-close-pay-modal">&times;</button>
+        </div>
+        
+        <div style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="color:var(--text-muted);">رقم الحجز:</span>
+            <strong id="pay-modal-booking-id">#0</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="color:var(--text-muted);">الخدمة:</span>
+            <strong id="pay-modal-service-title">-</strong>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="color:var(--text-muted);">المبلغ المطلوب سداده:</span>
+            <strong id="pay-modal-amount" style="color:#34d399; font-size:1.15rem;">0 ج.م</strong>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>طريقة الدفع (Payment Gateway / Method)</label>
+          <select id="pay-method-select">
+            <option value="PAYMOB_CARD">💳 بطاقة بنكية / فيزا (Paymob Online Card)</option>
+            <option value="PAYMOB_WALLET">📱 محفظة إلكترونية / فودافون كاش (E-Wallet)</option>
+            <option value="CASH_DIRECT">💵 دفع نقدي في الكنيسة (Direct Cash Confirmation)</option>
+          </select>
+        </div>
+
+        <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.5;">
+          * بعد السداد الناجح، يتم تطبيق المعاملة المالية وتتحول حالة الحجز فورياً إلى <span class="badge badge-blue">قيد المراجعة الهاتفية (AWAITING_CALL)</span> ويتم إدراج إشعار واتساب في طابور الإرسال.
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button class="btn btn-success" id="btn-confirm-payment" style="flex:1;">تأكيد الدفع والسداد الآن</button>
+          <button class="btn btn-secondary" id="btn-cancel-pay-modal">إلغاء</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Login / Auth Modal if not authenticated -->
+    <div id="auth-section" class="card" style="display:none; max-width: 480px; margin: 0 auto 1.5rem;">
+      <div class="card-title">🔐 تسجيل الدخول أو إنشاء حساب</div>
+      <div class="form-group">
+        <label>البريد الإلكتروني</label>
+        <input type="email" id="auth-email" placeholder="mariam@church.test" value="mariam@church.test">
+      </div>
+      <div class="form-group">
+        <label>كلمة المرور</label>
+        <input type="password" id="auth-password" placeholder="••••••••" value="password123">
+      </div>
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button class="btn btn-primary" style="flex:1;" id="btn-signin">تسجيل الدخول</button>
+        <button class="btn btn-secondary" style="flex:1;" id="btn-signup">حساب جديد</button>
+      </div>
+    </div>
+
+    <!-- Main App Content (when logged in) -->
+    <div id="app-content">
+
+      <!-- Navigation Tabs -->
+      <div class="tabs-bar">
+        <button class="tab-item active" data-tab="tab-slots">⛪ حجز القداسات والخدمات</button>
+        <button class="tab-item" data-tab="tab-my-bookings">📋 حجوزاتي وسداد الرسوم</button>
+        <button class="tab-item" data-tab="tab-announcements">📢 الإعلانات والأخبار</button>
+        <button class="tab-item" data-tab="tab-complaints">📝 الشكاوى والاستفسارات</button>
+        <button class="tab-item" data-tab="tab-faq">❓ الأسئلة الشائعة ودليل الكنيسة</button>
+      </div>
+
+      <!-- TAB 1: Slots & Booking -->
+      <section id="tab-slots" class="tab-content active">
+        <div class="card">
+          <div class="card-title">
+            <span>📅 المواعيد والقداسات المتاحة للحجز</span>
+            <button class="btn btn-sm btn-outline" id="btn-refresh-slots">🔄 تحديث</button>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.88rem;">
+            يتم فحص الطاقة الاستيعابية وحجز المقعد في قاعدة البيانات فورياً مع التحقق من قيود التزامن (Slot Lock).
+          </p>
+
+          <div style="margin-bottom: 12px; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="whatsapp-optin" checked style="width:18px;height:18px;cursor:pointer;">
+            <label for="whatsapp-optin" style="cursor:pointer; color:var(--text-main); font-weight:600;">
+              📲 إرسال تأكيد الحجز وإشعار التذكير عبر واتساب (WhatsApp Opt-in)
+            </label>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>الخدمة / المناسبة</th>
+                  <th>الموعد والتاريخ</th>
+                  <th>السعر</th>
+                  <th>الحالة والسعة المتاحة</th>
+                  <th>الإجراء</th>
+                </tr>
+              </thead>
+              <tbody id="slots-tbody">
+                <tr><td colspan="5" style="text-align:center;">جاري جلب المواعيد...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: My Bookings -->
+      <section id="tab-my-bookings" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>🎟️ سجل حجوزاتي وخيارات السداد</span>
+            <button class="btn btn-sm btn-outline" id="btn-refresh-bookings">🔄 تحديث</button>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.88rem;">
+            الحجوزات تمر بدورة الحياة: <span class="badge badge-yellow">قيد السداد (PENDING_PAYMENT)</span> &larr; <span class="badge badge-blue">مراجعة هاتفية (AWAITING_CALL)</span> &larr; <span class="badge badge-green">مؤكد (CONFIRMED)</span> &larr; <span class="badge badge-purple">مكتمل</span>.
+          </p>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>رقم الحجز</th>
+                  <th>الخدمة</th>
+                  <th>الموعد</th>
+                  <th>المبلغ</th>
+                  <th>حالة الحجز</th>
+                  <th>تاريخ الحجز</th>
+                  <th>الإجراءات والسداد</th>
+                </tr>
+              </thead>
+              <tbody id="bookings-tbody">
+                <tr><td colspan="7" style="text-align:center;">جاري جلب حجوزاتك...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: Announcements -->
+      <section id="tab-announcements" class="tab-content">
+        <div class="card">
+          <div class="card-title">
+            <span>📢 آخر إعلانات الكنيسة والخدمات</span>
+            <button class="btn btn-sm btn-outline" id="btn-refresh-announcements">🔄 تحديث</button>
+          </div>
+          <div id="announcements-list" class="grid-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Complaints & Suggestions -->
+      <section id="tab-complaints" class="tab-content">
+        <div class="grid-2">
+          <!-- Submit Complaint Form -->
+          <div class="card">
+            <div class="card-title">📝 تقديم شكوى أو استفسار مشفر</div>
+            <p style="color:var(--text-muted); font-size:0.85rem;">
+              يتم تشفير الشكوى بتقنية PGCrypto وحفظها بسرية تامة لا يقرأها سوى الكهنة والمسؤولين المصرح لهم.
+            </p>
+            <div class="form-group">
+              <label>عنوان الموضوع</label>
+              <input type="text" id="complaint-subject" placeholder="استفسار بخصوص خدمة مدارس الأحد...">
+            </div>
+            <div class="form-group">
+              <label>تفاصيل الشكوى أو الطلب</label>
+              <textarea id="complaint-details" rows="4" placeholder="اكتب تفاصيل طلبك هنا بوضوح..."></textarea>
+            </div>
+            <button class="btn btn-primary" id="btn-submit-complaint">🔒 إرسال الشكوى المشفرة</button>
+          </div>
+
+          <!-- My Submitted Complaints -->
+          <div class="card">
+            <div class="card-title">
+              <span>🗂️ الشكاوى السابقة وحالتها</span>
+              <button class="btn btn-sm btn-outline" id="btn-refresh-complaints">🔄 تحديث</button>
+            </div>
+            <div id="complaints-list" style="display:flex; flex-direction:column; gap:10px;">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: FAQs & Info -->
+      <section id="tab-faq" class="tab-content">
+        <div class="grid-2">
+          <!-- FAQs -->
+          <div class="card">
+            <div class="card-title">❓ الأسئلة الشائعة</div>
+            <div id="faq-list" style="display:flex; flex-direction:column; gap:10px;">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Priests & Socials -->
+          <div class="card">
+            <div class="card-title">⛪ الآباء الكهنة وروابط التواصل</div>
+            <div style="font-weight:700; margin-top:6px; color:var(--text-muted);">الآباء الكهنة ومواعيد المقابلات:</div>
+            <div id="priests-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+            
+            <div style="font-weight:700; margin-top:12px; color:var(--text-muted);">روابط التواصل الاجتماعي:</div>
+            <div id="socials-list" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer>
+    منصة الكنيسة الرقمية &copy; 2026 — بيئة الاختبار والتطوير المحلي (Local Supabase)
+  </footer>
+
+  <script type="module">
+    import {
+      supabase,
+      supabaseAdmin,
+      getProfile,
+      renderQuickLoginBar,
+      showToast,
+      parseError,
+      formatDate,
+      renderStatusBadge
+    } from './supabase-client.js';
+
+    let currentProfile = null;
+    let activePayingBooking = null;
+
+    // Tabs Switcher
+    document.querySelectorAll('.tab-item').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Auth Initialization
+    async function initAuth() {
+      currentProfile = await getProfile();
+      updateAuthUI();
+      if (currentProfile) {
+        loadAllData();
+        setupRealtimeSubscriptions();
+      }
+    }
+
+    function updateAuthUI() {
+      const dot = document.getElementById('auth-dot');
+      const nameEl = document.getElementById('user-name');
+      const btnLogout = document.getElementById('btn-logout');
+      const authSection = document.getElementById('auth-section');
+      const appContent = document.getElementById('app-content');
+
+      if (currentProfile) {
+        dot.className = 'auth-dot';
+        nameEl.textContent = `${currentProfile.name || currentProfile.email} (${currentProfile.role || 'USER'})`;
+        btnLogout.style.display = 'inline-flex';
+        authSection.style.display = 'none';
+        appContent.style.display = 'block';
+      } else {
+        dot.className = 'auth-dot offline';
+        nameEl.textContent = 'غير مسجل الدخول';
+        btnLogout.style.display = 'none';
+        authSection.style.display = 'block';
+        appContent.style.display = 'none';
+      }
+    }
+
+    // Quick Login Bar
+    renderQuickLoginBar('quick-login-container', async (user) => {
+      await initAuth();
+    });
+
+    // Sign in manually
+    document.getElementById('btn-signin').onclick = async () => {
+      const email = document.getElementById('auth-email').value;
+      const pass = document.getElementById('auth-password').value;
+      const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+      if (error) {
+        showToast(`خطأ في الدخول: ${parseError(error)}`, 'error');
+      } else {
+        showToast('تم تسجيل الدخول بنجاح', 'success');
+        await initAuth();
+      }
+    };
+
+    // Sign up manually
+    document.getElementById('btn-signup').onclick = async () => {
+      const email = document.getElementById('auth-email').value;
+      const pass = document.getElementById('auth-password').value;
+      const { error } = await supabase.auth.signUp({
+        email,
+        password: pass,
+        options: { data: { name: email.split('@')[0] } }
+      });
+      if (error) {
+        showToast(`خطأ في إنشاء الحساب: ${parseError(error)}`, 'error');
+      } else {
+        showToast('تم إنشاء الحساب بنجاح', 'success');
+        await initAuth();
+      }
+    };
+
+    // Logout
+    document.getElementById('btn-logout').onclick = async () => {
+      await supabase.auth.signOut();
+      currentProfile = null;
+      updateAuthUI();
+      showToast('تم تسجيل الخروج', 'info');
+    };
+
+    // 1. Load Available Slots
+    async function loadSlots() {
+      const tbody = document.getElementById('slots-tbody');
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">جاري تحميل المواعيد...</td></tr>';
+
+      try {
+        const { data: slots, error } = await supabase
+          .from('v_available_slots')
+          .select('*')
+          .order('starts_at', { ascending: true });
+
+        if (error) {
+          tbody.innerHTML = `<tr><td colspan="5" style="color:var(--danger); text-align:center;">فشل جلب المواعيد: ${parseError(error)}</td></tr>`;
+          return;
+        }
+
+        if (!slots || slots.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">لا توجد مواعيد متاحة حالياً.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = slots.map(s => {
+          const isFull = s.status === 'BOOKED' || (s.remaining_seats !== null && s.remaining_seats <= 0);
+          const isClosed = s.status === 'CLOSED';
+          return `
+            <tr>
+              <td><strong>${s.service_title || 'قداس / خدمة'}</strong></td>
+              <td>${formatDate(s.starts_at)}</td>
+              <td>${s.price ? s.price + ' ج.م' : 'مجاناً'}</td>
+              <td>
+                ${renderStatusBadge(s.status)}
+                <span style="font-size:0.8rem; color:var(--text-muted); margin-right:6px;">
+                  (المتاح: ${s.remaining_seats ?? s.capacity ?? '-'} من ${s.capacity ?? '-'})
+                </span>
+              </td>
+              <td>
+                ${!isClosed && !isFull ? `
+                  <button class="btn btn-sm btn-primary btn-book" data-id="${s.slot_id}" data-price="${s.price || 0}">حجز الآن</button>
+                ` : isFull ? `
+                  <button class="btn btn-sm btn-secondary btn-waitlist" data-id="${s.slot_id}">قائمة الانتظار</button>
+                ` : `<span style="color:var(--text-muted);">مغلق</span>`}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        tbody.querySelectorAll('.btn-book').forEach(btn => {
+          btn.onclick = () => handleBookSlot(btn.dataset.id, btn.dataset.price);
+        });
+        tbody.querySelectorAll('.btn-waitlist').forEach(btn => {
+          btn.onclick = () => handleJoinWaitlist(btn.dataset.id);
+        });
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--danger);">خطأ: ${err.message}</td></tr>`;
+      }
+    }
+
+    // Book Slot RPC
+    async function handleBookSlot(slotId, price) {
+      if (!currentProfile) {
+        showToast('يجب تسجيل الدخول أولاً', 'error');
+        return;
+      }
+      const optIn = document.getElementById('whatsapp-optin').checked;
+      const idempotencyKey = crypto.randomUUID();
+
+      showToast('جاري حجز الموعد وتأمين المقعد...', 'info');
+
+      try {
+        const { data, error } = await supabase.rpc('book_slot', {
+          p_slot_id: parseInt(slotId),
+          p_opt_in: optIn,
+          p_idempotency_key: idempotencyKey
+        });
+
+        if (error) {
+          showToast(`فشل الحجز: ${parseError(error)}`, 'error');
+        } else {
+          showToast(`تم الحجز بنجاح! رقم الحجز: #${data.id}`, 'success');
+          loadSlots();
+          await loadBookings();
+
+          // Switch tab to bookings
+          document.querySelector('[data-tab="tab-my-bookings"]').click();
+
+          // Open payment modal if needed
+          if (data.status === 'PENDING_PAYMENT') {
+            openPaymentModal({
+              id: data.id,
+              serviceTitle: 'حجز خدمة',
+              amount: data.paid_amount || price || 0
+            });
+          }
+        }
+      } catch (err) {
+        showToast(`خطأ: ${err.message}`, 'error');
+      }
+    }
+
+    // Join Waitlist RPC
+    async function handleJoinWaitlist(slotId) {
+      try {
+        const { error } = await supabase.rpc('join_waiting_list', {
+          p_slot_id: parseInt(slotId)
+        });
+        if (error) {
+          showToast(`فشل الانضمام لقائمة الانتظار: ${parseError(error)}`, 'error');
+        } else {
+          showToast('تمت إضافتك لقائمة الانتظار بنجاح!', 'success');
+        }
+      } catch (err) {
+        showToast(`خطأ: ${err.message}`, 'error');
+      }
+    }
+
+    // 2. Load My Bookings
+    async function loadBookings() {
+      if (!currentProfile) return;
+      const tbody = document.getElementById('bookings-tbody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">جاري جلب الحجوزات...</td></tr>';
+
+      try {
+        const { data: bookings, error } = await supabase
+          .from('bookings')
+          .select(`
+            id,
+            slot_id,
+            status,
+            paid_amount,
+            locked_until,
+            created_at,
+            service_slots (
+              price,
+              starts_at,
+              services ( title_ar )
+            )
+          `)
+          .eq('user_id', currentProfile.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          tbody.innerHTML = `<tr><td colspan="7" style="color:var(--danger);">خطأ: ${parseError(error)}</td></tr>`;
+          return;
+        }
+
+        if (!bookings || bookings.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">لا توجد لديك أي حجوزات حتى الآن.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = bookings.map(b => {
+          const serviceTitle = b.service_slots?.services?.title_ar || 'قداس';
+          const dateStr = formatDate(b.service_slots?.starts_at);
+          const canCancel = ['PENDING_PAYMENT', 'AWAITING_CALL', 'CONFIRMED'].includes(b.status);
+          const needsPayment = b.status === 'PENDING_PAYMENT';
+          const amount = b.paid_amount || b.service_slots?.price || 0;
+
+          return `
+            <tr>
+              <td><strong>#${b.id}</strong></td>
+              <td>${serviceTitle}</td>
+              <td>${dateStr}</td>
+              <td>${amount ? amount + ' ج.م' : 'مجاني'}</td>
+              <td>${renderStatusBadge(b.status)}</td>
+              <td>${formatDate(b.created_at)}</td>
+              <td>
+                <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                  ${needsPayment ? `
+                    <button class="btn btn-sm btn-success btn-open-pay" data-id="${b.id}" data-title="${serviceTitle}" data-amount="${amount}">
+                      💳 سداد الآن (Pay)
+                    </button>
+                  ` : ''}
+                  ${canCancel ? `
+                    <button class="btn btn-sm btn-danger btn-cancel-booking" data-id="${b.id}">إلغاء الحجز</button>
+                  ` : '-'}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        tbody.querySelectorAll('.btn-open-pay').forEach(btn => {
+          btn.onclick = () => {
+            openPaymentModal({
+              id: parseInt(btn.dataset.id),
+              serviceTitle: btn.dataset.title,
+              amount: parseFloat(btn.dataset.amount) || 0
+            });
+          };
+        });
+
+        tbody.querySelectorAll('.btn-cancel-booking').forEach(btn => {
+          btn.onclick = () => handleCancelBooking(btn.dataset.id);
+        });
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color:var(--danger);">خطأ: ${err.message}</td></tr>`;
+      }
+    }
+
+    // Payment Modal Functions
+    function openPaymentModal({ id, serviceTitle, amount }) {
+      activePayingBooking = { id, serviceTitle, amount };
+      document.getElementById('pay-modal-booking-id').textContent = `#${id}`;
+      document.getElementById('pay-modal-service-title').textContent = serviceTitle;
+      document.getElementById('pay-modal-amount').textContent = amount ? `${amount} ج.م` : 'مجاني (0 ج.م)';
+      document.getElementById('payment-modal-overlay').style.display = 'flex';
+    }
+
+    function closePaymentModal() {
+      document.getElementById('payment-modal-overlay').style.display = 'none';
+      activePayingBooking = null;
+    }
+
+    document.getElementById('btn-close-pay-modal').onclick = closePaymentModal;
+    document.getElementById('btn-cancel-pay-modal').onclick = closePaymentModal;
+
+    // Process Payment Simulation / Gateway
+    document.getElementById('btn-confirm-payment').onclick = async () => {
+      if (!activePayingBooking) return;
+      const { id: bookingId, amount } = activePayingBooking;
+      const method = document.getElementById('pay-method-select').value;
+
+      showToast('جاري معالجة الدفع وتسجيل المعاملة...', 'info');
+
+      try {
+        // Call record_booking_payment RPC (atomic payment creation and apply_payment transition)
+        const { data: payId, error: payErr } = await supabase.rpc('record_booking_payment', {
+          p_booking_id: parseInt(bookingId),
+          p_amount: parseFloat(amount) || 0,
+          p_gateway_ref: `sim_${method}_${Date.now()}`
+        });
+
+        if (payErr) {
+          throw new Error('فشل تسجيل الدفع: ' + parseError(payErr));
+        }
+
+        showToast(`تم سداد المبلغ (${amount} ج.م) بنجاح! تحول الحجز إلى (قيد المراجعة الهاتفية AWAITING_CALL).`, 'success');
+        closePaymentModal();
+        loadBookings();
+        loadSlots();
+
+      } catch (err) {
+        showToast(`خطأ في الدفع: ${err.message}`, 'error');
+      }
+    };
+
+    // Cancel Booking RPC
+    async function handleCancelBooking(bookingId) {
+      if (!confirm(`هل أنت متأكد من إلغاء الحجز رقم #${bookingId}؟`)) return;
+      try {
+        const { error } = await supabase.rpc('cancel_booking', {
+          p_booking_id: parseInt(bookingId)
+        });
+        if (error) {
+          showToast(`فشل إلغاء الحجز: ${parseError(error)}`, 'error');
+        } else {
+          showToast('تم إلغاء الحجز بنجاح', 'success');
+          loadBookings();
+          loadSlots();
+        }
+      } catch (err) {
+        showToast(`خطأ: ${err.message}`, 'error');
+      }
+    }
+
+    // 3. Load Announcements
+    async function loadAnnouncements() {
+      const container = document.getElementById('announcements-list');
+      container.innerHTML = '<div style="color:var(--text-muted);">جاري تحميل الإعلانات...</div>';
+
+      try {
+        const { data, error } = await supabase
+          .from('announcements')
+          .select('*')
+          .not('published_at', 'is', null)
+          .order('published_at', { ascending: false });
+
+        if (error) {
+          container.innerHTML = `<div style="color:var(--danger);">خطأ: ${parseError(error)}</div>`;
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          container.innerHTML = '<div style="color:var(--text-muted);">لا توجد إعلانات منشورة حالياً.</div>';
+          return;
+        }
+
+        container.innerHTML = data.map(a => `
+          <div class="card" style="border-right: 4px solid var(--primary);">
+            <div style="font-size:1.05rem; font-weight:700; color:#e2e8f0;">${a.title_ar}</div>
+            <div style="font-size:0.8rem; color:var(--text-muted);">${formatDate(a.published_at)}</div>
+            <p style="margin-top:6px; line-height:1.6; font-size:0.92rem;">${a.body_ar}</p>
+          </div>
+        `).join('');
+      } catch (err) {
+        container.innerHTML = `<div style="color:var(--danger);">${err.message}</div>`;
+      }
+    }
+
+    // 4. Complaints (v_my_complaints view & submit_complaint_secure RPC)
+    async function loadComplaints() {
+      if (!currentProfile) return;
+      const list = document.getElementById('complaints-list');
+      list.innerHTML = '<div style="color:var(--text-muted);">جاري التحميل...</div>';
+
+      try {
+        const { data, error } = await supabase
+          .from('v_my_complaints')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          list.innerHTML = `<div style="color:var(--danger);">${parseError(error)}</div>`;
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          list.innerHTML = '<div style="color:var(--text-muted); font-size:0.88rem;">لم تقم بتقديم أي شكاوى أو استفسارات سابقة.</div>';
+          return;
+        }
+
+        list.innerHTML = data.map(c => `
+          <div style="background:#0f172a; padding:10px; border-radius:8px; border:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong>#${c.id} - ${c.category || 'استفسار'}</strong>
+              <span class="badge ${c.status === 'RESOLVED' ? 'badge-green' : 'badge-yellow'}">${c.status || 'NEW'}</span>
+            </div>
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">${formatDate(c.created_at)}</div>
+          </div>
+        `).join('');
+      } catch (err) {
+        list.innerHTML = `<div style="color:var(--danger);">${err.message}</div>`;
+      }
+    }
+
+    document.getElementById('btn-submit-complaint').onclick = async () => {
+      const category = document.getElementById('complaint-subject').value.trim() || 'استفسار عام';
+      const details = document.getElementById('complaint-details').value.trim();
+
+      if (!details) {
+        showToast('يرجى كتابة تفاصيل الشكوى أو الاستفسار', 'error');
+        return;
+      }
+
+      showToast('جاري تشفير الشكوى بتقنية PGCrypto وإرسالها...', 'info');
+      try {
+        const { data, error } = await supabase.rpc('submit_complaint_secure', {
+          p_category: category,
+          p_body: details
+        });
+
+        if (error) {
+          showToast(`فشل إرسال الشكوى: ${parseError(error)}`, 'error');
+        } else {
+          showToast(`تم إرسال وتشفير الشكوى بنجاح (رقم #${data})!`, 'success');
+          document.getElementById('complaint-subject').value = '';
+          document.getElementById('complaint-details').value = '';
+          loadComplaints();
+        }
+      } catch (err) {
+        showToast(`خطأ: ${err.message}`, 'error');
+      }
+    };
+
+    // 5. Load FAQs & Info
+    async function loadFaqsAndInfo() {
+      try {
+        const { data: faqs } = await supabase.from('faq').select('*').limit(10);
+        const faqContainer = document.getElementById('faq-list');
+        if (faqs && faqs.length > 0) {
+          faqContainer.innerHTML = faqs.map(f => `
+            <div style="background:#0f172a; padding:10px; border-radius:8px; border:1px solid var(--border);">
+              <div style="font-weight:700; color:#60a5fa; margin-bottom:4px;">❓ ${f.question_ar}</div>
+              <p style="font-size:0.88rem; color:#cbd5e1;">${f.answer_ar}</p>
+            </div>
+          `).join('');
+        } else {
+          faqContainer.innerHTML = '<div style="color:var(--text-muted);">لا توجد أسئلة شائعة حالياً.</div>';
+        }
+
+        const { data: priests } = await supabase.from('priests').select('*');
+        const priestContainer = document.getElementById('priests-list');
+        if (priests && priests.length > 0) {
+          priestContainer.innerHTML = priests.map(p => `
+            <div style="background:#0f172a; padding:8px 12px; border-radius:8px; border:1px solid var(--border);">
+              <strong>${p.name}</strong> - <span style="font-size:0.85rem; color:var(--text-muted);">${p.bio || 'خادم الرعية'}</span>
+            </div>
+          `).join('');
+        }
+
+        const { data: socials } = await supabase.from('social_links').select('*');
+        const socialContainer = document.getElementById('socials-list');
+        if (socials && socials.length > 0) {
+          socialContainer.innerHTML = socials.map(s => `
+            <a href="${s.url}" target="_blank" class="badge badge-blue" style="text-decoration:none; padding:6px 12px;">
+              🔗 ${s.platform || s.title || s.url}
+            </a>
+          `).join('');
+        }
+      } catch (err) {
+        console.warn('Error loading FAQ info:', err);
+      }
+    }
+
+    function loadAllData() {
+      loadSlots();
+      loadBookings();
+      loadAnnouncements();
+      loadComplaints();
+      loadFaqsAndInfo();
+    }
+
+    // Refresh Buttons
+    document.getElementById('btn-refresh-slots').onclick = loadSlots;
+    document.getElementById('btn-refresh-bookings').onclick = loadBookings;
+    document.getElementById('btn-refresh-announcements').onclick = loadAnnouncements;
+    document.getElementById('btn-refresh-complaints').onclick = loadComplaints;
+
+    // Realtime Subscriptions
+    function setupRealtimeSubscriptions() {
+      supabase.channel('realtime:event_inventory')
+        .on('broadcast', { event: 'SLOT_EXHAUSTED' }, payload => {
+          showToast(`تنبيه: اكتمل حجز المقاعد في الموعد #${payload.payload?.slot_id}`, 'info');
+          loadSlots();
+        })
+        .subscribe();
+
+      if (currentProfile) {
+        supabase.channel(`user_bookings_${currentProfile.id}`)
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'bookings',
+            filter: `user_id=eq.${currentProfile.id}`
+          }, payload => {
+            showToast(`تحديث في حالة حجزك رقم #${payload.new?.id}: ${payload.new?.status}`, 'info');
+            loadBookings();
+          })
+          .subscribe();
+      }
+    }
+
+    // Startup
+    initAuth();
+  </script>
+</body>
+</html>

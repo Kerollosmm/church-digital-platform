@@ -74,8 +74,7 @@ SupabaseApiException mapSupabaseError(Object error, {required String context}) {
     }
     if (message.contains('BOOKING_NOT_FOUND') ||
         message.contains('PAYMENT_NOT_FOUND') ||
-        message.contains('USER_NOT_FOUND') ||
-        message.contains('VIDEO_NOT_FOUND')) {
+        message.contains('USER_NOT_FOUND')) {
       return SupabaseApiException(
         kind: AppErrorKind.notFound,
         code: error.code,

@@ -21,7 +21,7 @@ Cross-cutting behavior (auth, error shaping, payment gateway) lives behind small
 
 - **Single church** deployment. Tenant scaffolding stays internal; no multi-church UI or data entry ever ships.
 - **Paymob is the only payment rail** (electronic wallets + Visa).
-- **Two video types**: Global (public catalog, external YouTube links, free or paid per video) and Personal (per-booking filming add-ons; staff enter phone + YouTube URL + title; automated WhatsApp delivery to the booking phone). Title is the only video metadata — **no captions/transcripts** (owner removed caption enforcement).
+- **Event Booking with Extra Services** (specs 007 & 008) replaces all video delivery machinery (decommissioned 2026-08-17): separate `event_types` and `extra_services` tables, venue/resource exclusion constraints on `(resource_id, tstzrange)`, review-first-then-pay lifecycle (`SUBMITTED → CONFIRMED/REJECTED → PENDING_PAYMENT → PAID`), price snapshots on selected extras, and dual payment support (Paymob online + admin cash RPCs).
 - **Booking confirmation call is mandatory**: bookings wait in `AWAITING_CALL` until an admin confirms by phone (order-processing model); state machine `PENDING_PAYMENT → AWAITING_CALL → CONFIRMED → COMPLETED`.
 - **Error contract**: `{"error": CODE, "message_ar": "…"}` — codes frozen from feature 003; Arabic messages data-editable.
 
@@ -36,4 +36,4 @@ Cross-cutting behavior (auth, error shaping, payment gateway) lives behind small
 
 Constitution supersedes ad-hoc practice; AGENTS.md Locked Decisions are the enforcement detail. Amendments require an owner decision recorded in `docs/adr/` and a date bump below.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-17
+**Version**: 1.1.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-19

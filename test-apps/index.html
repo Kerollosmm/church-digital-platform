@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>منظومة الكنيسة الرقمية — بوابة الاختبار والتحكم المحلي</title>
+  
+  <!-- Shared Design System & Styles -->
+  <link rel="stylesheet" href="shared/styles.css">
+  
+  <!-- Supabase JS SDK CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Shared Infrastructure Scripts -->
+  <script src="shared/supabase-client.js"></script>
+  <script src="shared/paymob-simulator.js"></script>
+  <script src="shared/test-accounts.js"></script>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="portal-header">
+    <div class="container portal-nav">
+      <div class="brand-badge">
+        <div class="brand-icon">✝</div>
+        <div>
+          <div style="font-size:1.1rem; line-height:1.2;">منظومة الكنيسة الرقمية</div>
+          <div style="font-size:0.75rem; color:var(--text-secondary); font-weight:normal;">مركز الاختبار والتحكم المحلي الموحد</div>
+        </div>
+      </div>
+      
+      <div id="top-user-banner">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+    <div class="container">
+      
+      <!-- Welcome Hero Section -->
+      <section style="margin-bottom: var(--spacing-xl); text-align:center;">
+        <h1 style="font-size:2.2rem; margin-bottom:var(--spacing-xs); background: linear-gradient(135deg, #60a5fa, #f59e0b); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+          بيئة الاختبار والتشغيل المحلي
+        </h1>
+        <p style="font-size:1rem; max-width:760px; margin:0 auto; color:var(--text-secondary);">
+          منصة متكاملة لاختبار كافة مسارات وتدفقات منظومة الكنيسة الرقمية عبر ثلاث بوابات مخصصة، مع فحص حي لحالة قاعدة بيانات Supabase ودوال Deno Edge Functions ومحاكي مدفوعات Paymob.
+        </p>
+      </section>
+
+      <!-- 3 Main Portals Selection Grid -->
+      <section style="margin-bottom: var(--spacing-2xl);">
+        <h2 style="font-size:1.3rem; margin-bottom:var(--spacing-md); display:flex; align-items:center; gap:8px;">
+          <span>🚪</span>
+          <span>بوابات المنظومة الثلاث</span>
+        </h2>
+
+        <div class="grid grid-3">
+          
+          <!-- 1. User / Parishioner Portal -->
+          <div class="card card-interactive" style="border-top:4px solid var(--primary); display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div class="card-header">
+                <div class="card-title" style="color:#60a5fa;">
+                  <span>👤</span>
+                  <span>بوابة المخدومين والرعية</span>
+                </div>
+                <span class="badge badge-role-user">USER</span>
+              </div>
+              <div class="card-body">
+                <p style="font-size:0.88rem; margin-bottom:12px;">
+                  تطبيق المخدومين لحجز مواعيد القداسات والخدمات، واختيار الخدمات الإضافية، وسداد الرسوم عبر Paymob، وإرسال الشكاوى المشفرة والتطوع في الأنشطة.
+                </p>
+                <ul style="font-size:0.8rem; color:var(--text-muted); list-style-position:inside; margin-bottom:16px; line-height:1.8;">
+                  <li>استعراض المواعيد والسعة المتاحة (<code>v_available_slots</code>)</li>
+                  <li>حجز المواعيد مع قفل المقعد 20 دقيقة (<code>book_slot</code>)</li>
+                  <li>إرسال الشكاوى بتشفير pgcrypto (<code>submit_complaint_secure</code>)</li>
+                  <li>دفع إلكتروني عبر بوابة Paymob Checkout</li>
+                </ul>
+              </div>
+            </div>
+            <div class="card-footer">
+              <a href="user/index.html" class="btn btn-primary btn-block">
+                <span>دخول بوابة المخدومين</span>
+                <span>←</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- 2. Admin Dashboard -->
+          <div class="card card-interactive" style="border-top:4px solid var(--warning); display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div class="card-header">
+                <div class="card-title" style="color:#fbbf24;">
+                  <span>⚙️</span>
+                  <span>لوحة تحكم إدارة الكنيسة</span>
+                </div>
+                <span class="badge badge-role-admin">ADMIN</span>
+              </div>
+              <div class="card-body">
+                <p style="font-size:0.88rem; margin-bottom:12px;">
+                  لوحة السكرتارية والآباء الكهنة لمراجعة الحجوزات المعلقة، وتأكيدها بعد المكالمة الهاتفية، والحجز النقدي المباشر، ومتابعة رسائل WhatsApp Outbox.
+                </p>
+                <ul style="font-size:0.8rem; color:var(--text-muted); list-style-position:inside; margin-bottom:16px; line-height:1.8;">
+                  <li>طابور مراجعة الحجوزات الهاتفية (<code>AWAITING_CALL</code>)</li>
+                  <li>تأكيد ورفض الحجوزات والحجز النقدي (<code>manual_book</code>)</li>
+                  <li>فك تشفير وقراءة شكاوى المخدومين (<code>decrypt_complaint</code>)</li>
+                  <li>مراقبة طابور الرسائل وإعادة الإرسال (<code>event_outbox</code>)</li>
+                </ul>
+              </div>
+            </div>
+            <div class="card-footer">
+              <a href="admin/index.html" class="btn btn-warning btn-block">
+                <span>دخول لوحة الإدارة</span>
+                <span>←</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- 3. SuperAdmin Portal -->
+          <div class="card card-interactive" style="border-top:4px solid var(--danger); display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div class="card-header">
+                <div class="card-title" style="color:#f87171;">
+                  <span>⚡</span>
+                  <span>غرفة القيادة والحوكمة العليا</span>
+                </div>
+                <span class="badge badge-role-superadmin">SUPER_ADMIN</span>
+              </div>
+              <div class="card-body">
+                <p style="font-size:0.88rem; margin-bottom:12px;">
+                  بوابة الحوكمة والتحكم الأمني لإدارة صلاحيات المستخدمين، ومطالعة سجل التدقيق الأمني (Audit Log)، والتقارير المالية، وفحص سلامة النظام.
+                </p>
+                <ul style="font-size:0.8rem; color:var(--text-muted); list-style-position:inside; margin-bottom:16px; line-height:1.8;">
+                  <li>إدارة وتعيين أدوار المستخدمين عبر قناة الخدمة الآمنة</li>
+                  <li>سجل تدقيق العمليات غير القابل للتعديل (<code>audit_log</code>)</li>
+                  <li>التقارير والتحليلات المالية الشهرية وتصدير CSV</li>
+                  <li>تشغيل محرك الفحص الأمني (<code>diagnostic-engine</code>)</li>
+                </ul>
+              </div>
+            </div>
+            <div class="card-footer">
+              <a href="superadmin/index.html" class="btn btn-danger btn-block">
+                <span>دخول غرفة القيادة العليا</span>
+                <span>←</span>
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Stack Health & Live Monitor Section -->
+      <section style="margin-bottom: var(--spacing-2xl);">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>🩺</span>
+              <span>مراقب صحة المنظومة المباشر (Stack Health Monitor)</span>
+            </div>
+            <button id="btn-refresh-health" class="btn btn-sm btn-secondary">
+              <span>🔄</span>
+              <span>إعادة فحص الاتصال</span>
+            </button>
+          </div>
+          
+          <div class="card-body">
+            <div class="grid grid-4" style="margin-bottom:var(--spacing-md);">
+              
+              <!-- REST API Indicator -->
+              <div class="stat-tile" id="tile-rest">
+                <div class="stat-label">PostgREST API (54321)</div>
+                <div class="stat-value" style="font-size:1.1rem; display:flex; align-items:center; justify-content:space-between;">
+                  <span id="status-rest" class="badge badge-pending">جاري الفحص...</span>
+                  <span id="latency-rest" style="font-size:0.75rem; color:var(--text-muted);">-</span>
+                </div>
+              </div>
+
+              <!-- Auth Indicator -->
+              <div class="stat-tile" id="tile-auth">
+                <div class="stat-label">GoTrue Auth Service</div>
+                <div class="stat-value" style="font-size:1.1rem; display:flex; align-items:center; justify-content:space-between;">
+                  <span id="status-auth" class="badge badge-pending">جاري الفحص...</span>
+                  <span id="latency-auth" style="font-size:0.75rem; color:var(--text-muted);">-</span>
+                </div>
+              </div>
+
+              <!-- Edge Runtime Indicator -->
+              <div class="stat-tile" id="tile-edge">
+                <div class="stat-label">Deno Edge Functions</div>
+                <div class="stat-value" style="font-size:1.1rem; display:flex; align-items:center; justify-content:space-between;">
+                  <span id="status-edge" class="badge badge-pending">جاري الفحص...</span>
+                  <span id="latency-edge" style="font-size:0.75rem; color:var(--text-muted);">-</span>
+                </div>
+              </div>
+
+              <!-- Studio & Tools Indicator -->
+              <div class="stat-tile" id="tile-studio">
+                <div class="stat-label">Supabase Studio (54334)</div>
+                <div class="stat-value" style="font-size:1.1rem; display:flex; align-items:center; justify-content:space-between;">
+                  <span id="status-studio" class="badge badge-pending">جاري الفحص...</span>
+                  <span id="latency-studio" style="font-size:0.75rem; color:var(--text-muted);">-</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- External Tools Quick Links -->
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding-top:12px; border-top:1px solid var(--border-subtle); font-size:0.85rem;">
+              <div style="color:var(--text-muted);">
+                🔗 روابط سريعة لأدوات التطوير المحلية:
+              </div>
+              <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                <a href="http://127.0.0.1:54334" target="_blank" class="btn btn-sm btn-outline">📊 Supabase Studio (:54334)</a>
+                <a href="http://127.0.0.1:54335" target="_blank" class="btn btn-sm btn-outline">📬 InBucket Webmail (:54335)</a>
+                <a href="http://127.0.0.1:54321/rest/v1/" target="_blank" class="btn btn-sm btn-outline">📜 PostgREST OpenAPI (:54321)</a>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- Quick 1-Click Test Accounts Login Grid -->
+      <section style="margin-bottom: var(--spacing-2xl);">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>🔑</span>
+              <span>مبدل الحسابات التجريبية السريع (1-Click Switcher)</span>
+            </div>
+            <span class="badge badge-info">5 حسابات مهيأة مسبقاً</span>
+          </div>
+          
+          <div class="card-body">
+            <div id="accounts-grid-container">
+              <!-- Rendered dynamically by test-accounts.js -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Interactive Paymob Webhook Simulator Seam -->
+      <section style="margin-bottom: var(--spacing-2xl);">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>💳</span>
+              <span>محاكي Paymob Webhook المباشر (HMAC-SHA512 Simulator)</span>
+            </div>
+            <span class="badge badge-warning">اختبار مسار الدفع الفوري</span>
+          </div>
+
+          <div class="card-body">
+            <p style="font-size:0.85rem; margin-bottom:14px;">
+              يولد هذا المحاكي توقيع HMAC-SHA512 الصحيح عبر 21 حقلاً وفق معيار Paymob، ويرسله مباشرة إلى دالة <code>/functions/v1/paymob-webhook</code> لتحديث حالة الدفع وإطلاق RPC <code>apply_payment</code> تلقائياً.
+            </p>
+
+            <div class="grid grid-3" style="margin-bottom:12px;">
+              <div class="form-group">
+                <label class="form-label">رقم الطلب (Merchant Order ID / Booking ID):</label>
+                <input type="text" id="sim-order-id" class="form-input" placeholder="مثال: 101" value="101">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">المبلغ بالقروش (Amount Cents):</label>
+                <input type="number" id="sim-amount" class="form-input" placeholder="5000" value="5000">
+                <span class="form-help">= 50.00 جنيه مصري</span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">حالة العملية (Success / Fail):</label>
+                <select id="sim-success" class="form-select">
+                  <option value="true">نجاح الدفع (Success = true)</option>
+                  <option value="false">فشل الدفع (Success = false)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-bottom:14px;">
+              <button id="btn-trigger-paymob-webhook" class="btn btn-success">
+                <span>🚀</span>
+                <span>إرسال Webhook ومحاكاة الدفع</span>
+              </button>
+              <button id="btn-preview-paymob-hmac" class="btn btn-outline">
+                <span>🔍</span>
+                <span>معاينة التوقيع والبيانات</span>
+              </button>
+            </div>
+
+            <!-- Result Box -->
+            <div id="sim-result-box" style="display:none; background:var(--bg-elevated); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:12px; font-family:'JetBrains Mono', monospace; font-size:0.8rem; overflow-x:auto;">
+              <pre id="sim-result-content" style="margin:0;"></pre>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="portal-footer">
+    <div class="container">
+      منظومة الكنيسة الرقمية — منصة الاختبار والتطوير المحلي © 2026 | Supabase + Deno + Flutter Web
+    </div>
+  </footer>
+
+  <!-- Page Logic Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 1. Initialize Supabase Client
+      ChurchSupabase.init();
+      
+      // 2. Render Top Banner & Account Switcher
+      await TestAccounts.renderUserBanner('top-user-banner');
+      TestAccounts.renderGrid('accounts-grid-container', {
+        onSuccess: async () => {
+          await TestAccounts.renderUserBanner('top-user-banner');
+        }
+      });
+
+      // 3. Health Checks
+      async function runHealthChecks() {
+        // Reset badges
+        ['rest', 'auth', 'edge', 'studio'].forEach(id => {
+          const el = document.getElementById(`status-${id}`);
+          if (el) {
+            el.className = 'badge badge-pending';
+            el.textContent = 'جاري الفحص...';
+          }
+        });
+
+        // Test 1: REST API
+        try {
+          const start = performance.now();
+          const res = await fetch('http://127.0.0.1:54321/rest/v1/', {
+            headers: { 'apikey': ChurchSupabase.CONFIG.anonKey }
+          });
+          const latency = Math.round(performance.now() - start);
+          const el = document.getElementById('status-rest');
+          const latEl = document.getElementById('latency-rest');
+          if (res.ok) {
+            el.className = 'badge badge-confirmed';
+            el.textContent = 'متصل (200 OK)';
+            latEl.textContent = `${latency}ms`;
+          } else {
+            el.className = 'badge badge-failed';
+            el.textContent = `خطأ (${res.status})`;
+          }
+        } catch (e) {
+          document.getElementById('status-rest').className = 'badge badge-failed';
+          document.getElementById('status-rest').textContent = 'غير متاح';
+        }
+
+        // Test 2: Auth Service
+        try {
+          const start = performance.now();
+          const res = await fetch('http://127.0.0.1:54321/auth/v1/health', {
+            headers: { 'apikey': ChurchSupabase.CONFIG.anonKey }
+          });
+          const latency = Math.round(performance.now() - start);
+          const el = document.getElementById('status-auth');
+          const latEl = document.getElementById('latency-auth');
+          if (res.ok) {
+            el.className = 'badge badge-confirmed';
+            el.textContent = 'متصل (200 OK)';
+            latEl.textContent = `${latency}ms`;
+          } else {
+            el.className = 'badge badge-failed';
+            el.textContent = `خطأ (${res.status})`;
+          }
+        } catch (e) {
+          document.getElementById('status-auth').className = 'badge badge-failed';
+          document.getElementById('status-auth').textContent = 'غير متاح';
+        }
+
+        // Test 3: Edge Functions
+        try {
+          const start = performance.now();
+          const res = await fetch('http://127.0.0.1:54321/functions/v1/event-dispatcher', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${ChurchSupabase.CONFIG.serviceRoleKey}`
+            }
+          });
+          const latency = Math.round(performance.now() - start);
+          const el = document.getElementById('status-edge');
+          const latEl = document.getElementById('latency-edge');
+          if (res.ok || res.status === 400 || res.status === 200) {
+            el.className = 'badge badge-confirmed';
+            el.textContent = 'نشط ومستجيب';
+            latEl.textContent = `${latency}ms`;
+          } else {
+            el.className = 'badge badge-failed';
+            el.textContent = `خطأ (${res.status})`;
+          }
+        } catch (e) {
+          document.getElementById('status-edge').className = 'badge badge-failed';
+          document.getElementById('status-edge').textContent = 'غير متاح';
+        }
+
+        // Test 4: Supabase Studio
+        try {
+          const start = performance.now();
+          const res = await fetch('http://127.0.0.1:54334', { mode: 'no-cors' });
+          const latency = Math.round(performance.now() - start);
+          document.getElementById('status-studio').className = 'badge badge-confirmed';
+          document.getElementById('status-studio').textContent = 'متصل (:54334)';
+          document.getElementById('latency-studio').textContent = `${latency}ms`;
+        } catch (e) {
+          document.getElementById('status-studio').className = 'badge badge-failed';
+          document.getElementById('status-studio').textContent = 'غير متاح';
+        }
+      }
+
+      runHealthChecks();
+      document.getElementById('btn-refresh-health').addEventListener('click', runHealthChecks);
+
+      // 4. Paymob Simulation Handlers
+      const triggerBtn = document.getElementById('btn-trigger-paymob-webhook');
+      const previewBtn = document.getElementById('btn-preview-paymob-hmac');
+      const resultBox = document.getElementById('sim-result-box');
+      const resultContent = document.getElementById('sim-result-content');
+
+      previewBtn.addEventListener('click', async () => {
+        const orderId = document.getElementById('sim-order-id').value.trim();
+        const amountCents = Number(document.getElementById('sim-amount').value);
+        const isSuccess = document.getElementById('sim-success').value === 'true';
+
+        const payload = await PaymobSimulator.buildWebhookPayload({
+          merchantOrderId: orderId,
+          amountCents: amountCents,
+          success: isSuccess
+        });
+
+        resultBox.style.display = 'block';
+        resultContent.textContent = JSON.stringify({
+          hmac: payload.hmac,
+          concatenated_fields: payload.concatenated,
+          webhook_payload: payload
+        }, null, 2);
+      });
+
+      triggerBtn.addEventListener('click', async () => {
+        const orderId = document.getElementById('sim-order-id').value.trim();
+        const amountCents = Number(document.getElementById('sim-amount').value);
+        const isSuccess = document.getElementById('sim-success').value === 'true';
+
+        triggerBtn.disabled = true;
+        triggerBtn.innerHTML = '<span class="spinner"></span> <span>جاري الإرسال...</span>';
+
+        try {
+          const payload = await PaymobSimulator.buildWebhookPayload({
+            merchantOrderId: orderId,
+            amountCents: amountCents,
+            success: isSuccess
+          });
+
+          const res = await PaymobSimulator.sendWebhook(payload, payload.hmac);
+          resultBox.style.display = 'block';
+          resultContent.textContent = JSON.stringify(res, null, 2);
+
+          if (res.ok) {
+            ChurchSupabase.showToast(`تم إرسال الـ Webhook بنجاح (HTTP ${res.status})`, 'success');
+          } else {
+            ChurchSupabase.showToast(`استجابة غير ناجحة: HTTP ${res.status}`, 'warning');
+          }
+        } catch (err) {
+          ChurchSupabase.showToast(err.message || 'فشل إرسال Webhook', 'error');
+        } finally {
+          triggerBtn.disabled = false;
+          triggerBtn.innerHTML = '<span>🚀</span> <span>إرسال Webhook ومحاكاة الدفع</span>';
+        }
+      });
+
+    });
+  </script>
+</body>
+</html>

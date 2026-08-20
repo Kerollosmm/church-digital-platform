@@ -55,7 +55,6 @@ Secrets configured per edge function:
 * `SUPABASE_ANON_KEY`
 * `SUPABASE_SERVICE_ROLE_KEY`
 * `PAYMOB_API_KEY` / `PAYMOB_HMAC_SECRET`
-* `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REFRESH_TOKEN` (YouTube OAuth2)
 
 ---
 
@@ -77,7 +76,39 @@ SELECT * FROM cron.job_run_details ORDER BY start_time DESC LIMIT 20;
 
 ---
 
-## 5. Monitoring & Incident Handling
+## 5. Production Supabase Vault Provisioning
+
+Three internal secrets MUST be provisioned directly in Supabase Vault on production / staging environments:
+
+1. `COMPLAINTS_KEY`: Symmetric AES encryption passphrase used by `public.submit_complaint_secure` and `public.decrypt_complaint`.
+2. `SUPABASE_URL`: Internal API URL (e.g. `http://kong:8000` locally, or production Supabase project API gateway) for `pg_net` background dispatch triggers.
+3. `SERVICE_ROLE_KEY`: Supabase `service_role` JWT secret for internal edge function RPC invocation.
+
+### Provisioning Procedure
+```sql
+-- Run as superuser in Supabase SQL editor (never commit production secrets to repository):
+SELECT vault.create_secret('<PROD_COMPLAINTS_KEY>', 'COMPLAINTS_KEY');
+SELECT vault.create_secret('<PROD_SUPABASE_GATEWAY_URL>', 'SUPABASE_URL');
+SELECT vault.create_secret('<PROD_SERVICE_ROLE_KEY>', 'SERVICE_ROLE_KEY');
+
+-- Verify preflight check returns 0 missing rows:
+SELECT * FROM public.vault_preflight();
+```
+
+> [!IMPORTANT]
+> Real production secret values are **never committed** to git. `supabase/seed.sql` contains mock keys for local development only.
+
+---
+
+## 6. User Lifecycle & Deletion Policy
+
+* **Hard User Deletion is Unsupported**: Direct `DELETE FROM public.users` or `DELETE FROM auth.users` will be rejected by foreign key restrictions (`ON DELETE RESTRICT`) whenever the user has associated records (e.g., `bookings`, `complaints`, `waiting_list`).
+* **Soft Deletion (`users.deleted_at`)**: To deactivate a user, set `UPDATE public.users SET deleted_at = now() WHERE id = <USER_ID>;`.
+* **Data Erasure / Privacy Compliance**: Full anonymizing erasure RPC is deferred for future implementation in compliance with Egypt's Personal Data Protection Law (PDPL Law 151/2018).
+
+---
+
+## 7. Monitoring & Incident Handling
 
 * **Database Metrics:** Monitor active connections, CPU/Memory usage, and query performance in Supabase Dashboard -> Reports.
 * **Edge Function Logs:** Check `npx supabase functions logs <function-name>` or Sentry dashboard.

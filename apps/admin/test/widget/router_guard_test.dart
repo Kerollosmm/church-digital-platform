@@ -34,7 +34,6 @@ void main() {
       'announcements': [],
       'faq': [],
       'payments': [],
-      'videos': [],
     });
   }
 
@@ -116,10 +115,10 @@ void main() {
     expect(find.byType(AdminLoginScreen), findsOneWidget);
   });
 
-  testWidgets('Authenticated user with deprecated PRIEST or SUPER_ADMIN role is redirected to /login', (tester) async {
+  testWidgets('Authenticated user with USER role is redirected to /login', (tester) async {
     final router = createAdminRouter(
       isAuthenticated: () => true,
-      getUserRole: () => 'PRIEST',
+      getUserRole: () => 'USER',
       db: createFakeDb(),
     );
     await tester.pumpWidget(
@@ -138,6 +137,31 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(AdminLoginScreen), findsOneWidget);
+  });
+
+  testWidgets('Authenticated user with SUPER_ADMIN role is granted access to /bookings', (tester) async {
+    final router = createAdminRouter(
+      isAuthenticated: () => true,
+      getUserRole: () => 'SUPER_ADMIN',
+      initialLocation: '/bookings',
+      db: createFakeDb(),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(
+          routerConfig: router,
+          locale: const Locale('ar'),
+          supportedLocales: const [Locale('ar')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AdminLoginScreen), findsNothing);
   });
 
   testWidgets('Authenticated admin with AdminAuthStatus.authenticated is granted access to /bookings', (tester) async {

@@ -14,7 +14,6 @@ void main() {
       bool massTapped = false;
       bool confessionTapped = false;
       bool bookingTapped = false;
-      bool videosTapped = false;
       bool complaintsTapped = false;
 
       await tester.pumpWidget(
@@ -26,7 +25,6 @@ void main() {
               onTapMass: () => massTapped = true,
               onTapConfession: () => confessionTapped = true,
               onTapBooking: () => bookingTapped = true,
-              onTapVideos: () => videosTapped = true,
               onTapComplaints: () => complaintsTapped = true,
             ),
           ),
@@ -54,13 +52,6 @@ void main() {
       await tester.tap(bookingCard);
       await tester.pumpAndSettle();
       expect(bookingTapped, isTrue);
-
-      // Tap quick Videos card
-      final videosCard = find.text(AppStrings.quickVideos);
-      await tester.ensureVisible(videosCard);
-      await tester.tap(videosCard);
-      await tester.pumpAndSettle();
-      expect(videosTapped, isTrue);
 
       // Tap quick Complaints card
       final complaintsCard = find.text(AppStrings.quickComplaints);
