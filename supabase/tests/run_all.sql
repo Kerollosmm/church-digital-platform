@@ -5,7 +5,6 @@
 \ir 0002_rls_test.sql
 \ir 0003_rbac_test.sql
 \ir 0004_portal_read_views_test.sql
-\ir 0005_priest_self_assign_test.sql
 \ir 0006_announcements_test.sql
 \ir 0007_available_slots_test.sql
 \ir 0008_booking_state_machine_test.sql
@@ -46,3 +45,12 @@
 \ir 0053_security_fixes_test.sql
 \ir 0053_concurrency_test.sql
 \ir 0054_admin_security_alert_test.sql
+\ir 0055_vault_preflight_test.sql
+\ir 0056_handle_new_user_test.sql
+\ir 0057_integrity_constraints_test.sql
+\ir 0058_status_enums_test.sql
+\ir 0059_tenant_scaffolding_test.sql
+\ir 0060_priest_abstraction_removal_test.sql
+\ir 0061_user_delete_semantics_test.sql
+\ir 0062_drop_video_privacy_test.sql
+\ir 0063_service_role_grants_test.sql

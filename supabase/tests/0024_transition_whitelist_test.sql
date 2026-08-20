@@ -10,8 +10,8 @@ begin
   delete from public.services where id = 901;
 
   -- Setup: user with a pending-payment booking
-  insert into auth.users (id, email) values ('cccccccc-0000-0000-0000-000000000001'::uuid, 'user24_wl@test.com')
-  on conflict (id) do update set email = EXCLUDED.email;
+  insert into auth.users (id, email, phone) values ('cccccccc-0000-0000-0000-000000000001'::uuid, 'user24_wl@test.com', '+201000000244')
+  on conflict (id) do update set email = EXCLUDED.email, phone = EXCLUDED.phone;
   insert into public.users (id, phone, name, role, tenant_id)
     values ('cccccccc-0000-0000-0000-000000000001'::uuid, '+201000000244', 'User', 'USER', 1)
   on conflict (id) do update set role = 'USER', phone = EXCLUDED.phone;

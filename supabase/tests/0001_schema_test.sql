@@ -37,11 +37,11 @@ begin
               where n.nspname = 'public' and t.typname = e and t.typtype = 'e'),
       'enum missing: ' || e);
   end loop;
-  foreach e in array array['alert_type','attendance_method','member_status'] loop
+  foreach e in array array['alert_type','attendance_method','member_status','video_privacy'] loop
     perform tests.expect(
       not exists (select 1 from pg_type t join pg_namespace n on n.oid = t.typnamespace
                   where n.nspname = 'public' and t.typname = e and t.typtype = 'e'),
-      'CMeeting enum must not exist: ' || e);
+      'Decommissioned enum must not exist: ' || e);
   end loop;
   perform tests.expect(
     (select array_agg(e.enumlabel::text order by e.enumsortorder)
@@ -55,11 +55,6 @@ begin
     join pg_namespace n on n.oid = t.typnamespace
     where n.nspname = 'public' and t.typname = 'booking_status';
   perform tests.expect(v_count = 6, 'booking_status must have 6 values');
-  select count(*) into v_count from pg_enum e
-    join pg_type t on t.oid = e.enumtypid
-    join pg_namespace n on n.oid = t.typnamespace
-    where n.nspname = 'public' and t.typname = 'video_privacy';
-  perform tests.expect(v_count = 3, 'video_privacy must have 3 values (PUBLIC, UNLISTED, PRIVATE)');
   select count(*) into v_count from pg_enum e
     join pg_type t on t.oid = e.enumtypid
     join pg_namespace n on n.oid = t.typnamespace

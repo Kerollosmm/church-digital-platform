@@ -268,8 +268,8 @@ DECLARE
   v_count bigint;
 BEGIN
   -- Insert into auth.users first to satisfy FK if needed
-  INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-  VALUES (v_admin_auth_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin_test@test.local', crypt('password', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now())
+  INSERT INTO auth.users (id, instance_id, aud, role, email, phone, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  VALUES (v_admin_auth_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin_test@test.local', '+201099999999', crypt('password', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}', '{}', now(), now())
   ON CONFLICT (id) DO NOTHING;
 
   -- Ensure test admin user exists in public.users
@@ -336,8 +336,8 @@ DECLARE
   v_user_auth_id uuid := '00000000-0000-0000-0000-000000000088'::uuid;
   v_booking public.bookings;
 BEGIN
-  INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-  VALUES (v_user_auth_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u88@test.local', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now())
+  INSERT INTO auth.users (id, instance_id, aud, role, email, phone, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  VALUES (v_user_auth_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u88@test.local', '+201088888888', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now())
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.users (id, tenant_id, phone, name, role)
@@ -348,8 +348,8 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.service_slots (id, tenant_id, service_id, starts_at, ends_at, capacity, price, status) OVERRIDING SYSTEM VALUE
-  VALUES (988, 1, 988, now() + interval '2 days', now() + interval '2 days 2 hours', 1, 0, 'AVAILABLE')
-  ON CONFLICT (id) DO UPDATE SET capacity = 1, status = 'AVAILABLE';
+  VALUES (988, 1, 988, now() + interval '2 days', now() + interval '2 days 2 hours', 1, 0, 'OPEN')
+  ON CONFLICT (id) DO UPDATE SET capacity = 1, status = 'OPEN';
 
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_user_auth_id::text, 'role', 'authenticated')::text, true);
@@ -510,8 +510,8 @@ DECLARE
   v_super_auth_id uuid := '00000000-0000-0000-0000-000000000077'::uuid;
   v_admin_auth_id uuid := '00000000-0000-0000-0000-000000000099'::uuid;
 BEGIN
-  INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-  VALUES (v_super_auth_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'super@test.local', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now())
+  INSERT INTO auth.users (id, instance_id, aud, role, email, phone, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  VALUES (v_super_auth_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'super@test.local', '+201077777777', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now())
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.users (id, tenant_id, phone, name, role)

@@ -60,16 +60,16 @@ BEGIN
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO public.service_slots (id, tenant_id, service_id, starts_at, ends_at, capacity, price, status) OVERRIDING SYSTEM VALUE
-    VALUES (991, 1, 991, now() + interval '1 day', now() + interval '1 day 2 hours', 1, 1000, 'AVAILABLE')
-    ON CONFLICT (id) DO UPDATE SET capacity = 1, status = 'AVAILABLE', starts_at = now() + interval '1 day';
+    VALUES (991, 1, 991, now() + interval '1 day', now() + interval '1 day 2 hours', 1, 1000, 'OPEN')
+    ON CONFLICT (id) DO UPDATE SET capacity = 1, status = 'OPEN', starts_at = now() + interval '1 day';
 
     DELETE FROM public.payments WHERE booking_id IN (SELECT id FROM public.bookings WHERE slot_id = 991);
     DELETE FROM public.bookings WHERE slot_id = 991;
 
-    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+    INSERT INTO auth.users (id, instance_id, aud, role, email, phone, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
     VALUES
-      ('00000000-0000-0000-0000-0000000000a1'::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u1@test.local', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now()),
-      ('00000000-0000-0000-0000-0000000000a2'::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u2@test.local', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now())
+      ('00000000-0000-0000-0000-0000000000a1'::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u1@test.local', '+201011111111', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now()),
+      ('00000000-0000-0000-0000-0000000000a2'::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u2@test.local', '+201022222222', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now())
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO public.users (id, tenant_id, phone, name, role)
@@ -164,14 +164,14 @@ BEGIN
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO public.service_slots (id, tenant_id, service_id, starts_at, ends_at, capacity, price, status) OVERRIDING SYSTEM VALUE
-    VALUES (994, 1, 994, now() + interval '1 day', now() + interval '1 day 2 hours', 1, 0, 'AVAILABLE')
-    ON CONFLICT (id) DO UPDATE SET capacity = 1, status = 'AVAILABLE', starts_at = now() + interval '1 day';
+    VALUES (994, 1, 994, now() + interval '1 day', now() + interval '1 day 2 hours', 1, 0, 'OPEN')
+    ON CONFLICT (id) DO UPDATE SET capacity = 1, status = 'OPEN', starts_at = now() + interval '1 day';
 
     DELETE FROM public.payments WHERE booking_id IN (SELECT id FROM public.bookings WHERE slot_id = 994);
     DELETE FROM public.bookings WHERE slot_id = 994;
 
-    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-    VALUES ('00000000-0000-0000-0000-0000000000a4'::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u4@test.local', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now())
+    INSERT INTO auth.users (id, instance_id, aud, role, email, phone, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+    VALUES ('00000000-0000-0000-0000-0000000000a4'::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u4@test.local', '+201044444444', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now())
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO public.users (id, tenant_id, phone, name, role)
@@ -249,11 +249,11 @@ BEGIN
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO public.service_slots (id, tenant_id, service_id, starts_at, ends_at, capacity, price, status) OVERRIDING SYSTEM VALUE
-    VALUES (993, 1, 993, now() + interval '1 day', now() + interval '1 day 2 hours', 1, 1000, 'AVAILABLE')
-    ON CONFLICT (id) DO UPDATE SET capacity = 1, status = 'AVAILABLE', starts_at = now() + interval '1 day';
+    VALUES (993, 1, 993, now() + interval '1 day', now() + interval '1 day 2 hours', 1, 1000, 'OPEN')
+    ON CONFLICT (id) DO UPDATE SET capacity = 1, status = 'OPEN', starts_at = now() + interval '1 day';
 
-    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-    VALUES ('00000000-0000-0000-0000-0000000000a3'::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u3@test.local', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now())
+    INSERT INTO auth.users (id, instance_id, aud, role, email, phone, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+    VALUES ('00000000-0000-0000-0000-0000000000a3'::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'u3@test.local', '+201033333333', crypt('pw', gen_salt('bf')), now(), '{"provider":"email"}', '{}', now(), now())
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO public.users (id, tenant_id, phone, name, role)

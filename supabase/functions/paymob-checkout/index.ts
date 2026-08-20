@@ -133,7 +133,7 @@ export async function handleRequest(
     const apiKey = deps?.paymobApiKey ?? Deno.env.get("PAYMOB_API_KEY") ?? "";
     const integrationId =
       deps?.integrationId ??
-      Number(Deno.env.get("PAYMOB_INTEGRATION_ID") ?? "0");
+      Number(Deno.env.get("PAYMOB_INTEGRATION_ID") ?? Deno.env.get("PAYMOB_CARD_INTEGRATION_ID") ?? "0");
     const iframeId =
       deps?.iframeId ?? Number(Deno.env.get("PAYMOB_IFRAME_ID") ?? "0");
 
@@ -174,7 +174,7 @@ export async function handleRequest(
 
 if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
   const paymobApiKey = Deno.env.get("PAYMOB_API_KEY");
-  const integrationIdStr = Deno.env.get("PAYMOB_INTEGRATION_ID");
+  const integrationIdStr = Deno.env.get("PAYMOB_INTEGRATION_ID") ?? Deno.env.get("PAYMOB_CARD_INTEGRATION_ID");
   const iframeIdStr = Deno.env.get("PAYMOB_IFRAME_ID");
   const hmacSecret = Deno.env.get("PAYMOB_HMAC_SECRET") ?? Deno.env.get("PAYMOB_HMAC_KEY");
 
