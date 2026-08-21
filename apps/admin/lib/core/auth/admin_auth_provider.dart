@@ -111,16 +111,7 @@ class AdminAuthNotifier extends Notifier<AdminAuthState> {
   Future<bool> _verifyRole(User user) async {
     state = state.copyWith(status: AdminAuthStatus.loading);
     try {
-      bool isAllowed = false;
-      try {
-        final res = await _client.rpc('is_admin_or_priest');
-        if (res is bool) {
-          isAllowed = res;
-        }
-      } catch (_) {
-        // Fallback to table query if RPC is not available (e.g. in tests)
-      }
-
+      // Access is decided solely from the stored role (users.role).
       final response = await _client
           .from('users')
           .select('role')
@@ -130,8 +121,7 @@ class AdminAuthNotifier extends Notifier<AdminAuthState> {
       final role = response['role'] as String?;
       const allowedRoles = {'ADMIN', 'SUPER_ADMIN'};
 
-
-      if (isAllowed || (role != null && allowedRoles.contains(role))) {
+      if (role != null && allowedRoles.contains(role)) {
         return await _checkPinStatus(user, role);
       } else {
         await _client.auth.signOut();
