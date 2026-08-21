@@ -53,18 +53,20 @@ docs/
 - Unified `event_outbox` pattern: integrations enqueue rows to `public.event_outbox(id, handler_type, payload JSONB, status='PENDING', attempts=0, max_attempts=5, next_attempt_at=now())`. Handler types include `WHATSAPP`, `PAYMOB_REFUND`, `FCM_PUSH`. The `event-dispatcher` Edge Function drains the queue (100 rows/batch in parallel batches of 10), calling Meta Graph API, Paymob Refund API, or FCM v1 HTTP API (`https://fcm.googleapis.com/v1/projects/{FCM_PROJECT_ID}/messages:send` via OAuth2 service account JWT bearer token exchange with secrets `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`), marking SENT or bumping attempts with exponential backoff (max 5). Throughput ≈ 6k msgs/hr; for latency-critical sends (OTP, confirmations) wire pg_net `net.http_post` at enqueue time.
 - Paymob webhook: Paymob computes HMAC-**SHA512** (hex, lowercase) over the concatenation (no separators, booleans as lowercase `true`/`false`) of the transaction's **20 fields in this exact documented order**: `amount_cents`, `created_at`, `currency`, `error_occured`, `has_parent_transaction`, `id`, `integration_id`, `is_3d_secure`, `is_auth`, `is_capture`, `is_refunded`, `is_standalone_payment`, `is_voided`, `order.id`, `owner`, `pending`, `source_data.pan`, `source_data.sub_type`, `source_data.type`, `success`. Paymob sends the digest as the **`hmac` query parameter on the callback URL** (NOT a header); compare with constant-time equality. Replay-protect via unique `gateway_ref`, store raw body in `payments.raw_webhook`
 
-## Enums (exact values, used across all phases)
+## Enums (exact values, synced to shipped schema 2026-08-21)
+
+Values below mirror the live database types (`pg_enum`) value-for-value.
+Sync direction is DB → docs; never invent values here.
 
 ```sql
-booking_status   = 'PENDING_PAYMENT' | 'AWAITING_CALL' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'RESCHEDULED'
-payment_status   = 'CREATED' | 'PAID' | 'FAILED' | 'REFUNDED' | 'REFUND_PENDING' | 'PENDING'
-slot_status      = 'AVAILABLE' | 'BOOKED' | 'CLOSED'   -- view output; fully-locked slot reads BOOKED
-role             = 'USER' | 'ADMIN'
-complaint_status = 'NEW' | 'ASSIGNED' | 'RESOLVED'
-whatsapp_outbox_status = 'PENDING' | 'SENT' | 'FAILED'
-waiting_list_status    = 'WAITING' | 'PROMOTED' | 'EXPIRED' | 'CANCELLED'
-event_handler_type = 'WHATSAPP' | 'PAYMOB_REFUND' | 'FCM_PUSH' | 'SMS'
-outbox_status     = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED'
+app_role               = 'USER' | 'ADMIN' | 'SUPER_ADMIN'   -- PRIEST tier deliberately removed (0060; see docs/adr/0002-video-to-event-booking-pivot.md + specs/009 US5)
+booking_status         = 'PENDING_PAYMENT' | 'AWAITING_CALL' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'RESCHEDULED'
+payment_status         = 'CREATED' | 'PAID' | 'FAILED' | 'REFUNDED' | 'REFUND_PENDING' | 'PENDING'
+slot_status            = 'OPEN' | 'CLOSED'                  -- values in use (spec 009 FR-011); the view layer reports AVAILABLE|BOOKED|CLOSED
+complaint_status       = 'NEW' | 'ASSIGNED' | 'RESOLVED'
+event_handler_type     = 'WHATSAPP' | 'PAYMOB_REFUND' | 'FCM_PUSH' | 'SMS'
+outbox_status          = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED'
+waitlist_status        = 'WAITING' | 'OFFERED'              -- values in use (spec 009 FR-011); terminal-state handling recorded as open question there
 ```
 
 ## Slot Locking (no Redis)
