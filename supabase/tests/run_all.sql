@@ -54,3 +54,4 @@
 \ir 0061_user_delete_semantics_test.sql
 \ir 0062_drop_video_privacy_test.sql
 \ir 0063_service_role_grants_test.sql
+\ir 0064_transition_owner_guard_test.sql
