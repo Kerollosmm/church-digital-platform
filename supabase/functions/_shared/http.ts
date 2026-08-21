@@ -39,14 +39,13 @@ export function respond(
   });
 
   if (status >= 400) {
+    // Zero-leak contract: failure bodies carry ONLY the frozen code and the
+    // catalog Arabic sentence. Any caller-supplied detail stays server-side.
     const errorCode = typeof codeOrBody === "string" ? codeOrBody : "INTERNAL";
     const errorBody: Record<string, unknown> = {
       error: errorCode,
       message_ar: messageFor(errorCode),
     };
-    if (message !== undefined && message !== null) {
-      errorBody.message = message;
-    }
     if (body !== undefined && body !== null && typeof body === "object") {
       Object.assign(errorBody, body);
     }
@@ -235,4 +234,5 @@ export function verifyCronOrServiceAuth(
 
   return null;
 }
+
 

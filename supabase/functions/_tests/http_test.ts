@@ -34,9 +34,15 @@ Deno.test("http seam: respond() creates standard error response with CORS header
   const body = await res.json();
   assertEquals(body, {
     error: "UNAUTHORIZED",
-    message: "Missing credentials",
     message_ar: "انتهت الجلسة، من فضلك سجل الدخول مرة أخرى.",
   });
+});
+
+Deno.test("http seam: respond() error body carries NO message field even when supplied (zero-leak)", async () => {
+  const res = respond(401, "UNAUTHORIZED", "GoTrue internal: JWT signature mismatch 8812");
+  const body = await res.json();
+  assertEquals(Object.keys(body).sort(), ["error", "message_ar"]);
+  assertEquals(body.message, undefined);
 });
 
 Deno.test("http seam: respond() creates standard error with message_ar when message is omitted", async () => {
@@ -262,3 +268,24 @@ Deno.test("http seam: auth() passes staff user (ADMIN) when requireStaff is true
 });
 
 
+
+Deno.test("http seam: auth() token failure leaks NO library message into body (zero-leak)", async () => {
+  const fake = new FakeAuthSupabaseClient();
+  fake.setAuthToken("bad.token", null, {
+    message: "GoTrue internal: JWT signature mismatch 8812",
+    status: 401,
+  });
+  const res = await auth(
+    new Request("https://x/functions/v1/x", {
+      method: "POST",
+      headers: { Authorization: "Bearer bad.token" },
+    }),
+    { client: fake },
+  ) as Response;
+  assertEquals(res.status, 401);
+  const body = await res.json();
+  assertEquals(Object.keys(body).sort(), ["error", "message_ar"]);
+  const raw = JSON.stringify(body);
+  assertEquals(raw.includes("GoTrue"), false, "library message leaked");
+  assertEquals(raw.includes("8812"), false, "internal detail leaked");
+});

@@ -30,11 +30,8 @@ export async function handleRequest(
     const headers = Object.fromEntries(req.headers.entries());
     payload = wh.verify(rawBody, headers);
   } catch (err) {
-    return respond(
-      401,
-      "UNAUTHORIZED",
-      err instanceof Error ? err.message : String(err),
-    );
+    console.error("otp-sms webhook verification failed:", err);
+    return respond(401, "UNAUTHORIZED");
   }
 
   const phone = payload?.user?.phone;
@@ -98,24 +95,12 @@ export async function handleRequest(
       errDetails = errText;
     }
 
-    const message =
-      typeof errDetails === "object" &&
-      errDetails !== null &&
-      "error" in errDetails
-        ? (errDetails as { error: unknown }).error
-        : errText;
-
-    return respond(
-      502,
-      "UPSTREAM_ERROR",
-      typeof message === "string" ? message : JSON.stringify(message),
-    );
+    // Zero-leak: provider detail stays in server logs only.
+    console.error("otp-sms upstream error:", errDetails);
+    return respond(502, "UPSTREAM_ERROR");
   } catch (err) {
-    return respond(
-      502,
-      "UPSTREAM_ERROR",
-      err instanceof Error ? err.message : String(err),
-    );
+    console.error("otp-sms send failure:", err);
+    return respond(502, "UPSTREAM_ERROR");
   }
 }
 
