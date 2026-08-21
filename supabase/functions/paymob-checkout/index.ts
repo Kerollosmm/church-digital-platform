@@ -6,6 +6,7 @@ import {
   createPaymob,
   markPaymentFailed,
 } from "../_shared/paymob.ts";
+import { createPendingPayment } from "../_shared/payments-gateway.ts";
 
 export interface Deps {
   getClient(): unknown;
@@ -104,18 +105,18 @@ export async function handleRequest(
         if (slot?.price) amount = slot.price;
       }
       amountCents = Math.round(amount * amountMultiplier);
-      const { data: pay, error: pErr } = await supabase
-        .from("payments")
-        .insert({
-          booking_id: bookingId,
-          amount,
-          status: "CREATED",
-          gateway_ref: null,
-        })
-        .select()
-        .single();
-      if (pErr) throw pErr;
-      orderId = pay.id as number;
+      const created = await createPendingPayment(supabase, {
+        bookingId,
+        amount,
+      });
+      if (!created.ok) {
+        // P0001 = booking not in PENDING_PAYMENT state; 42501 = not owner
+        if (created.errorCode === "P0001" || created.errorCode === "42501") {
+          return respond(400, "BAD_REQUEST", "INVALID_BOOKING_STATE");
+        }
+        throw new Error(created.errorCode ?? "INTERNAL");
+      }
+      orderId = created.data as number;
       createdPaymentId = orderId;
     } else {
       return respond(
@@ -125,10 +126,7 @@ export async function handleRequest(
       );
     }
 
-    await supabase
-      .from("payments")
-      .update({ merchant_order_id: String(orderId) })
-      .eq("id", orderId);
+    // merchant_order_id is stamped inside create_pending_payment (0065).
 
     const apiKey = deps?.paymobApiKey ?? Deno.env.get("PAYMOB_API_KEY") ?? "";
     const integrationId =

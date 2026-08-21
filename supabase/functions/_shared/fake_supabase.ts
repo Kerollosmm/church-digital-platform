@@ -129,6 +129,68 @@ export class FakeClient {
       }
       return { data: null, error: null };
     }
+    // Slot-aware simulations of the payments-gateway RPC surface (0064/0065)
+    if (fn === "create_pending_payment") {
+      const bookings = this.db.get("bookings") ?? [];
+      const booking = bookings.find((b) => b.id === Number(args?.p_booking_id));
+      if (!booking) return { data: null, error: { message: "BOOKING_NOT_FOUND", code: "P0002" } };
+      if (booking.status !== "PENDING_PAYMENT") {
+        return {
+          data: null,
+          error: { message: "INVALID_STATUS: booking is not pending payment", code: "P0001" },
+        };
+      }
+      const rows = this.db.get("payments") ?? [];
+      if (!this.db.has("payments")) this.db.set("payments", rows);
+      const newId = rows.length + 1;
+      const row: Row = {
+        id: newId,
+        booking_id: Number(args?.p_booking_id),
+        amount: Number(args?.p_amount ?? 0),
+        status: "CREATED",
+        gateway_ref: args?.p_gateway_ref ?? null,
+        merchant_order_id: String(newId),
+      };
+      rows.push(row);
+      return { data: newId, error: null };
+    }
+    if (fn === "mark_payment_failed") {
+      const rows = this.db.get("payments") ?? [];
+      const payment = rows.find((r) => r.id === Number(args?.p_payment_id));
+      if (!payment) return { data: null, error: { message: "PAYMENT_NOT_FOUND", code: "P0002" } };
+      if (payment.status === "PAID") {
+        return { data: null, error: { message: "INVALID_STATUS: PAID", code: "P0003" } };
+      }
+      if (payment.status === "FAILED") return { data: null, error: null };
+      payment.status = "FAILED";
+      if (args?.p_detail) payment.raw_webhook = args.p_detail;
+      return { data: null, error: null };
+    }
+    if (fn === "record_webhook_payment") {
+      const rows = this.db.get("payments") ?? [];
+      if (!this.db.has("payments")) this.db.set("payments", rows);
+      const existing = rows.find((r) => r.merchant_order_id === args?.p_merchant_order_id);
+      if (existing) {
+        if (existing.status === "PAID") {
+          return { data: { id: existing.id, already_paid: true }, error: null };
+        }
+        existing.gateway_ref = args?.p_gateway_ref ?? existing.gateway_ref;
+        existing.raw_webhook = args?.p_raw ?? existing.raw_webhook;
+        if (!args?.p_paid) existing.status = "FAILED";
+        return { data: { id: existing.id, already_paid: false }, error: null };
+      }
+      const newId = rows.length + 1;
+      rows.push({
+        id: newId,
+        booking_id: null,
+        gateway_ref: args?.p_gateway_ref ?? null,
+        amount: Number(args?.p_amount ?? 0),
+        status: args?.p_paid ? "CREATED" : "FAILED",
+        raw_webhook: args?.p_raw ?? null,
+        merchant_order_id: args?.p_merchant_order_id,
+      });
+      return { data: { id: newId, already_paid: false }, error: null };
+    }
     return { data: { rpc: fn, args }, error: null };
   }
   from(table: string) { return new FakeQuery(this.db, table); }

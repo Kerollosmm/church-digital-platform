@@ -77,9 +77,16 @@ export async function handleRequest(
         await supabase.rpc("cancel_booking", {
           p_booking_id: pay.booking_id,
         });
-        await markPaymentFailed(supabase, pay.id, {
-          reason: "unpaid_on_reconcile",
-        });
+        try {
+          await markPaymentFailed(supabase, pay.id as number, {
+            reason: "unpaid_on_reconcile",
+          });
+        } catch (markErr) {
+          console.error(
+            `[INCIDENT] mark_payment_failed RPC failed for payment ${pay.id}:`,
+            markErr,
+          );
+        }
         resolved++;
       }
     }

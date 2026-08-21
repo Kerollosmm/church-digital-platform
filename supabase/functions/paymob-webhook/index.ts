@@ -2,6 +2,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { makeServiceClient } from "../_shared/client.ts";
 import { respond } from "../_shared/http.ts";
 import { hmacFields } from "../_shared/paymob.ts";
+import { recordWebhookPayment } from "../_shared/payments-gateway.ts";
 
 export interface Deps {
   getClient(): unknown;
@@ -80,40 +81,20 @@ export async function handleRequest(
       .select("id, gateway_ref, status")
       .eq("merchant_order_id", merchantOrderId)
       .maybeSingle();
-    let pay: { id: number; status: string };
-    if (existing) {
-      // Idempotency: if already processed as PAID, acknowledge without re-invoking state transitions or overwriting with FAILED
-      if (existing.status === "PAID") {
-        return respond(200, { ok: true, already_processed: true });
-      }
-      const { data: updated, error: uErr } = await supabase
-        .from("payments")
-        .update({
-          gateway_ref: txn.id,
-          raw_webhook: txn,
-          ...(paid ? {} : { status: "FAILED" }),
-        })
-        .eq("id", existing.id)
-        .select()
-        .single();
-      if (uErr) throw uErr;
-      pay = updated as { id: number; status: string };
-    } else {
-      const { data: created, error: cErr } = await supabase
-        .from("payments")
-        .insert({
-          booking_id: null,
-          gateway_ref: txn.id,
-          amount: Number(txn.amount_cents) / 100,
-          status: paid ? "CREATED" : "FAILED",
-          raw_webhook: txn,
-          merchant_order_id: merchantOrderId,
-        })
-        .select()
-        .single();
-      if (cErr) throw cErr;
-      pay = created as { id: number; status: string };
+    if (existing && (existing as { status: string }).status === "PAID") {
+      // Idempotency: already processed as PAID — acknowledge without re-invoking
+      return respond(200, { ok: true, already_processed: true });
     }
+
+    const recorded = await recordWebhookPayment(supabase, {
+      merchantOrderId,
+      gatewayRef: String(txn.id ?? ""),
+      amount: Math.round(Number(txn.amount_cents ?? 0) / 100),
+      paid,
+      raw: txn,
+    });
+    if (!recorded.ok) throw new Error(recorded.errorCode ?? "INTERNAL");
+    const pay = recorded.data as { id: number; already_paid: boolean };
 
     if (paid) {
       await deps.applyPayment(pay.id);

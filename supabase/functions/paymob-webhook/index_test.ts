@@ -30,7 +30,7 @@ Deno.test("paymob-webhook: valid HMAC + success -> upsert payment, raw_webhook s
   assertEquals(res.status, 200);
   assertEquals(appliedId, 17);
   const pay = fake.tableRows("payments")[0];
-  assertEquals(pay.gateway_ref, 9001);
+  assertEquals(pay.gateway_ref, "9001");
   assertEquals(pay.raw_webhook, TXN);
 });
 

@@ -1,3 +1,5 @@
+import { markPaymentFailed as gatewayMarkPaymentFailed } from "./payments-gateway.ts";
+
 export interface PaymobClientOptions {
   apiKey: string;
   baseUrl?: string;
@@ -137,19 +139,15 @@ export async function markPaymentFailed(
   paymentId: number,
   opts?: { reason?: string },
 ): Promise<void> {
-  try {
-    const updatePayload: Record<string, unknown> = {
-      status: "FAILED",
-    };
-    if (opts?.reason) {
-      updatePayload.raw_webhook = {
+  const detail = opts?.reason
+    ? {
         failure_reason: opts.reason,
         failed_at: new Date().toISOString(),
-      };
-    }
-    await client.from("payments").update(updatePayload).eq("id", paymentId);
-  } catch (err) {
-    console.error(`Failed to mark payment ${paymentId} as FAILED:`, err);
+      }
+    : undefined;
+  const res = await gatewayMarkPaymentFailed(client, paymentId, detail);
+  if (!res.ok) {
+    throw new Error(res.errorCode ?? "INTERNAL");
   }
 }
 
