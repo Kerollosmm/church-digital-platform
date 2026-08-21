@@ -80,7 +80,7 @@ select ok(
 -- ------------------------------------------------- 5..7: lifecycle RPC surface
 select has_function('public', 'create_pending_payment', array['bigint', 'numeric', 'text'],
   'create_pending_payment RPC should exist');
-select has_function('public', 'mark_payment_failed', array['bigint'],
+select has_function('public', 'mark_payment_failed', array['bigint', 'jsonb'],
   'mark_payment_failed RPC should exist');
 select has_function('public', 'mark_payment_refunded', array['bigint'],
   'mark_payment_refunded stays intact');
