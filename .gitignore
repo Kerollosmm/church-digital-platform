@@ -15,3 +15,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Speckit working artifacts
+.scratch/
+
+# Per-run portal credentials (FR-006)
+test-apps/shared/.local-credentials.json

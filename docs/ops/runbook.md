@@ -113,3 +113,20 @@ SELECT * FROM public.vault_preflight();
 * **Database Metrics:** Monitor active connections, CPU/Memory usage, and query performance in Supabase Dashboard -> Reports.
 * **Edge Function Logs:** Check `npx supabase functions logs <function-name>` or Sentry dashboard.
 * **Failure Alerts:** Webhook failures enqueue `refund_requests` or record error states in audit log.
+
+## Browser Test Portals — Privileged Workflow Policy (010)
+
+Portals under `test-apps/` run on the anon key only (zero credential literals).
+Every workflow must complete while signed in as a **seeded role account**
+(switcher cards: USER / ADMIN / SUPER_ADMIN).
+
+**Decision rule**: if a workflow still returns FORBIDDEN under the highest seeded
+role, it drops out of browser coverage into this manual checklist:
+
+1. `supabase secrets set` / vault provisioning checks — use SQL editor as postgres.
+2. Any direct DML on `payments`, `users`, `roles_permissions`, `audit_log` — use
+   service-role SQL session (psql via docker exec), never the browser.
+3. Storage bucket policy changes — apply via forward migration.
+
+Record any newly discovered FORBIDDEN-under-seeded-roles screen here with date +
+owner so it does not silently regress to a privileged browser client.

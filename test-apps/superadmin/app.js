@@ -449,7 +449,7 @@
       const targetUser = state.users.find(u => u.id === uid);
       const oldRole = targetUser ? targetUser.role : 'USER';
 
-      // 1. Update public.users via service_role security seam
+      // 1. Update public.users via privileged RPC security seam
       const { error: updateErr } = await admin
         .from('users')
         .update({

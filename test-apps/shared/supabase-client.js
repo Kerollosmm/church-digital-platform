@@ -9,9 +9,10 @@
 
   const SUPABASE_CONFIG = {
     url: 'http://127.0.0.1:54321',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
-    serviceRoleKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
   };
+  // NOTE: no service-role key here — privileged browser clients are forbidden
+  // (zero credential literals). All portals authenticate as seeded role accounts.
 
   // Error catalog matching public.error_messages and backend contracts
   const ARABIC_ERROR_CATALOG = {
@@ -44,20 +45,18 @@
   };
 
   let clientInstance = null;
-  let adminClientInstance = null;
 
   /**
-   * Initialize Supabase client
+   * Initialize Supabase client (anon key only — no custom-key escape hatch)
    */
-  function initClient(customUrl, customKey) {
+  function initClient(customUrl) {
     const sbGlobal = typeof window !== 'undefined' ? window.supabase : ((typeof globalThis !== 'undefined' && globalThis.supabase) ? globalThis.supabase : null);
     if (!sbGlobal) {
       console.warn('Supabase JS SDK not loaded! Make sure @supabase/supabase-js is loaded.');
       return null;
     }
     const url = customUrl || SUPABASE_CONFIG.url;
-    const key = customKey || SUPABASE_CONFIG.anonKey;
-    clientInstance = sbGlobal.createClient(url, key, {
+    clientInstance = sbGlobal.createClient(url, SUPABASE_CONFIG.anonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -67,24 +66,10 @@
     return clientInstance;
   }
 
-  /**
-   * Initialize Admin client using service_role key
-   */
-  function initAdminClient(customUrl, customKey) {
-    const sbGlobal = typeof window !== 'undefined' ? window.supabase : ((typeof globalThis !== 'undefined' && globalThis.supabase) ? globalThis.supabase : null);
-    if (!sbGlobal) {
-      console.warn('Supabase JS SDK not loaded!');
-      return null;
-    }
-    const url = customUrl || SUPABASE_CONFIG.url;
-    const key = customKey || SUPABASE_CONFIG.serviceRoleKey;
-    adminClientInstance = sbGlobal.createClient(url, key, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false
-      }
-    });
-    return adminClientInstance;
+  // Privileged admin client removed (FR-006): "admin" alias resolves to the
+  // same anon-key client; privileged flows must sign in as seeded role accounts.
+  function initAdminClient(customUrl) {
+    return initClient(customUrl);
   }
 
   function getClient() {
@@ -95,10 +80,11 @@
   }
 
   function getAdminClient() {
-    if (!adminClientInstance) {
-      initAdminClient();
+    // Alias of getClient(): no privileged browser client exists anymore.
+    if (!clientInstance) {
+      initClient();
     }
-    return adminClientInstance;
+    return clientInstance;
   }
 
   /**
