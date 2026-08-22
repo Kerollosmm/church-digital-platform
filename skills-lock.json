@@ -85,6 +85,102 @@
       "skillPath": "skills/engineering/domain-modeling/SKILL.md",
       "computedHash": "f54e391ce6cc28052af46840e3ef8519fd5e746331255510574f0270153186db"
     },
+    "firecrawl-company-directories": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-company-directories/SKILL.md",
+      "computedHash": "c5eec6162de045c87e8dd7c518a3cfdbf47cf1f2c12be079a187adaa97fcdaf6"
+    },
+    "firecrawl-competitive-intel": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-competitive-intel/SKILL.md",
+      "computedHash": "91a3306a617660e10580e036cf8155be2efe4e6efee4f8617b8002957b716982"
+    },
+    "firecrawl-dashboard-reporting": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-dashboard-reporting/SKILL.md",
+      "computedHash": "d5b3c86ad9da9f9d91328bc71b393a4b8874b5cc586a0e92b63db1458584a588"
+    },
+    "firecrawl-deep-research": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-deep-research/SKILL.md",
+      "computedHash": "33e39ac464abe957912be3833436b5d798523fdc74e4db102fdcbfa0276769cd"
+    },
+    "firecrawl-demo-walkthrough": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-demo-walkthrough/SKILL.md",
+      "computedHash": "b086c042f133e73dd31cdfaaa2d7cb094ecb1824ea92cd0113a71565ac7e38af"
+    },
+    "firecrawl-knowledge-base": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-knowledge-base/SKILL.md",
+      "computedHash": "820e9350871735ff586e829746c74b147d3f233e5e6d304d27e3ff0975178203"
+    },
+    "firecrawl-knowledge-ingest": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-knowledge-ingest/SKILL.md",
+      "computedHash": "c82d5e36d9aad29689fec4a3f58b3485219971b65018f239e5f0d2116a0f8213"
+    },
+    "firecrawl-lead-gen": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-lead-gen/SKILL.md",
+      "computedHash": "3c4f97f7655382966141ed999bf1dbc76aacedc6b1124ee874db70e360cc1165"
+    },
+    "firecrawl-lead-research": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-lead-research/SKILL.md",
+      "computedHash": "e25a9f847fae15b4802cc8072ff8d3ed14a3779144f4799925cbdc4b04e5597a"
+    },
+    "firecrawl-market-research": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-market-research/SKILL.md",
+      "computedHash": "637f9fbdfbd61cff41fe3732e0d3a2494f84798bce9dd24ee417e078b9e7a9a1"
+    },
+    "firecrawl-qa": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-qa/SKILL.md",
+      "computedHash": "71d403aeb1a4d527d817f8f160d0200e146663125ff1b48050771128e749515d"
+    },
+    "firecrawl-research-papers": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-research-papers/SKILL.md",
+      "computedHash": "2a9a6c62cb2861f1812b8610ab0a6a62b348508e1c22f92d6eddeb6924c9b5ab"
+    },
+    "firecrawl-seo-audit": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-seo-audit/SKILL.md",
+      "computedHash": "efec8bf676c19e0b230fe3ac152651f22ba84dccc0d545f638252c26ee97c273"
+    },
+    "firecrawl-shop": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-shop/SKILL.md",
+      "computedHash": "3e1d77e2cbe395c508534be2fa93411e8e292442cb7c519442291f38ef16f248"
+    },
+    "firecrawl-website-design-clone": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-website-design-clone/SKILL.md",
+      "computedHash": "95d4eb061a4ef89d0213beefb359c7e06467dfff38fce6e4eacd61175b90b6cf"
+    },
+    "firecrawl-workflows": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-workflows/SKILL.md",
+      "computedHash": "483c3b8eddb6e57d4cac59aaf4f054ecc533a0b7a6fe3ea47f8b46b3b6d3c9f5"
+    },
     "flutter-add-integration-test": {
       "source": "flutter/skills",
       "sourceType": "github",
