@@ -58,12 +58,12 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
           builder: (ctx) => Directionality(
             textDirection: TextDirection.rtl,
             child: AlertDialog(
-              title: Text('????? ?????? #$complaintId'),
-              content: SelectableText(decryptedText.isEmpty ? '?? ???? ??' : decryptedText),
+              title: Text('محتوى الشكوى #$complaintId'),
+              content: SelectableText(decryptedText.isEmpty ? 'لا يوجد نص' : decryptedText),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('?????'),
+                  child: const Text('إغلاق'),
                 ),
               ],
             ),
@@ -74,7 +74,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
       debugPrint('Complaint decryption failure: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('??? ?? ???????. ???? ???????? ??????.')),
+          const SnackBar(content: Text('فشل فك التشفير. يرجى المحاولة لاحقاً.')),
         );
       }
     }
@@ -100,7 +100,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('????? ???????'),
+          title: const Text('إدارة الشكاوى'),
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -111,7 +111,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? Center(child: Text('???: $_error'))
+                ? Center(child: Text('خطأ: $_error'))
                 : Column(
                     children: [
                       Padding(
@@ -120,17 +120,21 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
-                              FilterChip(
-                                label: const Text('????'),
-                                selected: _selectedStatus == null,
-                                onSelected: (_) => setState(() => _selectedStatus = null),
+                              OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: _selectedStatus == null ? Colors.blue.withOpacity(0.1) : null,
+                                ),
+                                onPressed: () => setState(() => _selectedStatus = null),
+                                child: const Text('الكل'),
                               ),
                               const SizedBox(width: 8),
                               for (final status in statuses) ...[
-                                FilterChip(
-                                  label: Text(status),
-                                  selected: _selectedStatus == status,
-                                  onSelected: (_) => setState(() => _selectedStatus = status),
+                                OutlinedButton(
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: _selectedStatus == status ? Colors.blue.withOpacity(0.1) : null,
+                                  ),
+                                  onPressed: () => setState(() => _selectedStatus = status),
+                                  child: Text('حالة: '),
                                 ),
                                 const SizedBox(width: 8),
                               ],
@@ -138,16 +142,16 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                                 const VerticalDivider(width: 16),
                                 DropdownButton<String?>(
                                   value: _selectedCategory,
-                                  hint: const Text('????? ??? ?????'),
+                                  hint: const Text('تصفية حسب الفئة'),
                                   items: [
                                     const DropdownMenuItem<String?>(
                                       value: null,
-                                      child: Text('?? ??????'),
+                                      child: Text('كل الفئات'),
                                     ),
                                     ...categories.map(
                                       (cat) => DropdownMenuItem<String?>(
                                         value: cat,
-                                        child: Text(cat),
+                                        child: Text('تصنيف: '),
                                       ),
                                     ),
                                   ],
@@ -161,7 +165,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                       const Divider(height: 1),
                       Expanded(
                         child: filteredComplaints.isEmpty
-                            ? const Center(child: Text('?? ???? ?????'))
+                            ? const Center(child: Text('لا توجد شكاوى'))
                             : ListView.builder(
                                 itemCount: filteredComplaints.length,
                                 itemBuilder: (context, index) {
@@ -177,7 +181,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                                     child: ListTile(
                                       title: Row(
                                         children: [
-                                          Text('???? #$id'),
+                                          Text('شكوى #$id'),
                                           const SizedBox(width: 12),
                                           Chip(
                                             label: Text(
@@ -197,14 +201,14 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           const SizedBox(height: 4),
-                                          Text('?????: $category'),
-                                          if (assignedTo != null) Text('????? ???: $assignedTo'),
-                                          Text('????? ???????: $createdAt'),
+                                          Text('الفئة: $category'),
+                                          if (assignedTo != null) Text('مسندة إلى: $assignedTo'),
+                                          Text('تاريخ الإنشاء: $createdAt'),
                                         ],
                                       ),
                                       trailing: ElevatedButton.icon(
                                         icon: const Icon(Icons.lock_open, size: 16),
-                                        label: const Text('?? ???????'),
+                                        label: const Text('فك التشفير'),
                                         onPressed: () => _decryptComplaint(id),
                                       ),
                                     ),
