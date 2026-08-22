@@ -1,10 +1,8 @@
-import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:mobile/core/failure.dart';
 import 'package:mobile/models/payment_channel.dart';
 import 'package:mobile/models/payment_proof_input.dart';
-import 'package:mobile/models/payout_channel.dart';
 import 'package:mobile/repositories/supabase_booking_repository.dart';
 import 'package:mobile/services/app_supabase.dart';
 

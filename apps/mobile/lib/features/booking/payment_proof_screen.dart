@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/payment_channel.dart';
@@ -34,7 +33,6 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
 
   PaymentChannel _selectedChannel = PaymentChannel.vodafoneCash;
   List<PayoutChannel> _payoutChannels = [];
-  bool _isLoadingChannels = true;
   bool _isSubmitting = false;
   Uint8List? _selectedImageBytes;
   String? _imageFileName;
@@ -61,7 +59,6 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
     final result = await widget.repository.fetchPayoutChannels();
     if (!mounted) return;
     setState(() {
-      _isLoadingChannels = false;
       result.fold(
         (_) => _payoutChannels = [],
         (channels) => _payoutChannels = channels,
@@ -251,7 +248,9 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          AppStrings.payoutDetailsTitle,
+                          activePayout.displayNameAr.isNotEmpty
+                              ? activePayout.displayNameAr
+                              : AppStrings.payoutDetailsTitle,
                           style: AppTypography.labelMd.copyWith(
                             color: AppColors.secondary,
                             fontWeight: FontWeight.bold,

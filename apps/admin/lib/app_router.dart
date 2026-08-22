@@ -23,6 +23,7 @@ import 'features/content/content_repository.dart';
 import 'features/content/faq_admin_screen.dart';
 import 'features/payments/payment_review_queue_screen.dart';
 import 'features/payments/payments_admin_screen.dart';
+import 'features/payments/payouts_config_screen.dart';
 import 'features/slots/slots_admin_screen.dart';
 
 class AdminShell extends StatelessWidget {
@@ -104,6 +105,12 @@ class AdminShell extends StatelessWidget {
                     title: const Text('المدفوعات'),
                     selected: location == '/payments',
                     onTap: () => context.go('/payments'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.account_balance),
+                    title: const Text('حسابات التحصيل'),
+                    selected: location == '/payouts-config',
+                    onTap: () => context.go('/payouts-config'),
                   ),
                   ListTile(
                     leading: const Icon(Icons.bar_chart),
@@ -219,6 +226,11 @@ GoRouter createAdminRouter({
             path: '/payments',
             name: 'payments',
             builder: (context, state) => PaymentsAdminScreen(repo: PaymentsAdminRepository(resolveDb()!)),
+          ),
+          GoRoute(
+            path: '/payouts-config',
+            name: 'payouts-config',
+            builder: (context, state) => PayoutsConfigScreen(repo: PaymentsAdminRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/analytics',

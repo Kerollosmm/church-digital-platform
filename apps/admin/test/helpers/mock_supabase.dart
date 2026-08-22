@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+
 typedef Row = Map<String, dynamic>;
 typedef RpcHandler = Future<Object?> Function(Map<String, dynamic> args);
 
@@ -10,8 +11,10 @@ typedef RpcHandler = Future<Object?> Function(Map<String, dynamic> args);
 /// Repositories under test are the production classes — only the transport
 /// is faked (AGENTS.md "Direct Repository Testing").
 class MockSupabase {
-  MockSupabase({Map<String, List<Row>>? tables, Map<String, RpcHandler>? rpc})
-      : data = tables ?? {},
+  MockSupabase({Map<String, List<Map<String, dynamic>>>? tables, Map<String, RpcHandler>? rpc})
+      : data = tables != null
+            ? tables.map((k, v) => MapEntry(k, v.map((r) => Map<String, dynamic>.from(r)).toList()))
+            : {},
         rpcHandlers = rpc ?? {};
 
   final Map<String, List<Row>> data;

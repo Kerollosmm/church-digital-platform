@@ -11,7 +11,9 @@ import 'package:admin/features/bookings/emergency_override_screen.dart';
 import 'package:admin/features/complaints/complaints_admin_screen.dart';
 import 'package:admin/features/content/announcements_admin_screen.dart';
 import 'package:admin/features/content/faq_admin_screen.dart';
+import 'package:admin/features/payments/payment_review_queue_screen.dart';
 import 'package:admin/features/payments/payments_admin_screen.dart';
+import 'package:admin/features/payments/payouts_config_screen.dart';
 import 'package:admin/features/slots/slots_admin_screen.dart';
 import '../helpers/mock_supabase.dart';
 
@@ -66,6 +68,8 @@ void main() {
       'announcements': [],
       'faq': [],
       'payments': [],
+      'payment_proofs': [],
+      'payout_channels': [],
       'v_available_slots': [],
     }).build();
 
@@ -79,7 +83,9 @@ void main() {
     expect(find.text('الشكاوى'), findsOneWidget);
     expect(find.text('الإعلانات'), findsOneWidget);
     expect(find.text('الأسئلة الشائعة'), findsOneWidget);
+    expect(find.text('مراجعة إثباتات الدفع'), findsOneWidget);
     expect(find.text('المدفوعات'), findsOneWidget);
+    expect(find.text('حسابات التحصيل'), findsOneWidget);
     expect(find.text('التحليلات'), findsOneWidget);
 
     await tester.tap(find.text('حجز يدوي'));
@@ -112,10 +118,20 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(FaqAdminScreen), findsOneWidget);
 
+    await tester.tap(find.text('مراجعة إثباتات الدفع'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(PaymentReviewQueueScreen), findsOneWidget);
+
     await tester.tap(find.text('المدفوعات'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(PaymentsAdminScreen), findsOneWidget);
+
+    await tester.tap(find.text('حسابات التحصيل'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(PayoutsConfigScreen), findsOneWidget);
 
     await tester.tap(find.text('التحليلات'));
     await tester.pump();

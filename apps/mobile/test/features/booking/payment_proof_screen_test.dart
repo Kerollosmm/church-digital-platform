@@ -157,5 +157,24 @@ void main() {
       expect(repository.lastSubmittedInput!.imagePath, isNull);
       expect(find.text(AppStrings.proofSubmittedSuccess), findsOneWidget);
     });
+
+    testWidgets('dynamically renders updated payout channels returned by repository', (tester) async {
+      repository.payoutChannels = [
+        const PayoutChannel(
+          id: 10,
+          channel: PaymentChannel.vodafoneCash,
+          displayNameAr: 'محفظة الكنيسة المحدثة',
+          accountNumber: '01099998888',
+          holderName: 'أبونا مقار',
+        ),
+      ];
+
+      await tester.pumpWidget(buildTestWidget());
+      await tester.pumpAndSettle();
+
+      expect(find.text('محفظة الكنيسة المحدثة'), findsOneWidget);
+      expect(find.text('01099998888'), findsWidgets);
+      expect(find.text('أبونا مقار'), findsOneWidget);
+    });
   });
 }

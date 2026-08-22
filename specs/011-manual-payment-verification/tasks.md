@@ -123,10 +123,10 @@ Monorepo (per plan.md): `supabase/migrations/`, `supabase/tests/`, `supabase/fun
 
 ### Implementation for User Story 4
 
-- [ ] T030 [P] [US4] Admin repository: `listPayoutChannels` / `upsertPayoutChannel` in `apps/admin/lib/features/payments/payments_admin_repository.dart` with fake-client tests (super-admin allow, admin deny mapping)
-- [ ] T031 [US4] Config screen `apps/admin/lib/features/payments/payouts_config_screen.dart`: per-channel Arabic display name, account number, holder name; visible read-only to ADMIN, editable to SUPER_ADMIN (UI gate mirrors RLS); route in `apps/admin/lib/app_router.dart`
-- [ ] T032 [US4] Widget tests `apps/admin/test/features/payments/payouts_config_test.dart`; `flutter analyze` + `flutter test` green; commit `feat(admin): payout channels configuration`
-- [ ] T033 [US4] Member-side verification: payment proof screen (T013) fetches live `payout_channels` — add repository test asserting displayed values come from the table, not constants
+- [x] T030 [P] [US4] Admin repository: `listPayoutChannels` / `upsertPayoutChannel` in `apps/admin/lib/features/payments/payments_admin_repository.dart` with fake-client tests (super-admin allow, admin deny mapping)
+- [x] T031 [US4] Config screen `apps/admin/lib/features/payments/payouts_config_screen.dart`: per-channel Arabic display name, account number, holder name; visible read-only to ADMIN, editable to SUPER_ADMIN (UI gate mirrors RLS); route in `apps/admin/lib/app_router.dart`
+- [x] T032 [US4] Widget tests `apps/admin/test/features/payments/payouts_config_test.dart`; `flutter analyze` + `flutter test` green; commit `feat(admin): payout channels configuration`
+- [x] T033 [US4] Member-side verification: payment proof screen (T013) fetches live `payout_channels` — add repository test asserting displayed values come from the table, not constants
 
 **Checkpoint**: US4 independently functional; parallelizable with Phases 4–5 after Phase 2.
 
