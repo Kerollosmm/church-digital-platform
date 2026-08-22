@@ -2,7 +2,6 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { SignJWT, importPKCS8 } from "npm:jose@5";
 import { makeServiceClient } from "../_shared/client.ts";
 import { respond, verifyCronOrServiceAuth } from "../_shared/http.ts";
-import { createPaymob, PaymobAdapter } from "../_shared/paymob.ts";
 
 export const TEMPLATES: Record<string, { paramCount: number }> = {
   booking_confirmed: { paramCount: 1 },
@@ -15,7 +14,6 @@ export const TEMPLATES: Record<string, { paramCount: number }> = {
   booking_offer: { paramCount: 1 },
 };
 export const MAX_ATTEMPTS = 5;
-export const REFUND_MAX_ATTEMPTS = 3;
 export const BACKOFF_MS = 30_000;
 export const DRAIN_BATCH = 10;
 export const DRAIN_LIMIT = 100;
@@ -25,12 +23,10 @@ export interface Deps {
   fetch: typeof fetch;
   phoneId: string;
   whatsappToken?: string;
-  paymobApiKey: string;
-  amountMultiplier: number;
+  amountMultiplier?: number;
   fcmProjectId?: string;
   fcmClientEmail?: string;
   fcmPrivateKey?: string;
-  paymob?: PaymobAdapter;
   cronSecret?: string;
   serviceRoleKey?: string;
 }
@@ -118,43 +114,6 @@ export async function sendWhatsApp(row: Row, deps: Deps): Promise<Result> {
   return res.status >= 400 && res.status < 500
     ? { ok: false, retryable: false, error: `WhatsApp API HTTP ${res.status}` }
     : { ok: false, retryable: true, error: `WhatsApp API HTTP ${res.status}` };
-}
-
-export async function triggerPaymobRefund(
-  row: Row,
-  deps: Deps,
-): Promise<Result> {
-  const client = deps.getClient();
-  const { payment_id, amount } = row.payload as {
-    payment_id?: number;
-    amount?: number;
-  };
-  if (!payment_id || !amount) return { ok: false, retryable: false, error: "Missing payment_id or amount" };
-  const { data: pay } = await client
-    .from("payments")
-    .select("gateway_ref")
-    .eq("id", payment_id)
-    .single();
-  if (!pay?.gateway_ref) return { ok: false, retryable: false, error: "Payment missing gateway_ref" };
-
-  const paymob =
-    deps.paymob ??
-    createPaymob({ apiKey: deps.paymobApiKey, fetch: deps.fetch });
-
-  const res = await paymob.refund({
-    transactionId: pay.gateway_ref,
-    amountCents: Math.round(Number(amount) * deps.amountMultiplier),
-  });
-
-  if (res.ok) {
-    await client.rpc("mark_payment_refunded", {
-      p_payment_id: payment_id,
-    });
-    return { ok: true, retryable: false };
-  }
-
-  const is4xx = res.status >= 400 && res.status < 500;
-  return { ok: false, retryable: !is4xx, error: `Paymob refund HTTP ${res.status}` };
 }
 
 let cachedFcmToken: { token: string; expiresAt: number; key: string } | null =
@@ -293,7 +252,6 @@ export async function sendFcmPush(row: Row, deps: Deps): Promise<Result> {
 
 const HANDLERS: Record<string, (row: Row, deps: Deps) => Promise<Result>> = {
   WHATSAPP: sendWhatsApp,
-  PAYMOB_REFUND: triggerPaymobRefund,
   FCM_PUSH: sendFcmPush,
 };
 
@@ -356,21 +314,13 @@ export async function handleRequest(
             return 0;
           }
           const attempts = row.attempts + 1;
-          if (
-            attempts >=
-            (row.handler_type === "PAYMOB_REFUND"
-              ? REFUND_MAX_ATTEMPTS
-              : MAX_ATTEMPTS)
-          ) {
+          if (attempts >= MAX_ATTEMPTS) {
             await setStatus(client, row.id, "FAILED", {
               attempts,
               last_error: outcome.error ?? "Max attempts exceeded",
             });
           } else {
-            const backoff =
-              row.handler_type === "PAYMOB_REFUND"
-                ? 0
-                : BACKOFF_MS * Math.pow(2, attempts);
+            const backoff = BACKOFF_MS * Math.pow(2, attempts);
             await setStatus(client, row.id, "PENDING", {
               attempts,
               next_attempt_at: new Date(Date.now() + backoff).toISOString(),
@@ -400,8 +350,6 @@ if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
       fetch,
       phoneId: Deno.env.get("WHATSAPP_PHONE_ID")!,
       whatsappToken: Deno.env.get("WHATSAPP_TOKEN"),
-      paymobApiKey: Deno.env.get("PAYMOB_API_KEY")!,
-      amountMultiplier: 100,
       cronSecret: Deno.env.get("CRON_SECRET"),
       serviceRoleKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
     }),

@@ -6,7 +6,6 @@ import 'package:mobile/core/failure.dart';
 import 'package:mobile/features/booking/payment_proof_screen.dart';
 import 'package:mobile/models/available_slot.dart';
 import 'package:mobile/models/booking.dart';
-import 'package:mobile/models/booking_checkout_session.dart';
 import 'package:mobile/models/payment_channel.dart';
 import 'package:mobile/models/payment_proof_input.dart';
 import 'package:mobile/models/payout_channel.dart';
@@ -64,13 +63,10 @@ class FakeProofBookingRepository implements BookingRepository {
   @override
   Future<List<Booking>> fetchMyBookings() async => [];
   @override
-  Future<Either<Failure, BookingCheckoutSession>> reserveAndPay({
+  Future<Either<Failure, Booking>> reserveAndPay({
     required int slotId,
     bool whatsappOptIn = false,
   }) async =>
-      const Left(BookingFailure('Unused in this test'));
-  @override
-  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(int bookingId) async =>
       const Left(BookingFailure('Unused in this test'));
   @override
   Future<void> cancelBooking(int bookingId) async {}

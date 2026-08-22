@@ -404,16 +404,7 @@ enabled = true
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
 
-[functions.paymob-checkout]
-verify_jwt = false
-
-[functions.paymob-webhook]
-verify_jwt = false
-
 [functions.event-dispatcher]
-verify_jwt = false
-
-[functions.reconcile-payments]
 verify_jwt = false
 
 [functions.otp-sms]
@@ -427,4 +418,5 @@ verify_jwt = false
 
 [functions.offline-sync]
 verify_jwt = false
+
 

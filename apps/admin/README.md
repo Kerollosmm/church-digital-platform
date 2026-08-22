@@ -6,7 +6,7 @@ The administrative web portal for church priests and system administrators, buil
 
 - **Slot & Capacity Management**: Schedule Masses, set seat limits, lock/unlock booking windows.
 - **Booking Management**: Manual booking (cash), emergency override (reschedule + apology + refund), refund queue.
-- **Financial Reconciliation**: Live view of Paymob transaction logs, pending refund requests, and capacity reports.
+- **Financial Management**: Manual payment proof review (approve/reject), direct cash collection, and payout channel configuration.
 - **Analytics Dashboard**: Slot utilization, payment/refund trends, and booking volume charts with CSV export.
 - **Role-Based Navigation**: View restrictions powered by Supabase Auth RLS claims (`ADMIN`, `SUPER_ADMIN`).
 

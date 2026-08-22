@@ -5,7 +5,7 @@
 -- switch to service_role/authenticated explicitly.
 
 begin;
-select plan(14);
+select plan(9);
 
 -- ---------------------------------------------------------------- fixtures
 delete from public.payments where id in (99981, 99982, 99983);
@@ -77,15 +77,13 @@ select ok(
   'service_role can advance booking to CONFIRMED'
 );
 
--- ------------------------------------------------- 5..7: lifecycle RPC surface
+-- ------------------------------------------------- 5..6: lifecycle RPC surface
 select has_function('public', 'create_pending_payment', array['bigint', 'numeric', 'text'],
   'create_pending_payment RPC should exist');
-select has_function('public', 'mark_payment_failed', array['bigint', 'jsonb'],
-  'mark_payment_failed RPC should exist');
 select has_function('public', 'mark_payment_refunded', array['bigint'],
   'mark_payment_refunded stays intact');
 
--- ------------------------------------------------- 8..10: create_pending_payment
+-- ------------------------------------------------- 7..9: create_pending_payment
 set local role service_role;
 set local request.jwt.claims = '{"role":"service_role"}';
 select public.create_pending_payment(902, 150, 'txn64_new');
@@ -116,42 +114,6 @@ select throws_ok(
   $$ select public.create_pending_payment(902, 100, 'txn64_bad') $$,
   '42501', null,
   'non-owner denied create_pending_payment on someone else''s booking'
-);
-
--- ------------------------------------------------- 11..14: mark_payment_failed
--- authenticated caller denied (execute revoked)
-select throws_ok(
-  $$ select public.mark_payment_failed(99981::bigint) $$,
-  '42501', null,
-  'authenticated caller denied mark_payment_failed (service-role only)'
-);
-
-set local role service_role;
-set local request.jwt.claims = '{"role":"service_role"}';
-select public.mark_payment_failed(99981::bigint);
-reset role;
-select ok(
-  (select status::text from public.payments where id = 99981) = 'FAILED',
-  'service_role marks CREATED payment FAILED'
-);
-
--- idempotent on already-FAILED
-set local role service_role;
-set local request.jwt.claims = '{"role":"service_role"}';
-select public.mark_payment_failed(99981::bigint);
-reset role;
-select ok(
-  (select count(*) from public.payments where id = 99981 and status = 'FAILED') = 1,
-  'mark_payment_failed is idempotent on already-FAILED payments'
-);
-
--- PAID rows are untouchable by mark_payment_failed
-set local role service_role;
-set local request.jwt.claims = '{"role":"service_role"}';
-select throws_ok(
-  $$ select public.mark_payment_failed(99983::bigint) $$,
-  'P0003', null,
-  'mark_payment_failed refuses PAID payments'
 );
 
 select * from finish();

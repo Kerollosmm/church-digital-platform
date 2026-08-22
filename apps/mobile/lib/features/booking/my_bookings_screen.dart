@@ -37,13 +37,13 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
   Future<List<Map<String, dynamic>>> _load() async =>
       widget.repository.myBookings();
 
-  Future<void> _retry(int bookingId) async {
+  Future<void> _submitProof(int bookingId, int amount) async {
     await runGuarded(
       () async {
         if (!mounted) return;
         context.pushNamed(
-          AppRoutes.paymentRedirect,
-          extra: {'bookingId': bookingId, 'checkoutUrl': null},
+          AppRoutes.paymentProof,
+          extra: {'bookingId': bookingId, 'amount': amount},
         );
       },
       onError: (message) {
@@ -104,7 +104,10 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                     ),
                     trailing: (r['status'] == 'PENDING_PAYMENT')
                         ? TextButton(
-                            onPressed: () => _retry(r['id'] as int),
+                            onPressed: () => _submitProof(
+                              r['id'] as int,
+                              (r['paid_amount'] as num?)?.toInt() ?? 0,
+                            ),
                             child: const Text(AppStrings.retryPayment),
                           )
                         : null,

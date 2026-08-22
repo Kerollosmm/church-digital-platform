@@ -3,7 +3,6 @@ import '../core/either.dart';
 import '../core/failure.dart';
 import '../models/available_slot.dart';
 import '../models/booking.dart';
-import '../models/booking_checkout_session.dart';
 import '../models/payment_proof_input.dart';
 import '../models/payout_channel.dart';
 
@@ -13,14 +12,11 @@ abstract interface class BookingRepository {
   Future<List<AvailableSlot>> fetchAvailableSlots();
   Future<List<Booking>> fetchMyBookings();
 
-  /// Single public entrypoint for reserving and initiating payment for a slot.
-  Future<Either<Failure, BookingCheckoutSession>> reserveAndPay({
+  /// Single public entrypoint for reserving a slot.
+  Future<Either<Failure, Booking>> reserveAndPay({
     required int slotId,
     bool whatsappOptIn = false,
   });
-
-  /// Explicit retry method to re-initialize Paymob checkout for a pending booking.
-  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(int bookingId);
 
   Future<Either<Failure, List<PayoutChannel>>> fetchPayoutChannels();
   Future<Either<Failure, int>> submitPaymentProof(PaymentProofInput input);

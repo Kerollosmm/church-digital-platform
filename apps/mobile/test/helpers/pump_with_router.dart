@@ -15,7 +15,7 @@ Future<void> pumpWithRouter(
         initialLocation: '/',
         routes: [
           GoRoute(path: '/', builder: (_, _) => home),
-          paymentRedirectRoute(db ?? UnimplementedAppSupabase()),
+          paymentProofRoute(db ?? UnimplementedAppSupabase()),
         ],
       ),
     ),

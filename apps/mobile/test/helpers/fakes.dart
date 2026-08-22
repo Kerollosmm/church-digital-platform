@@ -3,7 +3,6 @@ import 'package:mobile/core/either.dart';
 import 'package:mobile/core/failure.dart';
 import 'package:mobile/models/available_slot.dart';
 import 'package:mobile/models/booking.dart';
-import 'package:mobile/models/booking_checkout_session.dart';
 import 'package:mobile/models/payment_proof_input.dart';
 import 'package:mobile/models/payout_channel.dart';
 import 'package:mobile/repositories/booking_repository.dart';
@@ -66,7 +65,7 @@ class FakeBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<Either<Failure, BookingCheckoutSession>> reserveAndPay({
+  Future<Either<Failure, Booking>> reserveAndPay({
     required int slotId,
     bool whatsappOptIn = false,
   }) async {
@@ -88,38 +87,7 @@ class FakeBookingRepository implements BookingRepository {
             paidAmount: isFree ? 0 : 50,
           );
 
-    return Right(
-      BookingCheckoutSession(
-        booking: booking,
-        checkoutUrl: isFree ? null : checkoutUrl,
-        paymentId: isFree ? null : 1001,
-        isConfirmed: isFree,
-      ),
-    );
-  }
-
-  @override
-  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(
-    int bookingId,
-  ) async {
-    calls.add('retryCheckout');
-    final booking = bookings.firstWhere(
-      (b) => b.id == bookingId,
-      orElse: () => fakeBooking,
-    );
-    if (checkoutUrl == null) {
-      return Left(
-        CheckoutFailure('No checkout URL configured', bookingId: bookingId),
-      );
-    }
-    return Right(
-      BookingCheckoutSession(
-        booking: booking,
-        checkoutUrl: checkoutUrl,
-        paymentId: 1001,
-        isConfirmed: false,
-      ),
-    );
+    return Right(booking);
   }
 
   @override
@@ -141,4 +109,3 @@ final fakeBooking = Booking(
   serviceName: 'قداس',
   paidAmount: 0,
 );
-

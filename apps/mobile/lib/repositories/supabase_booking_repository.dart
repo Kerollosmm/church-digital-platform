@@ -5,7 +5,6 @@ import '../core/either.dart';
 import '../core/failure.dart';
 import '../models/available_slot.dart';
 import '../models/booking.dart';
-import '../models/booking_checkout_session.dart';
 import '../models/payment_proof_input.dart';
 import '../models/payout_channel.dart';
 import '../services/app_supabase.dart';
@@ -48,18 +47,17 @@ class SupabaseBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<Either<Failure, BookingCheckoutSession>> reserveAndPay({
+  Future<Either<Failure, Booking>> reserveAndPay({
     required int slotId,
     bool whatsappOptIn = false,
   }) async {
-    // 1. Atomic reservation via book_slot RPC
-    final Booking booking;
     try {
       final data = await _supabase.rpc('book_slot', {
         'p_slot_id': slotId,
         'p_opt_in': whatsappOptIn,
       });
-      booking = Booking.fromJson(Map<String, dynamic>.from(data as Map));
+      final booking = Booking.fromJson(Map<String, dynamic>.from(data as Map));
+      return Right(booking);
     } on PostgrestException catch (e) {
       developer.log(
         'book_slot RPC failed: ${e.message}',
@@ -77,124 +75,6 @@ class SupabaseBookingRepository implements BookingRepository {
       );
       return Left(BookingFailure(e.toString(), originalError: e));
     }
-
-    // 2. Free booking -> immediately confirmed (no Paymob checkout dispatch)
-    if (booking.paidAmount == 0) {
-      return Right(
-        BookingCheckoutSession(
-          booking: booking,
-          checkoutUrl: null,
-          paymentId: null,
-          isConfirmed: true,
-        ),
-      );
-    }
-
-    // 3. Paid booking -> dispatch Paymob checkout intent
-    try {
-      final checkout = await _createCheckout(booking.id);
-      final checkoutUrl = checkout?['checkout_url'] as String?;
-      final paymentId = checkout?['payment_id'] as int?;
-
-      if (checkoutUrl == null || checkoutUrl.isEmpty) {
-        return Left(
-          CheckoutFailure(
-            'Missing checkout URL in Paymob response',
-            bookingId: booking.id,
-          ),
-        );
-      }
-
-      return Right(
-        BookingCheckoutSession(
-          booking: booking,
-          checkoutUrl: checkoutUrl,
-          paymentId: paymentId,
-          isConfirmed: false,
-        ),
-      );
-    } catch (e) {
-      developer.log(
-        'paymob-checkout failed for booking #${booking.id}: $e',
-        name: 'BookingRepository',
-      );
-      return Left(
-        CheckoutFailure(
-          'Failed to initialize payment checkout: $e',
-          bookingId: booking.id,
-          originalError: e,
-        ),
-      );
-    }
-  }
-
-  @override
-  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(
-    int bookingId,
-  ) async {
-    try {
-      final rows = await _supabase.query(
-        'v_my_bookings',
-        filters: {'id': bookingId},
-      );
-      if (rows.isEmpty) {
-        return Left(
-          BookingFailure('Booking #$bookingId not found', code: 'PGRST204'),
-        );
-      }
-      final booking = Booking.fromJson(rows.first);
-      if (booking.status != 'PENDING_PAYMENT') {
-        return Left(
-          CheckoutFailure(
-            'Cannot retry checkout for booking with status ${booking.status}',
-            bookingId: bookingId,
-          ),
-        );
-      }
-
-      final checkout = await _createCheckout(bookingId);
-      final checkoutUrl = checkout?['checkout_url'] as String?;
-      final paymentId = checkout?['payment_id'] as int?;
-
-      if (checkoutUrl == null || checkoutUrl.isEmpty) {
-        return Left(
-          CheckoutFailure(
-            'Missing checkout URL in Paymob response',
-            bookingId: bookingId,
-          ),
-        );
-      }
-
-      return Right(
-        BookingCheckoutSession(
-          booking: booking,
-          checkoutUrl: checkoutUrl,
-          paymentId: paymentId,
-          isConfirmed: false,
-        ),
-      );
-    } catch (e) {
-      developer.log(
-        'retryCheckout failed for booking #$bookingId: $e',
-        name: 'BookingRepository',
-      );
-      return Left(
-        CheckoutFailure(
-          'Failed to retry payment checkout: $e',
-          bookingId: bookingId,
-          originalError: e,
-        ),
-      );
-    }
-  }
-
-  /// Internal checkout creation helper (hidden from presentation interface)
-  Future<Map<String, dynamic>?> _createCheckout(int bookingId) async {
-    final data = await _supabase.invokeFunction(
-      'paymob-checkout',
-      body: {'booking_id': bookingId},
-    );
-    return data;
   }
 
   @override
@@ -300,14 +180,10 @@ class EmptyBookingRepository implements BookingRepository {
   @override
   Future<List<Booking>> fetchMyBookings() async => [];
   @override
-  Future<Either<Failure, BookingCheckoutSession>> reserveAndPay({
+  Future<Either<Failure, Booking>> reserveAndPay({
     required int slotId,
     bool whatsappOptIn = false,
   }) async => const Left(BookingFailure('Empty booking repository'));
-  @override
-  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(
-    int bookingId,
-  ) async => const Left(BookingFailure('Empty booking repository'));
   @override
   Future<Either<Failure, List<PayoutChannel>>> fetchPayoutChannels() async =>
       const Right([]);

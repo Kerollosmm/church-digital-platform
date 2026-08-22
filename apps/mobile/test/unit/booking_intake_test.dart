@@ -71,7 +71,7 @@ class MockAppSupabase implements AppSupabase {
 }
 
 void main() {
-  group('Deep Booking Intake Seam — reserveAndPay & retryCheckout', () {
+  group('Deep Booking Intake Seam — reserveAndPay', () {
     late MockAppSupabase mockSupabase;
     late SupabaseBookingRepository repository;
 
@@ -81,7 +81,7 @@ void main() {
     });
 
     test(
-      '1. Paid slot triggers atomic reservation and creates Paymob checkout session',
+      '1. Paid slot triggers atomic reservation and returns Booking in PENDING_PAYMENT',
       () async {
         mockSupabase.rpcResponse = {
           'id': 101,
@@ -90,11 +90,6 @@ void main() {
           'status': 'PENDING_PAYMENT',
           'paid_amount': 50,
         };
-        mockSupabase.functionResponse = {
-          'checkout_url':
-              'https://accept.paymob.com/standalone?payment_token=token123',
-          'payment_id': 9901,
-        };
 
         final result = await repository.reserveAndPay(
           slotId: 5,
@@ -102,26 +97,19 @@ void main() {
         );
 
         expect(result.isRight, isTrue);
-        final session = result.rightOrNull!;
-        expect(session.booking.id, equals(101));
-        expect(session.booking.status, equals('PENDING_PAYMENT'));
-        expect(
-          session.checkoutUrl,
-          equals('https://accept.paymob.com/standalone?payment_token=token123'),
-        );
-        expect(session.paymentId, equals(9901));
-        expect(session.isConfirmed, isFalse);
+        final booking = result.rightOrNull!;
+        expect(booking.id, equals(101));
+        expect(booking.status, equals('PENDING_PAYMENT'));
+        expect(booking.paidAmount, equals(50));
 
         expect(mockSupabase.rpcCalls, contains('book_slot'));
         expect(mockSupabase.rpcParams['p_slot_id'], equals(5));
         expect(mockSupabase.rpcParams['p_opt_in'], isTrue);
-        expect(mockSupabase.functionCalls, contains('paymob-checkout'));
-        expect(mockSupabase.functionBodies['booking_id'], equals(101));
       },
     );
 
     test(
-      '2. Free slot (paid_amount == 0) returns session without dispatching Paymob checkout',
+      '2. Free slot (paid_amount == 0) returns booking without payment required',
       () async {
         mockSupabase.rpcResponse = {
           'id': 102,
@@ -137,20 +125,17 @@ void main() {
         );
 
         expect(result.isRight, isTrue);
-        final session = result.rightOrNull!;
-        expect(session.booking.id, equals(102));
-        expect(session.checkoutUrl, isNull);
-        expect(session.paymentId, isNull);
-        expect(session.isConfirmed, isTrue);
+        final booking = result.rightOrNull!;
+        expect(booking.id, equals(102));
+        expect(booking.paidAmount, equals(0));
 
         expect(mockSupabase.rpcCalls, contains('book_slot'));
         expect(mockSupabase.rpcParams['p_opt_in'], isFalse);
-        expect(mockSupabase.functionCalls, isEmpty);
       },
     );
 
     test(
-      '3. RPC failure (slot full / PostgrestException) returns Left(BookingFailure) without checkout',
+      '3. RPC failure (slot full / PostgrestException) returns Left(BookingFailure)',
       () async {
         mockSupabase.rpcError = const PostgrestException(
           message: 'SLOT_FULL',
@@ -169,137 +154,10 @@ void main() {
         expect(failure.code, equals('P0001'));
 
         expect(mockSupabase.rpcCalls, contains('book_slot'));
-        expect(mockSupabase.functionCalls, isEmpty);
       },
     );
 
-    test(
-      '4. Checkout failure after successful reservation returns Left(CheckoutFailure) with booking ID',
-      () async {
-        mockSupabase.rpcResponse = {
-          'id': 103,
-          'slot_id': 8,
-          'user_id': 'aaaaaaaa-0000-0000-0000-000000000002',
-          'status': 'PENDING_PAYMENT',
-          'paid_amount': 75,
-        };
-        mockSupabase.functionError = Exception(
-          'Paymob Gateway 502 Bad Gateway',
-        );
-
-        final result = await repository.reserveAndPay(
-          slotId: 8,
-          whatsappOptIn: true,
-        );
-
-        expect(result.isLeft, isTrue);
-        final failure = result.leftOrNull!;
-        expect(failure, isA<CheckoutFailure>());
-        expect((failure as CheckoutFailure).bookingId, equals(103));
-        expect(failure.message, contains('Paymob Gateway 502'));
-
-        expect(mockSupabase.rpcCalls, contains('book_slot'));
-        expect(mockSupabase.functionCalls, contains('paymob-checkout'));
-      },
-    );
-
-    test(
-      '5. Paid reservation + empty/missing checkout_url in payload => Left(CheckoutFailure) with bookingId',
-      () async {
-        mockSupabase.rpcResponse = {
-          'id': 104,
-          'slot_id': 9,
-          'user_id': 'aaaaaaaa-0000-0000-0000-000000000002',
-          'status': 'PENDING_PAYMENT',
-          'paid_amount': 100,
-        };
-        // Paymob returns 200 with empty body / missing checkout_url
-        mockSupabase.functionResponse = {};
-
-        final result = await repository.reserveAndPay(
-          slotId: 9,
-          whatsappOptIn: false,
-        );
-
-        expect(result.isLeft, isTrue);
-        final failure = result.leftOrNull!;
-        expect(failure, isA<CheckoutFailure>());
-        expect((failure as CheckoutFailure).bookingId, equals(104));
-        expect(failure.message, contains('Missing checkout URL'));
-      },
-    );
-
-    test(
-      '6. retryCheckout returns Either<Failure, BookingCheckoutSession> on success and failure',
-      () async {
-        // Success case: booking exists with PENDING_PAYMENT
-        mockSupabase.queryResponse = [
-          {
-            'id': 201,
-            'status': 'PENDING_PAYMENT',
-            'paid_amount': 50,
-            'title_ar': 'رحلة',
-          },
-        ];
-        mockSupabase.functionResponse = {
-          'checkout_url':
-              'https://accept.paymob.com/standalone?payment_token=token456',
-          'payment_id': 9902,
-        };
-
-        final okResult = await repository.retryCheckout(201);
-        expect(okResult.isRight, isTrue);
-        final session = okResult.rightOrNull!;
-        expect(session.booking.id, equals(201));
-        expect(session.booking.status, equals('PENDING_PAYMENT'));
-        expect(
-          session.checkoutUrl,
-          equals('https://accept.paymob.com/standalone?payment_token=token456'),
-        );
-        expect(mockSupabase.queryTables, contains('v_my_bookings'));
-
-        // Error case: Paymob failure
-        mockSupabase.queryResponse = [
-          {'id': 202, 'status': 'PENDING_PAYMENT', 'paid_amount': 50},
-        ];
-        mockSupabase.functionError = Exception('Network Timeout');
-        final errResult = await repository.retryCheckout(202);
-        expect(errResult.isLeft, isTrue);
-        final failure = errResult.leftOrNull!;
-        expect(failure, isA<CheckoutFailure>());
-        expect((failure as CheckoutFailure).bookingId, equals(202));
-      },
-    );
-
-    test(
-      '6b. retryCheckout on non-existent booking returns Left(BookingFailure) without calling paymob-checkout',
-      () async {
-        mockSupabase.queryResponse = []; // Not found
-
-        final result = await repository.retryCheckout(203);
-        expect(result.isLeft, isTrue);
-        final failure = result.leftOrNull!;
-        expect(failure, isA<BookingFailure>());
-        expect(mockSupabase.functionCalls, isNot(contains('paymob-checkout')));
-      },
-    );
-
-    test(
-      '6c. retryCheckout on non-PENDING_PAYMENT booking returns Left(CheckoutFailure) without calling paymob-checkout',
-      () async {
-        mockSupabase.queryResponse = [
-          {'id': 204, 'status': 'CONFIRMED', 'paid_amount': 50},
-        ];
-
-        final result = await repository.retryCheckout(204);
-        expect(result.isLeft, isTrue);
-        final failure = result.leftOrNull!;
-        expect(failure, isA<CheckoutFailure>());
-        expect(mockSupabase.functionCalls, isNot(contains('paymob-checkout')));
-      },
-    );
-
-    test('7. Unauthenticated call returns Left(AuthFailure)', () async {
+    test('4. Unauthenticated call returns Left(AuthFailure)', () async {
       mockSupabase.rpcError = const PostgrestException(
         message: 'AUTH_REQUIRED',
         code: '28000',
@@ -317,7 +175,7 @@ void main() {
     });
 
     test(
-      '8. BookingFlowController drives reserveAndPay and provides localized Arabic error messages',
+      '5. BookingFlowController drives reserveAndPay and provides localized Arabic error messages',
       () async {
         final controller = BookingFlowController(repository);
         mockSupabase.rpcError = const PostgrestException(
@@ -334,11 +192,10 @@ void main() {
     );
 
     test(
-      '9. EmptyBookingRepository provides safe no-op implementations without throwing',
+      '6. EmptyBookingRepository provides safe no-op implementations without throwing',
       () async {
         final empty = EmptyBookingRepository();
         expect((await empty.reserveAndPay(slotId: 1)).isLeft, isTrue);
-        expect((await empty.retryCheckout(1)).isLeft, isTrue);
         await expectLater(empty.cancelBooking(1), completes);
         await expectLater(empty.confirmBooking(1), completes);
         await expectLater(empty.completeBooking(1), completes);
@@ -346,40 +203,26 @@ void main() {
     );
 
     test(
-      '10. Fake adapter reserveAndPay and retryCheckout are slot-aware and deterministic',
+      '7. Fake adapter reserveAndPay is slot-aware and deterministic',
       () async {
         final fake = FakeBookingRepository(
           slots: [
             {'id': 12, 'title_ar': 'قداس الأحد', 'price': 0},
             {'id': 13, 'title_ar': 'رحلة دير الأنبا بولا', 'price': 150},
           ],
-          checkoutUrl: 'https://accept.paymob.com/checkout?token=abc',
         );
 
         // Slot 12 is free
         final resFree = await fake.reserveAndPay(slotId: 12);
         expect(resFree.isRight, isTrue);
-        expect(resFree.rightOrNull!.booking.id, equals(12));
-        expect(resFree.rightOrNull!.isConfirmed, isTrue);
-        expect(resFree.rightOrNull!.checkoutUrl, isNull);
+        expect(resFree.rightOrNull!.id, equals(12));
+        expect(resFree.rightOrNull!.paidAmount, equals(0));
 
         // Slot 13 is paid
         final resPaid = await fake.reserveAndPay(slotId: 13);
         expect(resPaid.isRight, isTrue);
-        expect(resPaid.rightOrNull!.booking.id, equals(13));
-        expect(resPaid.rightOrNull!.isConfirmed, isFalse);
-        expect(
-          resPaid.rightOrNull!.checkoutUrl,
-          equals('https://accept.paymob.com/checkout?token=abc'),
-        );
-
-        // retryCheckout on fake
-        final resRetry = await fake.retryCheckout(13);
-        expect(resRetry.isRight, isTrue);
-        expect(
-          resRetry.rightOrNull!.checkoutUrl,
-          equals('https://accept.paymob.com/checkout?token=abc'),
-        );
+        expect(resPaid.rightOrNull!.id, equals(13));
+        expect(resPaid.rightOrNull!.paidAmount, equals(50));
       },
     );
   });

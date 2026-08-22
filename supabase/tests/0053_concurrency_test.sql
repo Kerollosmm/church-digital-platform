@@ -303,6 +303,7 @@ BEGIN
 
   -- Teardown
   PERFORM dblink_exec(v_conn1, $cleanup$
+    DELETE FROM public.event_outbox WHERE payload->>'payment_id' = '99993';
     DELETE FROM public.payments WHERE id = 99993;
     DELETE FROM public.bookings WHERE id = 99993;
     DELETE FROM public.service_slots WHERE id = 993;

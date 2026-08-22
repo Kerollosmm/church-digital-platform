@@ -1,6 +1,6 @@
 import '../core/either.dart';
 import '../core/failure.dart';
-import '../models/booking_checkout_session.dart';
+import '../models/booking.dart';
 import '../repositories/booking_repository.dart';
 import '../services/app_strings.dart';
 
@@ -8,7 +8,7 @@ class BookingFlowController {
   BookingFlowController(this._repository);
   final BookingRepository _repository;
 
-  Future<Either<Failure, BookingCheckoutSession>> reserveAndPay({
+  Future<Either<Failure, Booking>> reserveAndPay({
     required int slotId,
     bool whatsappOptIn = false,
   }) {
@@ -16,10 +16,6 @@ class BookingFlowController {
       slotId: slotId,
       whatsappOptIn: whatsappOptIn,
     );
-  }
-
-  Future<Either<Failure, BookingCheckoutSession>> retryCheckout(int bookingId) {
-    return _repository.retryCheckout(bookingId);
   }
 
   String localizedMessage(Failure failure) {
@@ -31,7 +27,6 @@ class BookingFlowController {
     if (failure is AuthFailure || msg.contains('AUTH_REQUIRED')) {
       return AppStrings.authExpired;
     }
-    if (failure is CheckoutFailure) return AppStrings.paymentOpenFailed;
     return AppStrings.bookingFailed;
   }
 }

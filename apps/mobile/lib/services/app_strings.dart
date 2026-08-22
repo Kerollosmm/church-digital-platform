@@ -84,24 +84,8 @@ class AppStrings {
   static const paidAmountLabel = 'المبلغ المدفوع';
   static const createdAtLabel = 'تاريخ الحجز';
 
-  static const checkoutTitle = 'إتمام الدفع';
-  static const checkoutSubtitle =
-      'اختر وسيلة الدفع المناسبة لإتمام حجزك بأمان.';
-  static const paymentMethodsTitle = 'طرق الدفع';
-  static const cardMethod = 'البطاقات البنكية / ميزة';
-  static const cardMethodDesc =
-      'دفع آمن وسريع عبر بطاقات الخصم المباشر أو الائتمان.';
-  static const fawryMethod = 'فوري باي (Fawry Pay)';
-  static const fawryMethodDesc = 'احصل على كود وادفع من أي منفذ فوري.';
-  static const walletMethod = 'المحافظ الإلكترونية';
-  static const walletMethodDesc = 'فودافون كاش، اتصالات كاش، أورانج كاش.';
-  static const securePaymentTitle = 'دفع آمن';
-  static const securePaymentDesc =
-      'عملية الدفع مشفرة ومؤمنة بالكامل عبر بوابة Paymob.';
+  static const checkoutTitle = 'إتمام الحجز';
   static const orderSummaryTitle = 'ملخص الطلب';
-  static const payNow = 'ادفع الآن';
-  static const termsNote =
-      'بالنقر على "ادفع الآن"، أنت توافق على الشروط والأحكام.';
 
   static const paymentProofTitle = 'إرسال إثبات الدفع';
   static const paymentProofSubtitle =

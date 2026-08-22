@@ -1,11 +1,10 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/booking/my_bookings_screen.dart';
-import 'package:mobile/features/booking/payment_redirect_screen.dart';
+import 'package:mobile/features/booking/payment_proof_screen.dart';
 import 'package:mobile/models/booking_status.dart';
 import 'package:mobile/models/resolved_booking_status.dart';
 import 'package:mobile/repositories/supabase_booking_repository.dart';
-import 'package:mobile/services/app_strings.dart';
 import '../../helpers/pump_with_router.dart';
 import '../../helpers/test_app_supabase.dart';
 
@@ -40,7 +39,7 @@ void main() {
   });
 
   testWidgets(
-    'my bookings shows chips and retry button calls checkout for same booking',
+    'my bookings shows chips and retry button navigates to PaymentProofScreen',
     (tester) async {
       final fake = TestAppSupabase(
         {
@@ -49,16 +48,20 @@ void main() {
               'id': 7,
               'slot_id': 1,
               'status': 'PENDING_PAYMENT',
-              'paid_amount': 0,
+              'paid_amount': 150,
               'created_at': '2026-08-09T08:00:00+02:00',
             },
           ],
-        },
-        rpcHandler: {
-          'paymob-checkout': (params) async => {
-            'id': 'pay-1',
-            'checkout_url': 'https://example.test',
-          },
+          'payout_channels': [
+            {
+              'id': 1,
+              'channel': 'VODAFONE_CASH',
+              'display_name_ar': 'فودافون كاش',
+              'account_number': '01000000000',
+              'holder_name': 'الكنيسة القبطية',
+              'is_active': true,
+            },
+          ],
         },
       );
       final repo = SupabaseBookingRepository(fake);
@@ -70,13 +73,7 @@ void main() {
       expect(find.text('في انتظار الدفع'), findsOneWidget);
       await tester.tap(find.text('إعادة الدفع'));
       await tester.pumpAndSettle();
-      expect(find.byType(PaymentRedirectScreen), findsOneWidget);
-      final payBtn = find.text(AppStrings.payNow);
-      await tester.ensureVisible(payBtn);
-      await tester.tap(payBtn);
-      await tester.pumpAndSettle();
-      expect(fake.rpcCalls, ['paymob-checkout']);
-      expect(fake.rpcArgs['paymob-checkout'], {'booking_id': 7});
+      expect(find.byType(PaymentProofScreen), findsOneWidget);
     },
   );
 }

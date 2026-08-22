@@ -108,7 +108,6 @@ class FakeSupabase implements AppSupabase {
     rpcCalls.add(fn);
     if (body != null) rpcArgs[fn] = Map<String, Object?>.from(body);
     return {
-      'checkout_url': 'https://paymob.com/checkout/test',
       'rpc': fn,
       'args': body,
     };

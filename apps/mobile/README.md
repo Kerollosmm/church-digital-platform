@@ -5,7 +5,7 @@ The cross-platform mobile client application for the Coptic Church Digital Platf
 ## 📱 Features
 
 - **Mass & Event Booking**: Search liturgy schedules, reserve multi-seat slots, and receive instant QR tickets.
-- **Payment Processing**: Integrated online checkout supporting card payments and Egyptian mobile wallets (Vodafone Cash / Paymob).
+- **Payment Processing**: Manual payment proof verification supporting Vodafone Cash, InstaPay, and in-person cash.
 - **Coptic Calendar & Announcements**: View upcoming church feasts, meetings, and unlisted event broadcasts.
 - **Arabic / RTL UI**: Native Right-To-Left layout and localized Arabic text for church members.
 

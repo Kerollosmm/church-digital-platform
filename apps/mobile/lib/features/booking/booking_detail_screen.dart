@@ -63,14 +63,18 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   ),
                 );
               },
-              (session) {
-                context.pushNamed(
-                  AppRoutes.paymentRedirect,
-                  extra: {
-                    'bookingId': session.booking.id,
-                    'checkoutUrl': session.checkoutUrl,
-                  },
-                );
+              (booking) {
+                if (booking.paidAmount > 0) {
+                  context.pushNamed(
+                    AppRoutes.paymentProof,
+                    extra: {
+                      'bookingId': booking.id,
+                      'amount': booking.paidAmount.toInt(),
+                    },
+                  );
+                } else {
+                  Navigator.pop(context);
+                }
               },
             );
           },

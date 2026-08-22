@@ -52,7 +52,6 @@ class TestAppSupabase implements AppSupabase {
       if (res is Map) return Map<String, dynamic>.from(res);
     }
     return {
-      'checkout_url': 'https://paymob.com/checkout/test',
       'fn': fn,
       'body': body,
     };

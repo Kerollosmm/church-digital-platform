@@ -55,8 +55,8 @@
 \ir 0062_drop_video_privacy_test.sql
 \ir 0063_service_role_grants_test.sql
 \ir 0064_transition_owner_guard_test.sql
-\ir 0065_webhook_payment_rpc_test.sql
 \ir 0066_manual_payment_foundations_test.sql
 \ir 0067_submit_payment_proof_test.sql
 \ir 0068_payment_decision_rpcs_test.sql
 \ir 0069_mark_cash_received_test.sql
+\ir 0070_drop_paymob_stack_test.sql
