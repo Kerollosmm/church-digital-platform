@@ -2,6 +2,7 @@ import { assertEquals, assertNotEquals } from "jsr:@std/assert";
 import {
   approvePaymentProof,
   createPendingPayment,
+  markCashReceived,
   markPaymentFailed,
   recordPaidPayment,
   rejectPaymentProof,
@@ -131,3 +132,22 @@ Deno.test("gateway: rejectPaymentProof calls reject_payment_proof RPC", async ()
     p_reason_code: "BAD_REQUEST",
   });
 });
+
+Deno.test("gateway: markCashReceived calls mark_cash_received RPC", async () => {
+  const calls: RpcCall[] = [];
+  const res = await markCashReceived(stubClient(calls) as never, {
+    bookingId: 701,
+    amount: 250,
+    collectorNote: "Received at church office",
+  });
+
+  assertEquals(res.ok, true);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0].fn, "mark_cash_received");
+  assertEquals(calls[0].params, {
+    p_booking_id: 701,
+    p_amount: 250,
+    p_collector_note: "Received at church office",
+  });
+});
+

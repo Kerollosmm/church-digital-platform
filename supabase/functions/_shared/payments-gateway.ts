@@ -128,3 +128,24 @@ export async function rejectPaymentProof(
   return { ok: true };
 }
 
+export async function markCashReceived(
+  client: SupabaseClient,
+  opts: {
+    bookingId: number;
+    amount: number;
+    collectorNote?: string | null;
+  },
+): Promise<GatewayResult<{ proof_id: number; booking_id: number; payment_id: number }>> {
+  const { data, error } = await client.rpc("mark_cash_received", {
+    p_booking_id: opts.bookingId,
+    p_amount: opts.amount,
+    p_collector_note: opts.collectorNote ?? null,
+  });
+  if (error) return fail(error);
+  return {
+    ok: true,
+    data: data as { proof_id: number; booking_id: number; payment_id: number },
+  };
+}
+
+
