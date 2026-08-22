@@ -953,6 +953,36 @@
     </div>
   </div>
 
+  <!-- Modal 7: Mark Cash Received Directly on Booking -->
+  <div id="modal-direct-cash" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width:540px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--success);">💵 تحصيل نقدي مباشر في الخزينة</h3>
+        <button class="modal-close" onclick="window.AdminApp.closeModal('modal-direct-cash')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm" style="margin-bottom:12px;">
+          تسجيل تحصيل نقدي مباشر للحجز رقم <strong id="direct-cash-booking-id-text" style="color:var(--gold);">#--</strong>:
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="direct-cash-amount">المبلغ المحصل (ج.م):</label>
+          <input type="number" id="direct-cash-amount" class="form-input" min="1" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="direct-cash-note">ملاحظة التحصيل / اسم المستلم:</label>
+          <input type="text" id="direct-cash-note" class="form-input" placeholder="استلام نقدي بالخزينة">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="window.AdminApp.closeModal('modal-direct-cash')">إلغاء</button>
+        <button id="btn-confirm-direct-cash" class="btn btn-success" onclick="window.AdminApp.executeDirectCashBooking()">
+          <span>تأكيد استلام النقدية (mark_cash_received)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
 
   <!-- Footer -->
   <footer class="portal-footer">

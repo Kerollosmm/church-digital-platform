@@ -103,13 +103,13 @@ Monorepo (per plan.md): `supabase/migrations/`, `supabase/tests/`, `supabase/fun
 
 ### Tests for User Story 3 (write FIRST, verify FAIL)
 
-- [ ] T026 [P] [US3] Write failing SQL test `supabase/tests/0069_mark_cash_received_test.sql`: (a) ADMIN marks cash → APPROVED CASH proof with collector note + reviewer/time, payment `PAID`, booking `AWAITING_CALL`; (b) USER-role denied `FORBIDDEN` zero rows; (c) booking not `PENDING_PAYMENT` → `BAD_REQUEST`; (d) existing PENDING proof → `BAD_REQUEST` (decide it first); (e) amount ≤ 0 → `BAD_REQUEST`
-- [ ] T027 [P] [US3] Register in `run_all.sql`; confirm FAIL (red)
+- [x] T026 [P] [US3] Write failing SQL test `supabase/tests/0069_mark_cash_received_test.sql`: (a) ADMIN marks cash → APPROVED CASH proof with collector note + reviewer/time, payment `PAID`, booking `AWAITING_CALL`; (b) USER-role denied `FORBIDDEN` zero rows; (c) booking not `PENDING_PAYMENT` → `BAD_REQUEST`; (d) existing PENDING proof → `BAD_REQUEST` (decide it first); (e) amount ≤ 0 → `BAD_REQUEST`
+- [x] T027 [P] [US3] Register in `run_all.sql`; confirm FAIL (red)
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] Create migration `supabase/migrations/0069_mark_cash_received.sql`: `mark_cash_received(bigint, int, text default null)` per contracts — single transaction, tier gate, reuses `create_pending_payment` + `apply_payment`
-- [ ] T029 [US3] Green gates + commit `feat(sql): 0069 cash-in-person marking`; extend `payments-gateway.ts` with `markCashReceived` wrapper + Deno test; admin cash sheet `apps/admin/lib/features/payments/cash_received_sheet.dart` (amount, collector note, Arabic) + repository method + widget/repository tests in `apps/admin/test/features/payments/`; wire into `test-apps/admin.html`; all gates green; commit `feat(admin): cash received marking`
+- [x] T028 [US3] Create migration `supabase/migrations/0069_mark_cash_received.sql`: `mark_cash_received(bigint, int, text default null)` per contracts — single transaction, tier gate, reuses `create_pending_payment` + `apply_payment`
+- [x] T029 [US3] Green gates + commit `feat(sql): 0069 cash-in-person marking`; extend `payments-gateway.ts` with `markCashReceived` wrapper + Deno test; admin cash sheet `apps/admin/lib/features/payments/cash_received_sheet.dart` (amount, collector note, Arabic) + repository method + widget/repository tests in `apps/admin/test/features/payments/`; wire into `test-apps/admin.html`; all gates green; commit `feat(admin): cash received marking`
 
 **Checkpoint**: US3 independently functional.
 

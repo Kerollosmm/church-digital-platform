@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:admin/core/result.dart';
-import 'package:admin/features/payments/models/payment_proof_review.dart';
 import 'package:admin/features/payments/payment_review_queue_screen.dart';
 import 'package:admin/features/payments/payments_admin_repository.dart';
 import '../../helpers/mock_supabase.dart';

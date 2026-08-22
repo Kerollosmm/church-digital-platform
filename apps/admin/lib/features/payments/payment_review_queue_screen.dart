@@ -128,7 +128,7 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
               const Text('سبب الرفض (سيظهر للمخدوم لإعادة الإرسال):', style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                value: selectedCode,
+                initialValue: selectedCode,
                 items: reasons
                     .map((r) => DropdownMenuItem(
                           value: r['code'],

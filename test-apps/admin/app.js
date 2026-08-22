@@ -538,6 +538,14 @@
       // Action buttons according to state
       let actionButtons = '';
 
+      if (b.status === 'PENDING_PAYMENT') {
+        actionButtons += `
+          <button onclick="window.AdminApp.openDirectCashModal(${b.id}, ${b.service_slots?.price || 0})" class="btn btn-sm btn-success" title="تسجيل استلام نقدية بالخزينة">
+            <span>💵 استلام نقدي</span>
+          </button>
+        `;
+      }
+
       if (b.status === 'AWAITING_CALL') {
         actionButtons += `
           <button onclick="window.AdminApp.confirmBooking(${b.id})" class="btn btn-sm btn-success" title="تأكيد الحجز بعد إجراء المكالمة الهاتفية">
@@ -1736,6 +1744,59 @@
     document.querySelectorAll('.modal-backdrop.active').forEach(m => m.classList.remove('active'));
   }
 
+  function openDirectCashModal(bookingId, price) {
+    state.currentActionBookingId = bookingId;
+    const idEl = document.getElementById('direct-cash-booking-id-text');
+    const amtInput = document.getElementById('direct-cash-amount');
+    const noteInput = document.getElementById('direct-cash-note');
+
+    if (idEl) idEl.textContent = `#${bookingId}`;
+    if (amtInput) amtInput.value = price || 100;
+    if (noteInput) noteInput.value = 'استلام نقدي بالخزينة';
+
+    openModal('modal-direct-cash');
+  }
+
+  async function executeDirectCashBooking() {
+    const bookingId = state.currentActionBookingId;
+    if (!bookingId) return;
+
+    const amtInput = document.getElementById('direct-cash-amount');
+    const amount = parseInt(amtInput ? amtInput.value : '0', 10);
+    const note = (document.getElementById('direct-cash-note').value || 'استلام نقدي بالخزينة').trim();
+
+    if (!amount || amount <= 0) {
+      window.ChurchSupabase.showToast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('btn-confirm-direct-cash');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> <span>جاري التسجيل...</span>';
+
+    try {
+      const { error, messageAr } = await window.ChurchSupabase.invokeRpc('mark_cash_received', {
+        p_booking_id: bookingId,
+        p_amount: amount,
+        p_collector_note: note
+      });
+
+      if (error) {
+        throw new Error(messageAr || 'تعذر تسجيل الاستلام النقدي');
+      }
+
+      window.ChurchSupabase.showToast(`تم تسجيل استلام النقدية للحجز #${bookingId} ونقل الحالة إلى قيد الاتصال بنجاح!`, 'success');
+      closeModal('modal-direct-cash');
+      await Promise.all([loadBookings(), loadOutboxEvents()]);
+      updateTopStats();
+    } catch (e) {
+      window.ChurchSupabase.showToast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>تأكيد استلام النقدية (mark_cash_received)</span>';
+    }
+  }
+
   // Public Interface attached to window.AdminApp
   window.AdminApp = {
     init,
@@ -1759,6 +1820,8 @@
     executeCancelBooking,
     openEmergencyOverrideModal,
     executeEmergencyOverride,
+    openDirectCashModal,
+    executeDirectCashBooking,
     // Tab 2: Manual Booking
     loadSlotsForService,
     onSlotSelected,
