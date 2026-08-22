@@ -122,7 +122,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                             children: [
                               OutlinedButton(
                                 style: OutlinedButton.styleFrom(
-                                  backgroundColor: _selectedStatus == null ? Colors.blue.withOpacity(0.1) : null,
+                                  backgroundColor: _selectedStatus == null ? Colors.blue.withValues(alpha: 0.1) : null,
                                 ),
                                 onPressed: () => setState(() => _selectedStatus = null),
                                 child: const Text('الكل'),
@@ -131,7 +131,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                               for (final status in statuses) ...[
                                 OutlinedButton(
                                   style: OutlinedButton.styleFrom(
-                                    backgroundColor: _selectedStatus == status ? Colors.blue.withOpacity(0.1) : null,
+                                    backgroundColor: _selectedStatus == status ? Colors.blue.withValues(alpha: 0.1) : null,
                                   ),
                                   onPressed: () => setState(() => _selectedStatus = status),
                                   child: Text('حالة: '),
