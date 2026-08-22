@@ -62,6 +62,7 @@ Sync direction is DB → docs; never invent values here.
 app_role               = 'USER' | 'ADMIN' | 'SUPER_ADMIN'   -- PRIEST tier deliberately removed (0060; see docs/adr/0002-video-to-event-booking-pivot.md + specs/009 US5)
 booking_status         = 'PENDING_PAYMENT' | 'AWAITING_CALL' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'RESCHEDULED'
 payment_status         = 'CREATED' | 'PAID' | 'FAILED' | 'REFUNDED' | 'REFUND_PENDING' | 'PENDING'
+payment_channel        = 'VODAFONE_CASH' | 'INSTAPAY' | 'CASH'   -- spec 011 (ADR 0003 manual payment rail)
 slot_status            = 'OPEN' | 'CLOSED'                  -- values in use (spec 009 FR-011); the view layer reports AVAILABLE|BOOKED|CLOSED
 complaint_status       = 'NEW' | 'ASSIGNED' | 'RESOLVED'
 event_handler_type     = 'WHATSAPP' | 'PAYMOB_REFUND' | 'FCM_PUSH' | 'SMS'

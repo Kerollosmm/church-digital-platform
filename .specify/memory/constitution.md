@@ -20,8 +20,8 @@ Cross-cutting behavior (auth, error shaping, payment gateway) lives behind small
 ## Product Truth (owner-ratified 2026-08-17)
 
 - **Single church** deployment. Tenant scaffolding stays internal; no multi-church UI or data entry ever ships.
-- **Paymob is the only payment rail** (electronic wallets + Visa).
-- **Event Booking with Extra Services** (specs 007 & 008) replaces all video delivery machinery (decommissioned 2026-08-17): separate `event_types` and `extra_services` tables, venue/resource exclusion constraints on `(resource_id, tstzrange)`, review-first-then-pay lifecycle (`SUBMITTED → CONFIRMED/REJECTED → PENDING_PAYMENT → PAID`), price snapshots on selected extras, and dual payment support (Paymob online + admin cash RPCs).
+- **Manual payment verification is the only payment rail** (ADR 0003, 2026-08-22): Vodafone Cash / InstaPay transfers with admin-verified reference + screenshot proof, and cash collected in person; the screenshot is supporting evidence, the church's own statement is the source of truth. The Paymob gateway stack was never onboarded and is decommissioned; a future gateway would ride the unchanged payments seam behind new RPCs.
+- **Event Booking with Extra Services** (specs 007 & 008) replaces all video delivery machinery (decommissioned 2026-08-17): separate `event_types` and `extra_services` tables, venue/resource exclusion constraints on `(resource_id, tstzrange)`, review-first-then-pay lifecycle (`SUBMITTED → CONFIRMED/REJECTED → PENDING_PAYMENT → PAID`), price snapshots on selected extras, and single-rail manual payment support (member-submitted proofs + admin cash RPCs, per ADR 0003).
 - **Booking confirmation call is mandatory**: bookings wait in `AWAITING_CALL` until an admin confirms by phone (order-processing model); state machine `PENDING_PAYMENT → AWAITING_CALL → CONFIRMED → COMPLETED`.
 - **Error contract**: `{"error": CODE, "message_ar": "…"}` — codes frozen from feature 003; Arabic messages data-editable.
 
@@ -36,4 +36,4 @@ Cross-cutting behavior (auth, error shaping, payment gateway) lives behind small
 
 Constitution supersedes ad-hoc practice; AGENTS.md Locked Decisions are the enforcement detail. Amendments require an owner decision recorded in `docs/adr/` and a date bump below.
 
-**Version**: 1.1.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-19
+**Version**: 1.2.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-22

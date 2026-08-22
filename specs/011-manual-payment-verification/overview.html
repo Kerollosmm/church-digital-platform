@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>المواصفة 011 — استبدال الدفع الإلكتروني بالتحقق اليدوي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2733; --muted:#5b6b7b; --line:#e3e9ef;
+    --bg:#f6f8fa; --card:#ffffff;
+    --green:#1a7f5a; --green-bg:#e8f5ef;
+    --red:#b3372e; --red-bg:#fbeae8;
+    --blue:#2563a8; --blue-bg:#e9f1fa;
+    --amber:#9a6b15; --amber-bg:#fdf3e0;
+    --violet:#6d4fa1; --violet-bg:#f1ecf9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Cairo',Segoe UI,Tahoma,sans-serif;background:var(--bg);color:var(--ink);line-height:1.9;font-size:16px}
+  .wrap{max-width:1000px;margin:0 auto;padding:24px 20px 80px}
+
+  header.hero{background:linear-gradient(135deg,#14324a,#1a7f5a);color:#fff;border-radius:18px;padding:44px 36px;margin-bottom:28px}
+  header.hero h1{font-size:30px;font-weight:900;line-height:1.5;margin-bottom:10px}
+  header.hero p.sub{font-size:17px;opacity:.92;max-width:760px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .chip{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:4px 16px;font-size:13.5px;font-weight:600}
+
+  h2.sec{font-size:23px;font-weight:900;margin:46px 0 6px;display:flex;align-items:center;gap:12px}
+  h2.sec .num{background:var(--green);color:#fff;width:34px;height:34px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+  p.secdesc{color:var(--muted);margin-bottom:18px}
+
+  .verdict{background:var(--green-bg);border:1px solid #bfe3d4;border-right:6px solid var(--green);border-radius:14px;padding:20px 24px;margin-top:14px;font-size:17px}
+  .verdict strong{color:var(--green)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin-top:16px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center}
+  .stat .n{font-size:30px;font-weight:900;color:var(--red)}
+  .stat .t{font-size:13.5px;color:var(--muted);margin-top:2px}
+  .stat.ok .n{color:var(--green)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 24px;margin-top:14px}
+  .card h3{font-size:17px;font-weight:700;margin-bottom:8px}
+  .card ul{padding-right:22px}
+  .card li{margin-bottom:6px}
+  .tag{display:inline-block;border-radius:8px;padding:1px 10px;font-size:12.5px;font-weight:700;margin-left:6px}
+  .tag.red{background:var(--red-bg);color:var(--red)}
+  .tag.green{background:var(--green-bg);color:var(--green)}
+  .tag.blue{background:var(--blue-bg);color:var(--blue)}
+  .tag.amber{background:var(--amber-bg);color:var(--amber)}
+  .tag.violet{background:var(--violet-bg);color:var(--violet)}
+
+  table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;margin-top:14px;font-size:15px}
+  th,td{border:1px solid var(--line);padding:11px 14px;text-align:right;vertical-align:top}
+  th{background:#eef3f7;font-weight:700}
+  td:first-child{font-weight:700;background:#fafcfd;width:170px}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+
+  /* مخطط الرحلة */
+  .journey{margin-top:18px}
+  .jstep{display:flex;gap:14px;align-items:stretch}
+  .jstep .side{display:flex;flex-direction:column;align-items:center;width:52px;flex:none}
+  .jstep .dot{width:40px;height:40px;border-radius:50%;background:var(--blue);color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+  .jstep .bar{width:3px;flex:1;background:var(--line);min-height:18px}
+  .jstep:last-child .bar{display:none}
+  .jbody{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 18px;margin-bottom:12px;flex:1}
+  .jbody b{color:var(--blue)}
+  .jbody .who{font-size:12.5px;color:var(--muted)}
+  .status-pill{display:inline-block;background:#eef2f6;border:1px solid var(--line);border-radius:999px;padding:0 12px;font-family:Consolas,monospace;font-size:13px;font-weight:600;direction:ltr}
+
+  .rule{background:var(--amber-bg);border:1px solid #eedcb2;border-right:6px solid var(--amber);border-radius:14px;padding:18px 24px;margin-top:18px;font-size:16.5px}
+  .rule b{color:var(--amber)}
+
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px}
+  .del{border-right:6px solid var(--red)}
+  .keep{border-right:6px solid var(--green)}
+
+  ol.plan{counter-reset:p;margin-top:16px;list-style:none}
+  ol.plan li{counter-increment:p;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 64px 14px 20px;margin-bottom:10px;position:relative;font-size:15.5px}
+  ol.plan li::before{content:counter(p);position:absolute;right:14px;top:50%;transform:translateY(-50%);width:36px;height:36px;background:var(--violet);color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900}
+  ol.plan li b{display:block;font-size:16.5px}
+  ol.plan li span.meta{color:var(--muted);font-size:13px}
+
+  footer{margin-top:56px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px}
+  @media(max-width:640px){header.hero h1{font-size:23px} td:first-child{width:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <h1>تبسيط المدفوعات: من بوابة Paymob إلى التحقق اليدوي</h1>
+  <p class="sub">شرح مبسّط وغني بالتفاصيل لنتائج البحث، وللتصميم الجديد المقترح لدفعات حجز الفعاليات في تطبيق الكنيسة — لماذا قررنا ذلك؟ وكيف سيعمل الخطوة بخطوة؟ وماذا سيُحذف وماذا سيبقى؟</p>
+  <div class="chips">
+    <span class="chip">المواصفة: 011-manual-payment-verification</span>
+    <span class="chip">الحالة: جاهزة للتنفيذ</span>
+    <span class="chip">التاريخ: 22 أغسطس 2026</span>
+  </div>
+
+  <div class="verdict">
+    <strong>الخلاصة في سطر واحد:</strong> نحذف تكامل Paymob بالكامل (~1,500 سطر كود لم يعمل يومًا واحدًا فعليًا)، ونستبدله بما تقترحه الكنيسة فعلًا: العضو يحوّل من محفظته (فودافون كاش / انستاباي) أو يدفع كاش، يرفع صورة التحويل ورقم العملية، والأدمن يتحقق منها بضغطة زر — ثم يسير الحجز في نفس المسار الموجود اليوم تمامًا.
+  </div>
+</header>
+
+<!-- 1 -->
+<h2 class="sec"><span class="num">1</span>ما المشكلة؟</h2>
+<p class="secdesc">اكتشفت المراجعة حقائق حاسمة عن نظام الدفع الحالي:</p>
+
+<div class="grid">
+  <div class="stat"><div class="n">0</div><div class="t">معاملة حقيقية استطاع النظام تنفيذها — لا توجد حساب تاجر مع Paymob أصلًا (تأكيد المالك)</div></div>
+  <div class="stat"><div class="n">~1,500</div><div class="t">سطر كود كُتبت لتكامل لن يشتغل بدون حساب التاجر</div></div>
+  <div class="stat"><div class="n">6</div><div class="t">مفاتيح سرية ومتغيرات بيئة لإعداد Paymob يجب صيانتها</div></div>
+  <div class="stat ok"><div class="n">100%</div><div class="t">من الحجوزات تحتاج أصلًا تدخلًا بشريًا: مكالمة تأكيد من الأدمن بعد كل دفع</div></div>
+</div>
+
+<div class="card">
+  <h3>ما الذي يعنيه هذا؟</h3>
+  <ul>
+    <li><span class="tag red">المهم</span>تكامل Paymob <b>لا يمكنه معالجة أي جنيه واحد اليوم</b> — لأن الكنيسة لم تفتح حساب تاجر أبدًا (وعملية التسجيل لدى بوابات الدفع تتطلب أوراقًا تجارية يصعب على كنيسة توفيرها).</li>
+    <li><span class="tag amber">المفارقة</span>النظام الحالي <b>يتطلب أصلًا خطوة بشرية لكل حجز</b>: بعد أي دفع، الحجز ينتظر حتى يتصل الأدمن بالعضو ويؤكد (<span class="status-pill">AWAITING_CALL</span>). إذًا «مراجعة بشرية» هي طريقة عملنا أصلًا — وليست شيئًا جديدًا سنضيفه.</li>
+    <li><span class="tag blue">الخلاصة</span>نحن نحمل عبء صيانة أكبر جزء في النظام (الدفع الإلكتروني) مقابل الجزء الوحيد الذي <b>لم يعمل قط</b>. استبداله بمراجعة يدوية يزيل أعقد جزء ويستبدله بأبسط جزء ممكن.</li>
+  </ul>
+</div>
+
+<!-- 2 -->
+<h2 class="sec"><span class="num">2</span>نتائج البحث: كيف تتعامل مع هذا التطبيقات المشابهة؟</h2>
+<p class="secdesc">راجنا برامج إدارة الكنائس وتسجيل الفعاليات العالمية من مصادرها الرسمية:</p>
+
+<table>
+  <tr><th>المنتج</th><th>ما وجدناه (من وثائقهم الرسمية)</th></tr>
+  <tr>
+    <td>Breeze ChMS<br><small>برنامج كنائس صغيرة — الأقرب لحجم مشروعنا</small></td>
+    <td>يوفر نمط <b>«ادفع لاحقًا» (Pay Later)</b> كخيار رسمي في نماذج التسجيل: تسجيل الآن والتسوية يدويًا. والأهم: بواباته مقسمة جغرافيًا — خارج أمريكا وأوروبا يدعم فقط Stripe/PayPal، أي أنه <b>لا يدعم المحافظ المصرية إطلاقًا</b>. رسوم البطاقات لديهم ~2.9% + 0.30$ للعملية.</td>
+  </tr>
+  <tr>
+    <td>Planning Center<br><small>الأكبر عالميًا في إدارة الكنائس</small></td>
+    <td>يعتبر <b>الإدخال اليدوي للنقد والشيكات</b> مسارًا أساسيًا كاملًا في نظامه («Batches») مع أدلة تفصيلية لعدّ النقود وتنظيمها — أي أن المراجعة البشرية للأموال غير الإلكترونية ممارسة مؤسسة ومعتمدة، وليست حلًا ارتجاليًا للأسواق «الضعيفة».</td>
+  </tr>
+  <tr>
+    <td>القنوات المصرية<br><small>فودافون كاش وانستاباي</small></td>
+    <td>انستاباي نظام مدفقات فورية تابع للبنك المركزي المصري (انطلق مارس 2022)، وفودافون كاش أشهر محفظة في مصر. كل تحويل يصل مع <b>رقم مرجعي وإشعار على هاتف المرسل</b> — وهذا ما سنعتمده في التحقق.</td>
+  </tr>
+</table>
+
+<div class="rule">
+  <b>الاستنتاج الاستراتيجي:</b> لا يوجد برنامج كنسي عالمي واحد يخدم المحافظ المصرية — فمسار «بوابة دفع» كان سيتطلب دائمًا كل أعمال Paymob الخاصة (تسجيل تجاري + KYC + تكامل). بينما «سجّل الآن / ادفع يدويًا / يؤكد إنسان» هو النمط المعتمد في البرامج الكنسية خارج بطاقات أمريكا. قرارنا يتماشى مع السوق، لا عكسه.
+</div>
+
+<!-- 3 -->
+<h2 class="sec"><span class="num">3</span>التصميم الجديد المقترح: رحلة الحجز والدفع خطوة بخطوة</h2>
+<p class="secdesc">هذه هي التجربة الكاملة بعد التعديل — لاحظوا أن أول خطوتين وآخر خطوتين موجودة اليوم كما هي ولم تُمسّ:</p>
+
+<div class="journey">
+  <div class="jstep">
+    <div class="side"><div class="dot">1</div><div class="bar"></div></div>
+    <div class="jbody"><b>العضو يحجز مقعده</b> <span class="who">(موجود اليوم — بدون تغيير)</span><br>يختار فعالية ومقعدًا ويؤكد الحجز. حالة الحجز تصبح <span class="status-pill">PENDING_PAYMENT</span> والمقعد محجوز باسمه بمؤقت زمني.</div>
+  </div>
+  <div class="jstep">
+    <div class="side"><div class="dot">2</div><div class="bar"></div></div>
+    <div class="jbody"><b>شاشة الدفع الجديدة تعرض بيانات تحويل الكنيسة</b> <span class="who">(تغيير رئيسي — بدل شاشة تحويل Paymob)</span><br>ترى أرقام فودافون كاش / حساب انستاباي الخاصة بالكنيسة (قابلة للنسخ بلمسة)، مع المبلغ المطلوب. الأرقام يديرها المشرف الأعلى من لوحة التحكم — تغيير الرقم يصبح تعديل بيانات لا إصدار جديد.</div>
+  </div>
+  <div class="jstep">
+    <div class="side"><div class="dot">3</div><div class="bar"></div></div>
+    <div class="jbody"><b>العضو يحوّل ثم يرفع «إثبات الدفع»</b> <span class="who">(تغيير رئيسي — بدل بوابة الدفع)</span><br>يحول من محفظته، ثم في نفس الشاشة يرفع: قناة الدفع (فودافون كاش / انستاباي / كاش)، رقم هاتف المرسل، <b>رقم عملية التحويل</b>، المبلغ، وصورة تأكيد التحويل (إلزامية للمحافظ، ولا توجد للدفع الكاش). يستغرق أقل من دقيقة.</div>
+  </div>
+  <div class="jstep">
+    <div class="side"><div class="dot">4</div><div class="bar"></div></div>
+    <div class="jbody"><b>الأدمن يراجع من قائمة انتظار واحدة</b> <span class="who">(جديد لتطبيق الأدمن)</span><br>يظهر له كل إثبات بانتظار المراجعة: صورة التحويل، القناة، الرقم المرجعي، المبلغ، اسم العضو وحجزه. يقارن الرقم والمبلغ <b>بكشف محفظة الكنيسة نفسها</b> ثم يضغط «موافقة» أو «رفض مع سبب». الموافقة تحدث في شاشة واحدة بحد أقصى ضغطتين.</div>
+  </div>
+  <div class="jstep">
+    <div class="side"><div class="dot">5</div><div class="bar"></div></div>
+    <div class="jbody"><b>الموافقة تدفع الحجز في نفس مسار اليوم تمامًا</b> <span class="who">(موجود اليوم — بدون تغيير)</span><br>نفس آلية <span class="status-pill">apply_payment</span> الحالية تنقل الحجز إلى <span class="status-pill">AWAITING_CALL</span>، ثم مكالمة التأكيد المعتادة ← <span class="status-pill">CONFIRMED</span>. كل الضمانات المالية المبنية في المواصفة 010 تبقى كما هي.</div>
+  </div>
+</div>
+
+<div class="rule">
+  <b>القاعدة الذهبية ضد الاحتيال:</b> صورة الشاشة التي يرفعها العضو <b>ليست هي الدليل</b> — فهي قابلة للتزوير بسهولة. الدليل الحقيقي هو <b>كشف محفظة الكنيسة نفسها</b>: هل وصل تحويل بنفس الرقم المرجعي والمبلغ والوقت؟ بهذه القاعدة البسيطة تنهار فئة الاحتيال كاملة (صور مزيفة) دون أي تقنية معقدة.
+</div>
+
+<div class="card">
+  <h3>والسلامة المالية؟ محمية أصلًا بشكل مستقل عن طريقة الدفع</h3>
+  <ul>
+    <li><b>مؤقت تحرير المقاعد يعمل كل دقيقة</b> (موجود اليوم): أي حجز لم يُدفع خلال مدته يُلغى تلقائيًا ويُعرض المقعد لقائمة الانتظار. هذا يعمل سواء كان الدفع عبر بوابة أو يدويًا — فلن «تعلق» مقعد أبدًا بانتظار مراجعة لا تأتي.</li>
+    <li><b>بوابة كتابة واحدة للمال</b> (إنجاز المواصفة 010): كل تغيير في المدفوعات يتم داخل إجراءات SQL محمية — والإجراءات الجديدة (رفع إثبات / موافقة / رفض) ستسلك نفس الطريق. لا أحد يستطيع الموافقة على دفع غير حجزه.</li>
+    <li><b>الرفض ليس كارثة:</b> العضو يرى سبب الرفض بالعربية على شاشة حجزه ويمكنه تصحيح البيانات وإعادة الإرسال قبل انتهاء مدة قفل المقعد.</li>
+  </ul>
+</div>
+
+<!-- 4 -->
+<h2 class="sec"><span class="num">4</span>المقارنة الكاملة: Paymob مقابل التحقق اليدوي</h2>
+<table>
+  <tr><th>المحور</th><th>بوابة Paymob (الحالي)</th><th>التحقق اليدوي (المقترح)</th></tr>
+  <tr><td>هل يعمل اليوم؟</td><td class="no">لا — لا يوجد حساب تاجر</td><td class="yes">نعم — المحفظة موجودة عند الكنيسة</td></tr>
+  <tr><td>حجم الكود</td><td>~1,500 سطر + وظيفة مجدولة ليلية + Webhooks + تشفير HMAC</td><td>جدول إثباتات + 3 إجراءات SQL + شاشتان (رفع / مراجعة)</td></tr>
+  <tr><td>أنواع الأعطال</td><td>فقدان Webhook، عدم تطابق HMAC، جلسات معلقة، انحراف التسوية الليلية</td><td>خطأ بشري في المراجعة — يُعالَج بمطابقة كشف الكنيسة</td></tr>
+  <tr><td>الاحتيال</td><td>يديره البنك/البوابة نظريًا (ولم نصل لمرحلة التجربة)</td><td>صور مزيفة — <b>محايدة تمامًا</b> بقاعدة «كشف الكنيسة هو الدليل»</td></tr>
+  <tr><td>العبء التشغيلي لكل حجز</td><td>صفر عندما تكون صحية… وعالية جدًا عندما تتعطل</td><td>موافقة بضغطة — وتندمج مع مكالمة التأكيد الموجودة أصلًا</td></tr>
+  <tr><td>العمولات</td><td>~2.9% + رسم ثابت لكل عملية</td><td class="yes">صفر</td></tr>
+  <tr><td>الاسترداد</td><td>مسار API آلي (لم يُجرَّب قط)</td><td>إرجاع يدوي بالمحفظة/نقدًا — مناسب تمامًا لأحجام الرعية</td></tr>
+  <tr><td>المرونة مستقبلًا</td><td>—</td><td>لو فتحت الكنيسة حساب بوابة يومًا، تعود خلف نفس البوابات البرمجية دون إعادة تصميم</td></tr>
+</table>
+
+<!-- 5 -->
+<h2 class="sec"><span class="num">5</span>ماذا سيُحذف؟ وماذا يبقى؟</h2>
+<div class="cols">
+  <div class="card del">
+    <h3><span class="tag red">يُحذف</span> حمولة Paymob</h3>
+    <ul>
+      <li>3 دوال سحابية: <span class="status-pill">paymob-checkout</span> <span class="status-pill">paymob-webhook</span> <span class="status-pill">reconcile-payments</span> مع كل اختباراتها</li>
+      <li>ملف التكامل المشترك <span class="status-pill">paymob.ts</span>‎ (451 سطرًا)</li>
+      <li>الوظيفة الليلية لتسوية المدفوعات المعلقة (cron الساعة 3:30)</li>
+      <li>6 متغيرات بيئة سرية خاصة بـ Paymob</li>
+      <li>شاشة التحويل والـ iframe في تطبيق الأعضاء + نموذج جلسة الدفع</li>
+      <li>معالج الاسترداد <span class="status-pill">PAYMOB_REFUND</span> من نظام الإشعارات</li>
+      <li>إضافيًا: وحدة <span class="status-pill">offline-sync</span> — اكتشفنا أنها <b>لا تستخدمها أي شاشة في النظام إطلاقًا</b> (تؤكد قبل الحذف)</li>
+    </ul>
+  </div>
+  <div class="card keep">
+    <h3><span class="tag green">يبقى</span> كل ما يعمل ويثبت قيمته</h3>
+    <ul>
+      <li>آلة حالات الحجز كاملة (<span class="status-pill">PENDING_PAYMENT → AWAITING_CALL → CONFIRMED</span>)</li>
+      <li>مؤقت تحرير المقاعد وقائمة الانتظار (كل دقيقة)</li>
+      <li>بوابة الكتابة الموحدة للمدفوعات <span class="status-pill">payments-gateway.ts</span> — الإجراءات الجديدة ستُسجَّل فيها</li>
+      <li>إشعارات الواتساب (تنتقل نقطة إطلاقها من «نجاح الدفع الإلكتروني» إلى «موافقة الإثبات»)</li>
+      <li>تصدير التقارير وشاشات التحليلات للأدمن (لها استخدام فعلي)</li>
+      <li>تشفير الشكاوى (بيانات رعوية حساسة — تعقيدها مبرر)</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 6 -->
+<h2 class="sec"><span class="num">6</span>خطة التنفيذ (5 مراحل، كل مرحلة إيداع منفصل)</h2>
+<ol class="plan">
+  <li><b>الأساس: قاعدة البيانات والإجراءات</b><span class="meta">جدول PaymentProof + enum القنوات + جدول أرقام المحافظ + 3 إجراءات SQL محمية (رفع / موافقة / رفض) + اختبارات معاملات كاملة (منع غير المالك، منع التكرار، دورة رفض←إعادة←قبول، توافقها مع المؤقت)</span></li>
+  <li><b>شاشة رفع الإثبات — تطبيق الأعضاء</b><span class="meta">اختيار القناة، رقم المرسل، الرقم المرجعي، المبلغ، إرفاق الصورة، عرض أرقام الكنيسة للنسخ — كل الاستدعاءات عبر طبقة المستودعات القياسية والنصوص العربية من ملف السلاسل</span></li>
+  <li><b>قائمة المراجعة — تطبيق الأدمن</b><span class="meta">قائمة الإثباتات المعلقة بصورة مصغرة + زرا موافقة/رفض بسبب جاهز بالعربية + مسار «استلام كاش مباشر» للخدام المسؤولين</span></li>
+  <li><b>الحذف الشامل لـ Paymob</b><span class="meta">حذف الدوال والاختبارات والمتغيرات وإدخالات الإعداد وشاشة التحويل — فحص آلي يؤكد صفر إشارات متبقية</span></li>
+  <li><b>الإشعارات واللمسات الأخيرة</b><span class="meta">نقل إشعار الواتساب إلى لحظة الموافقة + تجربة كاملة من الحجز حتى التأكيد على البيئة المحلية</span></li>
+</ol>
+
+<div class="card">
+  <h3>قرارات جاهزة وأخرى مؤجلة بوعي</h3>
+  <ul>
+    <li><span class="tag green">محسوم</span>الاستبدال كامل لا توازٍ (لا نحمل مسارين للدفع).</li>
+    <li><span class="tag green">محسوم</span>القنوات: فودافون كاش + انستاباي + كاش حضوري.</li>
+    <li><span class="tag green">محسوم</span>الصورة إلزامية للمحافظ وغير مطلوبة للكاش.</li>
+    <li><span class="tag amber">يحدد أثناء التنفيذ</span>مدة الاحتفاظ بالصور قبل تنظيفها، وسلوك «موافقة خاطئة تحتاج تراجع» (سيوثَّق كإجراء يدوي عبر مسارات الحالة الموجودة).</li>
+  </ul>
+</div>
+
+<footer>
+  المستندات الكاملة (بالإنجليزية، مع كل المصادر والاستشهادات سطرًا وسطرًا):
+  <span class="status-pill">specs/011-manual-payment-verification/research.md</span>
+  و
+  <span class="status-pill">specs/011-manual-payment-verification/spec.md</span>
+  — هذه الصفحة ملخص مرئي منهما. المصادر الخارجية: وثائق Breeze ChMS وPlanning Center الرسمية، وموسوعة Wikipedia عن انستاباي/البنك المركزي المصري.
+</footer>
+
+</div>
+</body>
+</html>
