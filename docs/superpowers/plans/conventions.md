@@ -11,11 +11,11 @@ apps/
 supabase/
   migrations/          (0001_init.sql, 0002_..., ordered timestamped SQL files)
   functions/           (Edge Functions, one folder each)
-    paymob-webhook/    index.ts
-    whatsapp-sender/   index.ts
-    reconcile-payments/ index.ts
-    fcm-push/          index.ts
-    otp-sms/           index.ts (optional custom SMS provider)
+    event-dispatcher/  index.ts
+    otp-sms/           index.ts (custom SMS provider)
+    diagnostic-engine/ index.ts
+    analytics-export/  index.ts
+    offline-sync/      index.ts
   seed/                (seed.sql — RBAC matrix, demo content)
   config.toml          (supabase CLI local config)
 docs/
@@ -28,32 +28,31 @@ docs/
 - Local dev: `supabase start` (Docker-based local stack), `supabase stop`
 - Schema changes: write a new numbered migration in `supabase/migrations/` → `supabase db reset` locally → verify → `supabase db push` to staging → deploy to prod via `supabase db push --db-url $PROD_DB_URL`
 - Edge Functions: `supabase functions new <name>` → `supabase functions serve` (local, with `--env-file`) → `supabase functions deploy <name> --project-ref $REF`
-- Secrets: `supabase secrets set PAYMOB_HMAC_KEY=...` — NEVER in git or apps
+- Secrets: `supabase secrets set ...` — NEVER in git or apps
 - CI deploys: `supabase functions deploy --project-ref $REF --token $SUPABASE_ACCESS_TOKEN`
 
 ## Backend Logic Conventions (SQL first, Edge Functions for HTTP)
 
-**Rule of thumb:** anything that touches money, bookings, or state lives in SQL (RPCs/triggers/constraints). Anything that touches the outside world (Paymob, Meta, FCM) lives in an Edge Function. PostgREST exposes:
+**Rule of thumb:** anything that touches money, bookings, or state lives in SQL (RPCs/triggers/constraints). Anything that touches the outside world (Meta WhatsApp, FCM) lives in an Edge Function. PostgREST exposes:
 - `GET /rest/v1/<table|view>` — reads (RLS-filtered)
 - `POST /rest/v1/rpc/<function>` — state changes (SECURITY DEFINER functions)
 
 ### SQL conventions
-- All state transitions are **SECURITY DEFINER** functions: `book_slot()`, `confirm_booking()`, `cancel_booking()`, `emergency_override()`, `manual_book()` … each: one transaction, writes `audit_log`, returns the new row. Apps NEVER write bookings/payments directly.
+- All state transitions are **SECURITY DEFINER** functions: `book_slot()`, `confirm_booking()`, `cancel_booking()`, `emergency_override()`, `manual_book()`, `submit_payment_proof()`, `approve_payment_proof()`, `reject_payment_proof()`, `mark_cash_received()` … each: one transaction, writes `audit_log`, returns the new row. Apps NEVER write bookings/payments directly.
 - All `SECURITY DEFINER` RPCs MUST include `SET search_path = ''` (or `SET search_path = public`) in their function signature to prevent search_path hijacking attacks.
 - Audit: trigger `audit_trigger()` on bookings/payments/complaints writing to `audit_log(id, user_id, action, entity_type, entity_id, meta JSONB, created_at)`; `user_id` from `auth.uid()`.
 - RLS enabled on EVERY table; policies per role using `public.users.role` (read via a `current_user_role()` SECURITY DEFINER helper).
 - `tenant_id` on every business table; default via `tenant_id()` helper; policies always filter `tenant_id = tenant_id()`.
 - Views for reads: `v_available_slots`, `v_my_bookings`, analytics views in Phase 2. No `SELECT *` leaks: views select explicit columns.
 - Scheduled jobs: pg_cron (`cron.schedule(...)`) in migrations. Extension `pg_cron` and `pg_net` enabled. Jobs call SQL or `net.http_post` to Edge Functions.
-- Idempotency: payments keyed on `gateway_ref` (unique); webhook processing is UPSERT.
+- Idempotency: payments keyed on `gateway_ref` (unique); manual proof submissions reviewed atomically via RPC.
 
 ### Edge Function conventions
 - Deno + TypeScript, `deno.land/x/supabase` client with `SERVICE_ROLE_KEY` (server-only)
 - Every function: JWT/token auth where needed, try/catch with `cors` header (Supabase functions support CORS via config), structured logging
-- Unified `event_outbox` pattern: integrations enqueue rows to `public.event_outbox(id, handler_type, payload JSONB, status='PENDING', attempts=0, max_attempts=5, next_attempt_at=now())`. Handler types include `WHATSAPP`, `PAYMOB_REFUND`, `FCM_PUSH`. The `event-dispatcher` Edge Function drains the queue (100 rows/batch in parallel batches of 10), calling Meta Graph API, Paymob Refund API, or FCM v1 HTTP API (`https://fcm.googleapis.com/v1/projects/{FCM_PROJECT_ID}/messages:send` via OAuth2 service account JWT bearer token exchange with secrets `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`), marking SENT or bumping attempts with exponential backoff (max 5). Throughput ≈ 6k msgs/hr; for latency-critical sends (OTP, confirmations) wire pg_net `net.http_post` at enqueue time.
-- Paymob webhook: Paymob computes HMAC-**SHA512** (hex, lowercase) over the concatenation (no separators, booleans as lowercase `true`/`false`) of the transaction's **20 fields in this exact documented order**: `amount_cents`, `created_at`, `currency`, `error_occured`, `has_parent_transaction`, `id`, `integration_id`, `is_3d_secure`, `is_auth`, `is_capture`, `is_refunded`, `is_standalone_payment`, `is_voided`, `order.id`, `owner`, `pending`, `source_data.pan`, `source_data.sub_type`, `source_data.type`, `success`. Paymob sends the digest as the **`hmac` query parameter on the callback URL** (NOT a header); compare with constant-time equality. Replay-protect via unique `gateway_ref`, store raw body in `payments.raw_webhook`
+- Unified `event_outbox` pattern: integrations enqueue rows to `public.event_outbox(id, handler_type, payload JSONB, status='PENDING', attempts=0, max_attempts=5, next_attempt_at=now())`. Handler types include `WHATSAPP`, `FCM_PUSH`, `SMS`. The `event-dispatcher` Edge Function drains the queue (100 rows/batch in parallel batches of 10), calling Meta Graph API or FCM v1 HTTP API (`https://fcm.googleapis.com/v1/projects/{FCM_PROJECT_ID}/messages:send` via OAuth2 service account JWT bearer token exchange with secrets `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`), marking SENT or bumping attempts with exponential backoff (max 5). Throughput ≈ 6k msgs/hr; for latency-critical sends (OTP, confirmations) wire pg_net `net.http_post` at enqueue time.
 
-## Enums (exact values, synced to shipped schema 2026-08-21)
+## Enums (exact values, synced to shipped schema 2026-08-23)
 
 Values below mirror the live database types (`pg_enum`) value-for-value.
 Sync direction is DB → docs; never invent values here.
@@ -65,7 +64,7 @@ payment_status         = 'CREATED' | 'PAID' | 'FAILED' | 'REFUNDED' | 'REFUND_PE
 payment_channel        = 'VODAFONE_CASH' | 'INSTAPAY' | 'CASH'   -- spec 011 (ADR 0003 manual payment rail)
 slot_status            = 'OPEN' | 'CLOSED'                  -- values in use (spec 009 FR-011); the view layer reports AVAILABLE|BOOKED|CLOSED
 complaint_status       = 'NEW' | 'ASSIGNED' | 'RESOLVED'
-event_handler_type     = 'WHATSAPP' | 'PAYMOB_REFUND' | 'FCM_PUSH' | 'SMS'
+event_handler_type     = 'WHATSAPP' | 'FCM_PUSH' | 'SMS'
 outbox_status          = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED'
 waitlist_status        = 'WAITING' | 'OFFERED'              -- values in use (spec 009 FR-011); terminal-state handling recorded as open question there
 ```
@@ -76,12 +75,11 @@ waitlist_status        = 'WAITING' | 'OFFERED'              -- values in use (sp
 - `book_slot()` raises `SLOT_FULL` / `ALREADY_BOOKED_SLOT` / `TOO_MANY_ACTIVE_BOOKINGS` (max 3 active per user — thundering-herd guard) and sets `locked_until = now() + interval '20 minutes'` for PENDING_PAYMENT
 - pg_cron every minute: expired PENDING_PAYMENT → CANCELLED (frees slot) + waiting-list promotion
 - Feast openings (~250-300 QPS): pool all client connections through the **Transaction Pooler (port 6543)** — session pool (5432) caps at project limit and would queue; Transaction Pooler hands each statement to a shared backend so FOR UPDATE locks serialize correctly
-- Retry payment: `book:{id}:payretry` flag → a `payretry` column on bookings (v1) — recreate Paymob checkout for the SAME booking id
 
 ## External Integrations (all backend-only)
 
-- **Paymob:** Edge Function `paymob-webhook` receives POST (HMAC-verified), upserts payments, calls `apply_payment()` SQL to transition booking; refund via `paymob-refund` logic inside `reconcile-payments` or a dedicated RPC-triggered function
-- **WhatsApp:** Edge Function `whatsapp-sender` uses Meta Graph API `POST /v20.0/<phone-id>/messages` with template payloads; every send requires an opt-in row in `whatsapp_optins`; templates: `booking_confirmed`, `payment_received` ({{1}}=link), `booking_cancelled`, `booking_rescheduled`, `booking_apology`, `otp_auth`
+- **Manual Payment Rail (ADR 0003):** Members submit payment proof (Vodafone Cash / InstaPay screenshot or cash reference) via `submit_payment_proof()` RPC; admins review in queue via `approve_payment_proof()` or `reject_payment_proof()`. Paymob gateway stack decommissioned per spec 011.
+- **WhatsApp:** Edge Function `event-dispatcher` / `whatsapp-sender` uses Meta Graph API `POST /v20.0/<phone-id>/messages` with template payloads; every send requires an opt-in row in `whatsapp_optins`; templates: `booking_confirmed`, `booking_payment_received` ({{1}}=link), `booking_cancelled`, `booking_rescheduled`, `booking_apology`, `otp_auth`
 
 ## Auth & Security (Supabase)
 
@@ -103,7 +101,7 @@ waitlist_status        = 'WAITING' | 'OFFERED'              -- values in use (sp
 
 - CI (GitHub Actions): `flutter analyze` + `flutter test` (mobile, admin) → Edge Function tests (`deno test` with mocks) → SQL tests (pgTAP via `supabase db test` or a Jest script running against local `supabase start` Postgres) → `supabase functions deploy` (staging on main push)
 - TDD loop per task: write failing test → run → confirm FAIL → implement minimal → run → confirm PASS → commit (conventional commits: `feat:`, `fix:`, `test:`, `chore:`)
-- Commit scopes: `feat(bookings): add book_slot RPC`, `fix(payments): webhook idempotency`, `feat(mobile): booking flow screen`
+- Commit scopes: `feat(bookings): add book_slot RPC`, `feat(payments): manual proof approval RPC`, `feat(mobile): booking flow screen`
 
 ## Plan Document Format (every phase plan)
 
