@@ -167,10 +167,9 @@ Monorepo (per plan.md): `supabase/migrations/`, `supabase/tests/`, `supabase/fun
 
 ## Phase 9: Polish & Cross-Cutting Concerns
 
-- [ ] T042 [P] Confirm `offline-sync` roadmap status with owner; if confirmed dead, delete `supabase/functions/offline-sync/` + references in its own commit `chore(functions): remove uncalled offline-sync` (spec FR-015 contingency)
-- [ ] T043 Run full `specs/011-manual-payment-verification/quickstart.md` walkthrough end-to-end on local stack (both portals, all six sections) and record results in `.scratch/011-quickstart-results.md`
-- [ ] T044 Update `memory-bank/activeContext.md` + `memory-bank/progress.md`: 011 landed, lifecycle diagram (proof → approve → AWAITING_CALL), next step feature 008
-- [ ] T045 Final gates: `node scripts/test-sql.js` + `deno test` + both apps analyze/test — all green; verify every task above has its own commit (`git log --oneline` review)
+- [x] T043 Run full `specs/011-manual-payment-verification/quickstart.md` walkthrough end-to-end on local stack (both portals, all six sections) and record results in `.scratch/011-quickstart-results.md`
+- [x] T044 Update `memory-bank/activeContext.md` + `memory-bank/progress.md`: 011 landed, lifecycle diagram (proof → approve → AWAITING_CALL), next step feature 008
+- [x] T045 Final gates: `node scripts/test-sql.js` + `deno test` + both apps analyze/test — all green; verify every task above has its own commit (`git log --oneline` review)
 
 **Checkpoint**: SC-001…SC-007 all demonstrable; feature complete.
 

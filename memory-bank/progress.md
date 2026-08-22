@@ -4,41 +4,38 @@
 
 | Component | Status | Test / Gate Outcome | Notes |
 | :--- | :--- | :--- | :--- |
-| **PostgreSQL Schema (0001-0065)** | **100% Passing** | 56/56 SQL suites registered | Ownership guard, `create_pending_payment`, `mark_payment_failed` |
-| **Deno Edge Functions** | **100% Passing** | 100/100 tests PASS (100%) | `payments-gateway.ts` seam, zero-leak error contract |
-| **Browser Test Harness (`test-apps/`)** | **100% Operational** | Served on `http://127.0.0.1:3000` | Re-auth via seeded role accounts, no literals |
-| **Flutter Mobile App** | **100% Passing** | 23/23 suites PASS (82 tests), 0 lints | Deep repository seams, Arabic localization |
-| **Flutter Web Admin App** | **100% Passing** | 23/23 suites PASS (50 tests), 0 lints | 8 typed repository seams, 0 direct DB queries in UI |
-| **Feature 010 (Review Remediation)** | **Completed** | All 10 phases & 7 stories done | Commits: `9153c64`, `d7cb8da`, `7a827ac`, `8919b2d`, `af31f22`, `2a38f03`, `b74c449`, `f4d8307`, `cb4c89b`, `cd4e430`, `ef040bd`, `ccf3095` |
+| **PostgreSQL Schema (0001-0070)** | **100% Passing** | 60/60 SQL suites registered | Migrations 0066–0070: Manual payments, proof review, Paymob drop |
+| **Deno Edge Functions** | **100% Passing** | 63/63 tests PASS (100%) | 5 edge functions, payments gateway RPC wrapper, zero-leak contract |
+| **Flutter Mobile App** | **100% Passing** | 73/73 tests PASS, 0 lints | PaymentProofScreen, direct booking reservation, Arabic UI |
+| **Flutter Web Admin App** | **100% Passing** | 64/64 tests PASS, 0 lints | PaymentReviewQueue, CashReceivedSheet, PayoutsConfigScreen |
+| **Feature 011 (Manual Payments)** | **Completed** | All 9 phases & 6 stories done | Commits: `09b5cd3`, `c357eb2`, `8880d5d`, `14c92f4`, `5916ba7`, `1114cc6`, `f2951b0`, `becb266`, `710daa1` |
 
 ---
 
 ## What Works (Completed & Verified)
 
-1. **Sacramental & Trip Slot Booking**:
+1. **Sacramental & Event Slot Booking**:
    - Atomic reservation with `SELECT capacity FOR UPDATE` in `book_slot()`.
    - Realtime exhaustion broadcast (`SLOT_EXHAUSTED`).
    - Order-processing transition model (`PENDING_PAYMENT` -> `AWAITING_CALL` -> `CONFIRMED` -> `COMPLETED`).
-2. **Unified Payments Seam (Feature 010 / US1)**:
-   - Dedicated edge function gateway `_shared/payments-gateway.ts`.
-   - Security-definer RPCs: `create_pending_payment`, `mark_payment_failed`, `record_booking_payment`, `apply_payment`.
-   - Webhook HMAC SHA-512 verification, positive-int checks, and idempotent paid acknowledgement.
-3. **Zero-Leak Error Contract (Feature 010 / US2)**:
+2. **Manual Payment Verification Rail (Feature 011 / ADR 0003)**:
+   - Dynamic payout channel configuration for Vodafone Cash, InstaPay, Cash.
+   - Member payment proof upload to Supabase Storage (`payment-proofs`) and submission RPC (`submit_payment_proof`).
+   - Staff review queue with receipt preview, approval modal, and rejection reason tracking.
+   - Cash receipt recording via `mark_cash_received` RPC.
+   - Complete decommissioning of Paymob gateway endpoints, webhooks, crons, and client files.
+3. **Zero-Leak Error Contract**:
    - Frozen error codes (`UNAUTHORIZED`, `FORBIDDEN`, `BAD_REQUEST`, `UPSTREAM_ERROR`, `INTERNAL`).
    - Catalog-driven Arabic message delivery with zero stack trace/internal exception leak.
-4. **Clean Browser Test Harness (Feature 010 / US3, US7)**:
-   - Single consolidated `test-apps/` harness with role-based authentication.
-   - Elimination of `test_portal/` and committed credential literals.
-5. **Admin Architecture & Typed Seams (Feature 010 / US4, US6)**:
-   - Clean 3-step auth (Phone + OTP + PIN) without dead RPC calls.
+4. **Admin Architecture & Typed Seams**:
+   - Clean 3-step auth (Phone + OTP + PIN) with RBAC (`ADMIN`, `SUPER_ADMIN`).
    - Typed repositories across Content, Slots, Bookings, Complaints, Payments, Analytics.
-   - Complete decoupling of UI widgets from database SDK transport.
-6. **Encrypted Complaints System**:
+5. **Encrypted Complaints System**:
    - PGCrypto encryption with Supabase Vault key (`submit_complaint_secure`).
    - Definer-rights view `v_complaints` and `decrypt_complaint()` RPC for authorized admins.
-7. **Transactional Outbox & Notifications**:
-   - `event_outbox` and `whatsapp_outbox` with `FOR UPDATE SKIP LOCKED` queue drain.
-   - Stuck event reaper and retry backoff mechanism.
+6. **Transactional Outbox & Notifications**:
+   - `event_outbox` with `FOR UPDATE SKIP LOCKED` queue drain.
+   - WhatsApp template triggers (`booking_payment_received`, `booking_confirmed`, etc.) and FCM push notifications.
 
 ---
 
