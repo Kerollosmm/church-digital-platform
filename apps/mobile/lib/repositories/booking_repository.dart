@@ -1,8 +1,11 @@
+import 'dart:typed_data';
 import '../core/either.dart';
 import '../core/failure.dart';
 import '../models/available_slot.dart';
 import '../models/booking.dart';
 import '../models/booking_checkout_session.dart';
+import '../models/payment_proof_input.dart';
+import '../models/payout_channel.dart';
 
 abstract interface class BookingRepository {
   Future<List<Map<String, dynamic>>> fetchServices();
@@ -18,6 +21,14 @@ abstract interface class BookingRepository {
 
   /// Explicit retry method to re-initialize Paymob checkout for a pending booking.
   Future<Either<Failure, BookingCheckoutSession>> retryCheckout(int bookingId);
+
+  Future<Either<Failure, List<PayoutChannel>>> fetchPayoutChannels();
+  Future<Either<Failure, int>> submitPaymentProof(PaymentProofInput input);
+  Future<Either<Failure, String>> uploadProofImage({
+    required int bookingId,
+    required Uint8List bytes,
+    required String filename,
+  });
 
   Future<void> cancelBooking(int bookingId);
   Future<void> confirmBooking(int bookingId);

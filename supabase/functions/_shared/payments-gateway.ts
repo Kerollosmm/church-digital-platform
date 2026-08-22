@@ -72,3 +72,28 @@ export async function recordPaidPayment(
   if (error) return fail(error);
   return { ok: true };
 }
+
+export type PaymentChannel = "VODAFONE_CASH" | "INSTAPAY" | "CASH";
+
+export async function submitPaymentProof(
+  client: SupabaseClient,
+  opts: {
+    bookingId: number;
+    channel: PaymentChannel;
+    senderPhone: string;
+    reference: string;
+    amount: number;
+    imagePath?: string | null;
+  },
+): Promise<GatewayResult<number>> {
+  const { data, error } = await client.rpc("submit_payment_proof", {
+    p_booking_id: opts.bookingId,
+    p_channel: opts.channel,
+    p_sender_phone: opts.senderPhone,
+    p_reference: opts.reference,
+    p_amount: opts.amount,
+    p_image_path: opts.imagePath ?? null,
+  });
+  if (error) return fail(error);
+  return { ok: true, data: data as number };
+}

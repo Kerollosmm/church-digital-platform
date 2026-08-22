@@ -566,6 +566,65 @@
     </div>
   </div>
 
+  <!-- Manual Payment Proof Modal Dialog -->
+  <div id="proof-modal" class="modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div class="card modal-content" style="max-width:550px; width:90%; padding:24px; position:relative; box-shadow:0 10px 30px rgba(0,0,0,0.6); max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:12px; margin-bottom:16px;">
+        <h3 style="margin:0; font-size:1.15rem; color:var(--gold); display:flex; align-items:center; gap:8px;">
+          <span>📸</span>
+          <span>إرسال إثبات الدفع والتحويل</span>
+        </h3>
+        <button id="btn-close-proof-modal" style="background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer;">&times;</button>
+      </div>
+
+      <!-- Church Payout Channels Info -->
+      <div id="proof-payout-info" style="margin-bottom:16px; background:rgba(217, 119, 6, 0.1); border:1px solid var(--gold); border-radius:8px; padding:12px;">
+        <div style="font-weight:700; color:var(--gold); font-size:0.9rem; margin-bottom:6px;">بيانات التحويل الخاصة بالكنيسة:</div>
+        <div id="proof-payout-channels-list" style="font-size:0.82rem; color:var(--text-secondary); display:flex; flex-direction:column; gap:4px;">
+          جاري تحميل أرقام الحسابات...
+        </div>
+      </div>
+
+      <form id="form-submit-proof" style="display:flex; flex-direction:column; gap:12px;">
+        <input type="hidden" id="proof-booking-id">
+
+        <div class="form-group">
+          <label for="proof-channel">طريقة التحويل:</label>
+          <select id="proof-channel" class="input" required>
+            <option value="VODAFONE_CASH">فودافون كاش (Vodafone Cash)</option>
+            <option value="INSTAPAY">إنستاباي (InstaPay)</option>
+            <option value="CASH">نقداً في مقر الكنيسة (CASH)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="proof-sender-phone">رقم الهاتف المحول منه:</label>
+          <input type="tel" id="proof-sender-phone" class="input" placeholder="01000000002" required dir="ltr">
+        </div>
+
+        <div class="form-group">
+          <label for="proof-reference">رقم المعاملة / المرجع:</label>
+          <input type="text" id="proof-reference" class="input" placeholder="مثال: REF12345678" required dir="ltr">
+        </div>
+
+        <div class="form-group">
+          <label for="proof-amount">المبلغ المحول (جنيه):</label>
+          <input type="number" id="proof-amount" class="input" required min="1" dir="ltr">
+        </div>
+
+        <div class="form-group" id="proof-image-group">
+          <label for="proof-image-file">صورة إشعار التحويل (مطلوبة للمحافظ وإنستاباي):</label>
+          <input type="file" id="proof-image-file" class="input" accept="image/*">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+          <button type="button" id="btn-cancel-proof" class="btn btn-outline">إلغاء</button>
+          <button type="submit" id="btn-confirm-proof" class="btn btn-primary" style="padding:8px 20px;">إرسال الإثبات للمراجعة</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div id="toast-container"></div>
 

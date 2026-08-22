@@ -3,6 +3,7 @@ import {
   createPendingPayment,
   markPaymentFailed,
   recordPaidPayment,
+  submitPaymentProof,
 } from "../_shared/payments-gateway.ts";
 
 type RpcCall = { fn: string; params: Record<string, unknown> };
@@ -55,6 +56,30 @@ Deno.test("gateway: recordPaidPayment calls apply_payment RPC", async () => {
   assertEquals(calls.length, 1);
   assertEquals(calls[0].fn, "apply_payment");
   assertEquals(calls[0].params, { p_payment_id: 99982 });
+});
+
+Deno.test("gateway: submitPaymentProof calls submit_payment_proof RPC", async () => {
+  const calls: RpcCall[] = [];
+  const res = await submitPaymentProof(stubClient(calls) as never, {
+    bookingId: 901,
+    channel: "VODAFONE_CASH",
+    senderPhone: "01000000000",
+    reference: "REF12345",
+    amount: 150,
+    imagePath: "1/901/proof.jpg",
+  });
+
+  assertEquals(res.ok, true);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0].fn, "submit_payment_proof");
+  assertEquals(calls[0].params, {
+    p_booking_id: 901,
+    p_channel: "VODAFONE_CASH",
+    p_sender_phone: "01000000000",
+    p_reference: "REF12345",
+    p_amount: 150,
+    p_image_path: "1/901/proof.jpg",
+  });
 });
 
 Deno.test("gateway: RPC error surfaces as failure result with frozen code", async () => {

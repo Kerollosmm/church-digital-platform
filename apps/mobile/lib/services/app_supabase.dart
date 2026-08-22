@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract interface class AppSupabase {
@@ -11,6 +12,12 @@ abstract interface class AppSupabase {
   Future<Map<String, dynamic>> invokeFunction(
     String fn, {
     Map<String, dynamic>? body,
+  });
+  Future<String> uploadStorage(
+    String bucket,
+    String path,
+    List<int> bytes, {
+    String? contentType,
   });
 }
 
@@ -53,6 +60,25 @@ class SupabaseAppSupabase implements AppSupabase {
     }
     return Map<String, dynamic>.from(response.data as Map);
   }
+
+  @override
+  Future<String> uploadStorage(
+    String bucket,
+    String path,
+    List<int> bytes, {
+    String? contentType,
+  }) async {
+    final uint8List = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+    await _client.storage.from(bucket).uploadBinary(
+      path,
+      uint8List,
+      fileOptions: FileOptions(
+        contentType: contentType,
+        upsert: true,
+      ),
+    );
+    return path;
+  }
 }
 
 class UnimplementedAppSupabase implements AppSupabase {
@@ -72,5 +98,14 @@ class UnimplementedAppSupabase implements AppSupabase {
     Map<String, dynamic>? body,
   }) => throw UnimplementedError(
     'invokeFunction $fn called in test dependencies',
+  );
+  @override
+  Future<String> uploadStorage(
+    String bucket,
+    String path,
+    List<int> bytes, {
+    String? contentType,
+  }) => throw UnimplementedError(
+    'uploadStorage called in test dependencies',
   );
 }

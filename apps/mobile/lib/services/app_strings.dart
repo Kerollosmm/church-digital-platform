@@ -102,4 +102,30 @@ class AppStrings {
   static const payNow = 'ادفع الآن';
   static const termsNote =
       'بالنقر على "ادفع الآن"، أنت توافق على الشروط والأحكام.';
+
+  static const paymentProofTitle = 'إرسال إثبات الدفع';
+  static const paymentProofSubtitle =
+      'يرجى تحويل المبلغ عبر إحدى الطرق التالية ثم إرفاق بيانات وإشعار التحويل:';
+  static const paymentChannelLabel = 'طريقة الدفع / التحويل';
+  static const vodafoneCash = 'فودافون كاش';
+  static const instaPay = 'إنستاباي';
+  static const cashInPerson = 'نقداً بالكنيسة';
+  static const senderPhoneLabel = 'رقم الهاتف المحول منه';
+  static const senderPhoneHint = '01000000000';
+  static const referenceNumberLabel = 'رقم المعاملة / المرجع';
+  static const referenceNumberHint = 'مثال: 12345678';
+  static const amountClaimedLabel = 'المبلغ المحول';
+  static const attachProofImage = 'إرفاق صورة التحويل';
+  static const proofImageRequired = 'يرجى إرفاق صورة إشعار التحويل';
+  static const proofSubmittedSuccess = 'تم إرسال إثبات الدفع بنجاح — بانتظار المراجعة';
+  static const submitProof = 'إرسال الإثبات';
+  static const submitting = 'جاري الإرسال...';
+  static const copy = 'نسخ';
+  static const copied = 'تم النسخ';
+  static const payoutDetailsTitle = 'بيانات التحويل الخاصة بالكنيسة';
+  static const accountNumberLabel = 'رقم الحساب / المحفظة';
+  static const accountHolderLabel = 'اسم صاحب الحساب';
+  static const pendingReviewNotice = 'بانتظار المراجعة';
+  static const fieldRequired = 'هذا الحقل مطلوب';
+  static const invalidAmount = 'مبلغ غير صحيح';
 }

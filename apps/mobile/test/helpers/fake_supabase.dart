@@ -114,5 +114,16 @@ class FakeSupabase implements AppSupabase {
     };
   }
 
+  @override
+  Future<String> uploadStorage(
+    String bucket,
+    String path,
+    List<int> bytes, {
+    String? contentType,
+  }) async {
+    rpcCalls.add('uploadStorage:$bucket/$path');
+    return path;
+  }
+
   FakeAuth get auth => FakeAuth(currentUser);
 }

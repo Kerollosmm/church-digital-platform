@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile/app_router.dart';
 import 'package:mobile/features/auth/login_screen.dart';
+import 'package:mobile/features/booking/payment_proof_screen.dart';
 import 'package:mobile/features/booking/payment_redirect_screen.dart';
 import 'package:mobile/screens/home_hub_screen.dart';
 import 'package:mobile/services/app_routes.dart';
@@ -43,6 +44,14 @@ class FakeAppSupabase implements AppSupabase {
     }
     throw UnimplementedError('invokeFunction $fn');
   }
+
+  @override
+  Future<String> uploadStorage(
+    String bucket,
+    String path,
+    List<int> bytes, {
+    String? contentType,
+  }) async => path;
 
   FakeQuery from(String table) => FakeQuery([]);
 }
@@ -164,6 +173,29 @@ void main() {
 
       expect(find.byType(HomeHubScreen), findsOneWidget);
       expect(find.byType(LoginScreen), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'T6: payment-proof route renders PaymentProofScreen',
+    (tester) async {
+      final fakeDb = FakeAppSupabase();
+      final router = buildRouter(
+        db: fakeDb,
+        isUserLoggedIn: () => true,
+      );
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      final BuildContext context = tester.element(find.byType(HomeHubScreen));
+      context.pushNamed(
+        AppRoutes.paymentProof,
+        extra: {'bookingId': 42, 'amount': 150},
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PaymentProofScreen), findsOneWidget);
     },
   );
 }

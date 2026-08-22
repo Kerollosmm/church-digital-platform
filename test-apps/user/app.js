@@ -725,6 +725,126 @@
         }
       });
     }
+
+    setupProofModal();
+  }
+
+  async function openProofModal(bookingId, amount) {
+    const sb = window.ChurchSupabase;
+    const client = sb.getClient();
+    const modal = document.getElementById('proof-modal');
+    if (!modal) return;
+
+    document.getElementById('proof-booking-id').value = bookingId;
+    document.getElementById('proof-amount').value = amount || 50;
+
+    const channelsContainer = document.getElementById('proof-payout-channels-list');
+    if (channelsContainer) {
+      channelsContainer.innerHTML = 'جاري تحميل أرقام الحسابات...';
+      try {
+        const { data, error } = await client.from('payout_channels').select('*');
+        if (error || !data || data.length === 0) {
+          channelsContainer.innerHTML = '<div>فودافون كاش: 01000000000 | إنستاباي: church@instapay</div>';
+        } else {
+          let html = '';
+          data.forEach((ch) => {
+            html += `<div><strong>${ch.display_name_ar}:</strong> <span style="font-family:'JetBrains Mono';">${ch.account_number}</span> (${ch.holder_name})</div>`;
+          });
+          channelsContainer.innerHTML = html;
+        }
+      } catch (e) {
+        channelsContainer.innerHTML = '<div>فودافون كاش: 01000000000 | إنستاباي: church@instapay</div>';
+      }
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  function setupProofModal() {
+    const modal = document.getElementById('proof-modal');
+    const btnClose = document.getElementById('btn-close-proof-modal');
+    const btnCancel = document.getElementById('btn-cancel-proof');
+    const form = document.getElementById('form-submit-proof');
+    const channelSelect = document.getElementById('proof-channel');
+    const imageGroup = document.getElementById('proof-image-group');
+
+    function closeModal() {
+      if (modal) modal.style.display = 'none';
+      if (form) form.reset();
+    }
+
+    if (btnClose) btnClose.addEventListener('click', closeModal);
+    if (btnCancel) btnCancel.addEventListener('click', closeModal);
+
+    if (channelSelect && imageGroup) {
+      channelSelect.addEventListener('change', () => {
+        if (channelSelect.value === 'CASH') {
+          imageGroup.style.display = 'none';
+        } else {
+          imageGroup.style.display = 'block';
+        }
+      });
+    }
+
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const sb = window.ChurchSupabase;
+        const client = sb.getClient();
+        const bookingId = Number(document.getElementById('proof-booking-id').value);
+        const channel = document.getElementById('proof-channel').value;
+        const phone = document.getElementById('proof-sender-phone').value;
+        const ref = document.getElementById('proof-reference').value;
+        const amount = Number(document.getElementById('proof-amount').value);
+        const fileInput = document.getElementById('proof-image-file');
+        const submitBtn = document.getElementById('btn-confirm-proof');
+
+        if (channel !== 'CASH' && (!fileInput.files || fileInput.files.length === 0)) {
+          sb.showToast('يرجى إرفاق صورة إشعار التحويل', 'error');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'جاري رفع الإثبات...';
+
+        try {
+          let imagePath = null;
+          if (channel !== 'CASH' && fileInput.files && fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const ext = file.name.split('.').pop() || 'jpg';
+            const filename = `1/${bookingId}/${Date.now()}_proof.${ext}`;
+            const { data: uploadData, error: upErr } = await client.storage
+              .from('payment-proofs')
+              .upload(filename, file, { upsert: true });
+
+            if (upErr) throw upErr;
+            imagePath = filename;
+          }
+
+          const res = await sb.invokeRpc('submit_payment_proof', {
+            p_booking_id: bookingId,
+            p_channel: channel,
+            p_sender_phone: phone,
+            p_reference: ref,
+            p_amount: amount,
+            p_image_path: imagePath,
+          });
+
+          if (!res.success) {
+            throw new Error(res.messageAr || 'تعذر إرسال إثبات الدفع');
+          }
+
+          sb.showToast('✓ تم إرسال إثبات الدفع بنجاح — بانتظار المراجعة من الإدارة', 'success');
+          closeModal();
+          await loadMyBookings();
+        } catch (err) {
+          sb.showToast(err.message, 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'إرسال الإثبات للمراجعة';
+        }
+      });
+    }
   }
 
   async function handleJoinWaitlist(slotId) {
@@ -797,7 +917,10 @@
         let actions = '<div style="display:flex; gap:6px; flex-wrap:wrap;">';
         if (isPendingPayment) {
           actions += `
-            <button class="btn btn-sm btn-primary btn-paymob-checkout" data-booking-id="${b.id}" style="padding:4px 8px; font-size:0.75rem;">
+            <button class="btn btn-sm btn-primary btn-submit-proof" data-booking-id="${b.id}" data-amount="${b.paid_amount || 0}" style="padding:4px 8px; font-size:0.75rem;">
+              📸 إرسال إثبات الدفع
+            </button>
+            <button class="btn btn-sm btn-outline btn-paymob-checkout" data-booking-id="${b.id}" style="padding:4px 8px; font-size:0.75rem;">
               💳 دفع Paymob
             </button>
             <button class="btn btn-sm btn-outline btn-simulate-paymob" data-booking-id="${b.id}" data-amount="${b.paid_amount || 0}" style="padding:4px 8px; font-size:0.75rem; border-color:var(--gold); color:var(--gold);">
@@ -827,6 +950,15 @@
         `;
       });
       tbody.innerHTML = html;
+
+      // Attach Submit Proof
+      tbody.querySelectorAll('.btn-submit-proof').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const bookingId = Number(btn.getAttribute('data-booking-id'));
+          const amount = Number(btn.getAttribute('data-amount') || 0);
+          openProofModal(bookingId, amount);
+        });
+      });
 
       // Attach Paymob Checkout
       tbody.querySelectorAll('.btn-paymob-checkout').forEach((btn) => {

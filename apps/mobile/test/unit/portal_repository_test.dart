@@ -26,6 +26,14 @@ class FakePortalSupabase implements AppSupabase {
     String fn, {
     Map<String, dynamic>? body,
   }) async => {};
+
+  @override
+  Future<String> uploadStorage(
+    String bucket,
+    String path,
+    List<int> bytes, {
+    String? contentType,
+  }) async => path;
 }
 
 void main() {

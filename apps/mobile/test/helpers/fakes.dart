@@ -1,8 +1,11 @@
+import 'dart:typed_data';
 import 'package:mobile/core/either.dart';
 import 'package:mobile/core/failure.dart';
 import 'package:mobile/models/available_slot.dart';
 import 'package:mobile/models/booking.dart';
 import 'package:mobile/models/booking_checkout_session.dart';
+import 'package:mobile/models/payment_proof_input.dart';
+import 'package:mobile/models/payout_channel.dart';
 import 'package:mobile/repositories/booking_repository.dart';
 
 class FakeBookingRepository implements BookingRepository {
@@ -10,13 +13,39 @@ class FakeBookingRepository implements BookingRepository {
     this.bookings = const [],
     this.services = const [],
     this.slots = const [],
+    this.payoutChannels = const [],
     this.checkoutUrl,
   });
   List<Booking> bookings;
   List<Map<String, dynamic>> services;
   List<Map<String, dynamic>> slots;
+  List<PayoutChannel> payoutChannels;
   String? checkoutUrl;
   final List<String> calls = [];
+  PaymentProofInput? lastSubmittedProof;
+
+  @override
+  Future<Either<Failure, List<PayoutChannel>>> fetchPayoutChannels() async {
+    calls.add('fetchPayoutChannels');
+    return Right(payoutChannels);
+  }
+
+  @override
+  Future<Either<Failure, int>> submitPaymentProof(PaymentProofInput input) async {
+    calls.add('submitPaymentProof');
+    lastSubmittedProof = input;
+    return const Right(1);
+  }
+
+  @override
+  Future<Either<Failure, String>> uploadProofImage({
+    required int bookingId,
+    required Uint8List bytes,
+    required String filename,
+  }) async {
+    calls.add('uploadProofImage');
+    return Right('1/$bookingId/$filename');
+  }
 
   @override
   Future<List<Map<String, dynamic>>> fetchServices() async {

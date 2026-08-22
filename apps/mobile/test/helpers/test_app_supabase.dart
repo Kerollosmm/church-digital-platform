@@ -57,4 +57,15 @@ class TestAppSupabase implements AppSupabase {
       'body': body,
     };
   }
+
+  @override
+  Future<String> uploadStorage(
+    String bucket,
+    String path,
+    List<int> bytes, {
+    String? contentType,
+  }) async {
+    rpcCalls.add('uploadStorage:$bucket/$path');
+    return path;
+  }
 }
