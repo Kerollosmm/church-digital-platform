@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:admin/features/content/content_repository.dart';
+import 'package:admin/core/result.dart';
 
 class FaqAdminScreen extends StatefulWidget {
   const FaqAdminScreen({super.key, required this.repository});
@@ -11,7 +12,7 @@ class FaqAdminScreen extends StatefulWidget {
 class _FaqAdminScreenState extends State<FaqAdminScreen> {
   late Future<List<Map<String, dynamic>>> _rows;
   @override
-  void initState() { super.initState(); _rows = widget.repository.faq(); }
+  void initState() { super.initState(); _rows = widget.repository.faq().then(unwrapOrThrow); }
 
   Future<void> _add() async {
     final q = TextEditingController();
@@ -28,14 +29,13 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
           TextButton(
             onPressed: () async {
-              await widget.repository.createFaq({
+              (await widget.repository.createFaq({
                 'question_ar': q.text, 'answer_ar': a.text,
                 'position': 999, 'published': true, 'tenant_id': 1,
-              });
+              })).fold((f) => throw f, (_) => {});
               if (ctx.mounted) Navigator.pop(ctx);
-              final next = widget.repository.faq();
               setState(() {
-                _rows = next;
+                _rows = widget.repository.faq().then(unwrapOrThrow);
               });
             },
             child: const Text('حفظ'),
@@ -66,11 +66,8 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
                 trailing: IconButton(
                   icon: const Icon(Icons.delete),
                   onPressed: () async {
-                    await widget.repository.deleteFaq(r['id'] as int);
-                    final next = widget.repository.faq();
-                    setState(() {
-                      _rows = next;
-                    });
+                    (await widget.repository.deleteFaq(r['id'] as int)).fold((f) => throw f, (_) => {});
+
                   },
                 ),
               );

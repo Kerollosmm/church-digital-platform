@@ -1,37 +1,46 @@
 # Active Context: Church Digital Platform
 
 ## Current Focus & Status
-- **Current Feature**: `009-schema-integrity-fixes` (**100% Implemented & Verified**).
-  - All 53 SQL test suites passing over stdin via `npm run test:sql` (`node scripts/test-sql.js`) with 0 failures and verified TAP output.
+- **Current Milestone**: Full Local Backend Health Verification & Interactive Test Portals Suite (**100% Operational & Verified**).
+  - All 54 SQL test suites passing over stdin via `npm run test:sql` (`node scripts/test-sql.js`) with 0 failures (`0001` through `0063`).
   - All 84 Deno edge function unit tests passing (`deno test --allow-env --allow-net supabase/functions/`).
-  - Forward migrations `0055` through `0062` applied cleanly.
-  - Constitution bumped to version 1.1.0 with ADR 0002.
-- **Next Immediate Step**: Review / commit Feature 009 branch and proceed to Feature 008 or next scheduled roadmap milestone.
+  - Forward migrations `0055` through `0063` applied cleanly on local database reset.
+  - Interactive test portals (`c:\church\test_portal\`) deployed and serving on `http://127.0.0.1:3000`.
+- **Next Immediate Step**: Proceed to Feature 008 (Event Booking with Extra Services domain implementation).
 
-## Key Accomplishments & Deliverables (Feature 009)
-1. **Vault Preflight & Provisioning (US1 — `0055_vault_preflight.sql`)**:
-   - Built `public.vault_preflight()` returning missing runtime secrets with zero secret disclosure.
-   - Provisioned mock development secrets in `supabase/seed.sql` (`COMPLAINTS_KEY`, `SUPABASE_URL`, `SERVICE_ROLE_KEY`).
-   - Documented operational procedures in `docs/ops/runbook.md` §5 & §6.
-2. **Close Email Registration Path (US2 — `0056_harden_handle_new_user.sql`)**:
-   - Enforced phone number requirement on `handle_new_user` trigger with `PHONE_REQUIRED` exception.
-   - Disabled email signups in `supabase/config.toml` (`[auth.email] enable_signup = false`).
-3. **Integrity Constraints & Enums (US3 — `0057_integrity_constraints.sql`, `0058_status_enums.sql`)**:
-   - Added CHECK constraints on `service_slots.capacity > 0`, `service_slots.price >= 0`, `payments.amount > 0`, `media_assets` alt-text requirement, `event_outbox.status` enum membership, `event_outbox.attempts <= 5`.
-   - Replaced free-form text with Postgres enums: `public.slot_status` (`'OPEN'`, `'CLOSED'`) and `public.waitlist_status` (`'WAITING'`, `'OFFERED'`).
-   - Recreated dependent views `v_available_slots`, `v_schedule_today`, `v_services` with `security_invoker = true`.
-4. **Tenant Scaffolding (US4 — `0059_tenant_scaffolding.sql`)**:
-   - Primary key on `payments_monthly` set to `(tenant_id, month)`.
-   - Analytics materialization function `materialize_analytics()` scoped by `tenant_id`.
-   - `audit_log.tenant_id` and `whatsapp_optins.tenant_id` given `NOT NULL DEFAULT public.tenant_id()`.
-   - `whatsapp_optins` primary key set to `(tenant_id, phone)` and RPCs `book_slot` and `manual_book` updated.
-5. **Priest Abstraction Removal (US5 — `0060_remove_priest_abstraction.sql`)**:
-   - Recreated 8 policies across `announcements`, `faq`, `faq_categories`, `priests`, `services`, `service_slots`, `slot_utilization_monthly`, `payments_monthly`, `bookings_monthly` to use `public.is_admin()`.
-   - Updated `publish_announcement` and dropped `public.is_admin_or_priest()`.
-   - Deleted obsolete `0005_priest_self_assign_test.sql`.
-6. **User Deletion Semantics (US6 — `0061_user_delete_semantics.sql`)**:
-   - Replaced implicit `NO ACTION` with explicit `ON DELETE RESTRICT` on foreign keys referencing `public.users` from `bookings`, `complaints`, and `waiting_list`.
-7. **Constitution Realignment & Orphan Enum Drop (US7 — `0062_drop_video_privacy_enum.sql`)**:
-   - Dropped orphan `public.video_privacy` enum type.
-   - Authored `docs/adr/0002-video-to-event-booking-pivot.md`.
-   - Amended `.specify/memory/constitution.md` to version 1.1.0 reflecting Event Booking with Extra Services product truth.
+---
+
+## Recent Accomplishments & Bug Fixes (Migration 0063 & Test Portals)
+
+### 1. Interactive Test Portal Suite (`c:\church\test_portal\`)
+- Built unified browser test suite running against local Supabase (`http://127.0.0.1:54321`):
+  - `index.html`: Unified Launcher Hub & backend services health probe.
+  - `user.html`: Parishioner app with slot booking, seat counter, payment modal, encrypted complaints desk, announcements, and FAQs.
+  - `admin.html`: Servant/Priest admin app with 2FA Admin PIN, booking queue, direct confirmation, manual booking, emergency override, and complaint decrypter.
+  - `superadmin.html`: SuperAdmin portal with RBAC management, Outbox event queues, stuck event reaper, and Edge Function test runner.
+  - `server.mjs`: Zero-dependency Node.js HTTP server running on port 3000.
+
+### 2. Resolved Backend Invariants & Migration 0063 (`0063_service_role_grants_and_payment_rpc.sql`)
+1. **Financial DML Boundary & `record_booking_payment` RPC**:
+   - Direct client DML on `public.payments` is strictly revoked per Migration 0053.
+   - Built `public.record_booking_payment(p_booking_id bigint, p_amount numeric, p_gateway_ref text)` `SECURITY DEFINER` RPC.
+   - Fixed schema column mismatch: `gateway_ref` (not `gateway`).
+   - Automatically executes `apply_payment(v_pay_id)` and advances booking from `PENDING_PAYMENT` to `AWAITING_CALL`.
+2. **Transition Engine State Machine (`transition_booking_status`)**:
+   - Updated `transition_booking_status` to permit the `apply_payment` transition (`PENDING_PAYMENT` &rarr; `AWAITING_CALL`) for non-admin callers when executing payments.
+3. **Encrypted Complaints In-DB (PGCrypto)**:
+   - Wired `submit_complaint_secure(p_category, p_body)` RPC for encrypted submission.
+   - Integrated `v_my_complaints` view for user history and `v_complaints` + `decrypt_complaint(p_complaint_id)` for admin decryption.
+4. **Manual Booking & `book_slot` Canonical Signature**:
+   - Dropped stale legacy overloads of `book_slot` (`(bigint)`, `(bigint, boolean)`) and granted execute on canonical `book_slot(bigint, boolean, uuid)` to `authenticated` and `service_role`.
+   - Wired `public.manual_book(p_slot_id, p_phone, p_opt_in, p_notes)` in admin portal with auto-provisioning of user profile.
+
+---
+
+## Live End-to-End Verified Lifecycle
+```text
+Step 1: User Book Slot           -> PENDING_PAYMENT  (Success)
+Step 2: User Pay Online          -> AWAITING_CALL    (Success)
+Step 3: Admin Phone Confirmation -> CONFIRMED        (Success)
+Step 4: Admin Completion         -> COMPLETED        (Success)
+```

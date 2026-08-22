@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:admin/app_router.dart';
 import 'package:admin/core/auth/admin_auth_provider.dart';
 import 'package:admin/features/auth/admin_login_screen.dart';
-import '../helpers/fake_supabase.dart';
+import '../helpers/mock_supabase.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -26,14 +26,15 @@ void main() {
     }
   });
 
-  FakeSupabase createFakeDb() {
-    return FakeSupabase({
+  MockSupabase createFakeDb() {
+    return MockSupabase(tables: {
       'bookings': [],
       'service_slots': [],
-      'complaints': [],
+      'v_complaints': [],
       'announcements': [],
       'faq': [],
       'payments': [],
+      'v_available_slots': [],
     });
   }
 
@@ -41,7 +42,7 @@ void main() {
     final router = createAdminRouter(
       isAuthenticated: () => false,
       initialLocation: '/bookings',
-      db: createFakeDb(),
+      db: createFakeDb().build(),
     );
 
     await tester.pumpWidget(
@@ -68,7 +69,7 @@ void main() {
   testWidgets('Default createAdminRouter without isAuthenticated callback denies privileged access', (tester) async {
     final router = createAdminRouter(
       initialLocation: '/bookings',
-      db: createFakeDb(),
+      db: createFakeDb().build(),
     );
 
     await tester.pumpWidget(
@@ -95,7 +96,7 @@ void main() {
     final router = createAdminRouter(
       isAuthenticated: () => true,
       getUserRole: () => null,
-      db: createFakeDb(),
+      db: createFakeDb().build(),
     );
     await tester.pumpWidget(
       ProviderScope(
@@ -119,7 +120,7 @@ void main() {
     final router = createAdminRouter(
       isAuthenticated: () => true,
       getUserRole: () => 'USER',
-      db: createFakeDb(),
+      db: createFakeDb().build(),
     );
     await tester.pumpWidget(
       ProviderScope(
@@ -144,7 +145,7 @@ void main() {
       isAuthenticated: () => true,
       getUserRole: () => 'SUPER_ADMIN',
       initialLocation: '/bookings',
-      db: createFakeDb(),
+      db: createFakeDb().build(),
     );
     await tester.pumpWidget(
       ProviderScope(
@@ -169,7 +170,7 @@ void main() {
       isAuthenticated: () => true,
       getUserRole: () => 'ADMIN',
       initialLocation: '/bookings',
-      db: createFakeDb(),
+      db: createFakeDb().build(),
     );
 
     await tester.pumpWidget(

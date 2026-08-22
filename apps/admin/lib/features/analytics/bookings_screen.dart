@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'analytics_repository.dart';
 
 class BookingsScreen extends StatefulWidget {
-  const BookingsScreen({super.key, required this.supabase});
-  final dynamic supabase;
+  const BookingsScreen({super.key, required this.repo});
+  final AnalyticsRepository repo;
 
   @override
   State<BookingsScreen> createState() => _BookingsScreenState();
@@ -20,11 +21,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
   Future<void> _loadData() async {
     try {
-      final res = await widget.supabase
-          .from('v_analytics_bookings')
-          .select();
+      final res = await widget.repo.bookingRows();
       setState(() {
-        _data = List<Map<String, dynamic>>.from(res as List);
+        _data = res.fold((f) => throw f, (rows) => rows);
         _loading = false;
       });
     } catch (_) {

@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'analytics_repository.dart';
 
 typedef AttendanceQueryFetcher = Future<List<Map<String, dynamic>>> Function();
 
 class AttendanceChartWidget extends StatefulWidget {
   const AttendanceChartWidget({
     super.key,
+    this.repo,
     this.client,
     this.fetchData,
     this.initialData,
   });
 
+  final AnalyticsRepository? repo;
+  // Retained solely for the export edge-function invocation.
   final SupabaseClient? client;
   final AttendanceQueryFetcher? fetchData;
   final List<Map<String, dynamic>>? initialData;
@@ -31,7 +35,7 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget> {
     if (widget.initialData != null) {
       _data = widget.initialData!;
       _loading = false;
-    } else if (widget.fetchData != null || widget.client != null) {
+    } else if (widget.fetchData != null || widget.repo != null) {
       _loadData();
     } else {
       _loading = false;
@@ -43,11 +47,8 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget> {
       final List<Map<String, dynamic>> rows;
       if (widget.fetchData != null) {
         rows = await widget.fetchData!();
-      } else if (widget.client != null) {
-        final res = await widget.client!
-            .from('v_analytics_utilization')
-            .select();
-        rows = res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      } else if (widget.repo != null) {
+        rows = (await widget.repo!.utilizationRows()).fold((f) => throw f, (r) => r);
       } else {
         rows = [];
       }

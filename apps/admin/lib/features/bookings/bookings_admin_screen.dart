@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'bookings_provider.dart';
 
 class BookingsAdminScreen extends ConsumerWidget {
-  const BookingsAdminScreen({super.key, required this.db});
-  final dynamic db;
+  const BookingsAdminScreen({super.key, required this.gateway});
+  final BookingsGateway gateway;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(bookingsProvider(db));
-    final notifier = ref.read(bookingsProvider(db).notifier);
+    final state = ref.watch(bookingsProvider(gateway));
+    final notifier = ref.read(bookingsProvider(gateway).notifier);
     final filter = ref.watch(bookingsFilterProvider);
 
     const statuses = [
@@ -69,17 +69,17 @@ class BookingsAdminScreen extends ConsumerWidget {
                           if (r['status'] == 'AWAITING_CALL')
                             IconButton(
                               icon: const Icon(Icons.check_circle),
-                              onPressed: () => notifier.executeRpc('confirm_booking', r['id'] as int),
+                              onPressed: () => notifier.confirmBooking(r['id'] as int),
                             ),
                           if (r['status'] == 'CONFIRMED')
                             IconButton(
                               icon: const Icon(Icons.done_all),
-                              onPressed: () => notifier.executeRpc('complete_booking', r['id'] as int),
+                              onPressed: () => notifier.completeBooking(r['id'] as int),
                             ),
                           if (r['status'] == 'PENDING_PAYMENT' || r['status'] == 'AWAITING_CALL')
                             IconButton(
                               icon: const Icon(Icons.cancel),
-                              onPressed: () => notifier.executeRpc('cancel_booking', r['id'] as int),
+                              onPressed: () => notifier.cancelBooking(r['id'] as int),
                             ),
                         ],
                       ),

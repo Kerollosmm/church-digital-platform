@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'analytics_repository.dart';
 
 class PaymentsScreen extends StatefulWidget {
-  const PaymentsScreen({super.key, required this.supabase});
-  final dynamic supabase;
+  const PaymentsScreen({super.key, required this.repo});
+  final AnalyticsRepository repo;
 
   @override
   State<PaymentsScreen> createState() => _PaymentsScreenState();
@@ -20,11 +21,9 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
   Future<void> _loadData() async {
     try {
-      final res = await widget.supabase
-          .from('v_analytics_payments')
-          .select();
+      final res = await widget.repo.paymentRows();
       setState(() {
-        _data = List<Map<String, dynamic>>.from(res as List);
+        _data = res.fold((f) => throw f, (rows) => rows);
         _loading = false;
       });
     } catch (_) {

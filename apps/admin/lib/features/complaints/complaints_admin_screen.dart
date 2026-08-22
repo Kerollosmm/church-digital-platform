@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'complaints_admin_repository.dart';
 
 class ComplaintsAdminScreen extends StatefulWidget {
-  const ComplaintsAdminScreen({super.key, this.db});
-  final dynamic db;
+  const ComplaintsAdminScreen({super.key, required this.repo});
+  final ComplaintsAdminRepository repo;
 
   @override
   State<ComplaintsAdminScreen> createState() => _ComplaintsAdminScreenState();
 }
 
 class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
-  dynamic get _db => widget.db ?? Supabase.instance.client;
+  ComplaintsAdminRepository get _repo => widget.repo;
 
   List<Map<String, dynamic>> _allComplaints = [];
   String? _selectedStatus;
@@ -30,8 +30,8 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
       _error = null;
     });
     try {
-      final res = await _db.from('v_complaints').select().order('created_at', ascending: false);
-      final list = (res as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final res = await _repo.list();
+      final list = res.fold((f) => throw f, (rows) => rows);
       if (mounted) {
         setState(() {
           _allComplaints = list;
@@ -50,35 +50,34 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
 
   Future<void> _decryptComplaint(int complaintId) async {
     try {
-      final res = await _db.rpc('decrypt_complaint', params: {'p_complaint_id': complaintId});
-      final decryptedText = res is Map ? (res['decrypted'] ?? res.toString()) : res.toString();
+      final outcome = await _repo.decrypt(complaintId);
+      final decryptedText = outcome.fold((f) => throw f, (t) => t);
       if (mounted) {
         showDialog<void>(
           context: context,
           builder: (ctx) => Directionality(
             textDirection: TextDirection.rtl,
             child: AlertDialog(
-              title: Text('محتوى الشكوى #$complaintId'),
-              content: SelectableText(decryptedText),
+              title: Text('????? ?????? #$complaintId'),
+              content: SelectableText(decryptedText.isEmpty ? '?? ???? ??' : decryptedText),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('إغلاق'),
+                  child: const Text('?????'),
                 ),
               ],
             ),
           ),
         );
       }
-    } catch (e, st) {
-      debugPrint('Complaint decryption failure: $e\n$st');
+    } catch (e) {
+      debugPrint('Complaint decryption failure: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('فشل فك التشفير. يرجى المحاولة لاحقاً.')),
+          const SnackBar(content: Text('??? ?? ???????. ???? ???????? ??????.')),
         );
       }
     }
-
   }
 
   @override
@@ -101,7 +100,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('إدارة الشكاوى'),
+          title: const Text('????? ???????'),
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -112,7 +111,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? Center(child: Text('خطأ: $_error'))
+                ? Center(child: Text('???: $_error'))
                 : Column(
                     children: [
                       Padding(
@@ -122,7 +121,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                           child: Row(
                             children: [
                               FilterChip(
-                                label: const Text('الكل'),
+                                label: const Text('????'),
                                 selected: _selectedStatus == null,
                                 onSelected: (_) => setState(() => _selectedStatus = null),
                               ),
@@ -139,11 +138,11 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                                 const VerticalDivider(width: 16),
                                 DropdownButton<String?>(
                                   value: _selectedCategory,
-                                  hint: const Text('تصفية حسب الفئة'),
+                                  hint: const Text('????? ??? ?????'),
                                   items: [
                                     const DropdownMenuItem<String?>(
                                       value: null,
-                                      child: Text('كل الفئات'),
+                                      child: Text('?? ??????'),
                                     ),
                                     ...categories.map(
                                       (cat) => DropdownMenuItem<String?>(
@@ -162,7 +161,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                       const Divider(height: 1),
                       Expanded(
                         child: filteredComplaints.isEmpty
-                            ? const Center(child: Text('لا توجد شكاوى'))
+                            ? const Center(child: Text('?? ???? ?????'))
                             : ListView.builder(
                                 itemCount: filteredComplaints.length,
                                 itemBuilder: (context, index) {
@@ -178,7 +177,7 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                                     child: ListTile(
                                       title: Row(
                                         children: [
-                                          Text('شكوى #$id'),
+                                          Text('???? #$id'),
                                           const SizedBox(width: 12),
                                           Chip(
                                             label: Text(
@@ -198,14 +197,14 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           const SizedBox(height: 4),
-                                          Text('الفئة: $category'),
-                                          if (assignedTo != null) Text('مسندة إلى: $assignedTo'),
-                                          Text('تاريخ الإنشاء: $createdAt'),
+                                          Text('?????: $category'),
+                                          if (assignedTo != null) Text('????? ???: $assignedTo'),
+                                          Text('????? ???????: $createdAt'),
                                         ],
                                       ),
                                       trailing: ElevatedButton.icon(
                                         icon: const Icon(Icons.lock_open, size: 16),
-                                        label: const Text('فك التشفير'),
+                                        label: const Text('?? ???????'),
                                         onPressed: () => _decryptComplaint(id),
                                       ),
                                     ),

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'analytics_repository.dart';
 
 class UtilizationScreen extends StatefulWidget {
-  const UtilizationScreen({super.key, required this.supabase});
-  final dynamic supabase;
+  const UtilizationScreen({super.key, required this.repo});
+  final AnalyticsRepository repo;
 
   @override
   State<UtilizationScreen> createState() => _UtilizationScreenState();
@@ -20,11 +21,9 @@ class _UtilizationScreenState extends State<UtilizationScreen> {
 
   Future<void> _loadData() async {
     try {
-      final res = await widget.supabase
-          .from('v_analytics_utilization')
-          .select();
+      final res = await widget.repo.utilizationRows();
       setState(() {
-        _data = List<Map<String, dynamic>>.from(res as List);
+        _data = res.fold((f) => throw f, (rows) => rows);
         _loading = false;
       });
     } catch (_) {

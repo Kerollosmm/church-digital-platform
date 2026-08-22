@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'emergency_override_repository.dart';
 
 class EmergencyOverrideScreen extends StatefulWidget {
-  const EmergencyOverrideScreen({super.key, this.db});
-  final dynamic db;
+  const EmergencyOverrideScreen({super.key, required this.repo});
+  final EmergencyOverrideRepository repo;
 
   @override
   State<EmergencyOverrideScreen> createState() => _EmergencyOverrideScreenState();
 }
 
 class _EmergencyOverrideScreenState extends State<EmergencyOverrideScreen> {
-  dynamic get _db => widget.db ?? Supabase.instance.client;
-
   final _bookingIdController = TextEditingController();
   List<Map<String, dynamic>> _slots = [];
   int? _selectedNewSlotId;
@@ -35,8 +33,8 @@ class _EmergencyOverrideScreenState extends State<EmergencyOverrideScreen> {
 
   Future<void> _fetchSlots() async {
     try {
-      final res = await _db.from('v_available_slots').select().eq('slot_status', 'AVAILABLE');
-      final list = (res as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final res = await widget.repo.availableSlots();
+      final list = res.fold((f) => throw f, (rows) => rows);
       if (mounted) {
         setState(() {
           _slots = list;
@@ -58,17 +56,22 @@ class _EmergencyOverrideScreenState extends State<EmergencyOverrideScreen> {
     if (bookingId == null || _selectedNewSlotId == null) return;
     setState(() => _isSubmitting = true);
     try {
-      await _db.rpc('emergency_override', params: {
-        'p_booking_id': bookingId,
-        'p_new_slot_id': _selectedNewSlotId,
-        'p_refund': _refund,
-      });
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-          _message = 'تم تعديل الطوارئ بنجاح';
-        });
-      }
+      final outcome = await widget.repo.override(
+        bookingId: bookingId,
+        newSlotId: _selectedNewSlotId!,
+        refund: _refund,
+      );
+      outcome.fold(
+        (f) => throw f,
+        (_) {
+          if (mounted) {
+            setState(() {
+              _isSubmitting = false;
+              _message = 'تم تعديل الطوارئ بنجاح';
+            });
+          }
+        },
+      );
     } catch (e) {
       if (mounted) {
         setState(() {

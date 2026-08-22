@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'slots_admin_repository.dart';
+import '../../core/result.dart';
 
 class SlotsAdminScreen extends StatefulWidget {
-  const SlotsAdminScreen({super.key, required this.db});
-  final dynamic db;
+  const SlotsAdminScreen({super.key, required this.repo});
+  final SlotsAdminRepository repo;
   @override
   State<SlotsAdminScreen> createState() => _SlotsAdminScreenState();
 }
@@ -12,7 +14,7 @@ class _SlotsAdminScreenState extends State<SlotsAdminScreen> {
   @override
   void initState() { super.initState(); _rows = _load(); }
   Future<List<Map<String, dynamic>>> _load() async =>
-      ((await widget.db.from('service_slots').select()) as List).map((r) => Map<String, dynamic>.from(r as Map)).toList();
+      unwrapOrThrow(await widget.repo.list());
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +36,7 @@ class _SlotsAdminScreenState extends State<SlotsAdminScreen> {
                   icon: const Icon(Icons.lock_outline),
                   tooltip: 'إغلاق',
                   onPressed: () async {
-                    await widget.db.from('service_slots').update({'status': 'CLOSED'}).eq('id', r['id']);
+                    await widget.repo.closeSlot(r['id'] as int);
                     final next = _load();
                     setState(() {
                       _rows = next;

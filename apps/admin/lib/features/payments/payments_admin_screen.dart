@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'payments_admin_repository.dart';
+import '../../core/result.dart';
 
 class PaymentsAdminScreen extends StatefulWidget {
-  const PaymentsAdminScreen({super.key, required this.db});
-  final dynamic db;
+  const PaymentsAdminScreen({super.key, required this.repo});
+  final PaymentsAdminRepository repo;
   @override
   State<PaymentsAdminScreen> createState() => _PaymentsAdminScreenState();
 }
@@ -12,8 +14,7 @@ class _PaymentsAdminScreenState extends State<PaymentsAdminScreen> {
   @override
   void initState() { super.initState(); _rows = _load(); }
   Future<List<Map<String, dynamic>>> _load() async =>
-      ((await widget.db.from('payments').select().order('created_at', ascending: false)) as List)
-          .map((r) => Map<String, dynamic>.from(r as Map)).toList();
+      unwrapOrThrow(await widget.repo.list());
 
   @override
   Widget build(BuildContext context) {

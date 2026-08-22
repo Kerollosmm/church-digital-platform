@@ -12,6 +12,13 @@ import 'features/bookings/emergency_override_screen.dart';
 import 'features/bookings/manual_book_screen.dart';
 import 'features/complaints/complaints_admin_screen.dart';
 import 'features/content/announcements_admin_screen.dart';
+import 'features/bookings/bookings_provider.dart';
+import 'features/slots/slots_admin_repository.dart';
+import 'features/bookings/manual_book_repository.dart';
+import 'features/bookings/emergency_override_repository.dart';
+import 'features/complaints/complaints_admin_repository.dart';
+import 'features/content/announcements_repository.dart';
+import 'features/payments/payments_admin_repository.dart';
 import 'features/content/content_repository.dart';
 import 'features/content/faq_admin_screen.dart';
 import 'features/payments/payments_admin_screen.dart';
@@ -118,8 +125,8 @@ GoRouter createAdminRouter({
   dynamic db,
   Listenable? refreshListenable,
 }) {
-  dynamic resolveDb() {
-    if (db != null) return db;
+  SupabaseClient? resolveDb() {
+    if (db != null) return db as SupabaseClient;
     try {
       return Supabase.instance.client;
     } catch (_) {
@@ -164,49 +171,49 @@ GoRouter createAdminRouter({
           GoRoute(
             path: '/bookings',
             name: 'bookings',
-            builder: (context, state) => BookingsAdminScreen(db: resolveDb()),
+            builder: (context, state) => BookingsAdminScreen(gateway: SupabaseBookingsGateway(resolveDb()!)),
           ),
           GoRoute(
             path: '/slots',
             name: 'slots',
-            builder: (context, state) => SlotsAdminScreen(db: resolveDb()),
+            builder: (context, state) => SlotsAdminScreen(repo: SlotsAdminRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/manual-book',
             name: 'manual-book',
-            builder: (context, state) => ManualBookScreen(db: resolveDb()),
+            builder: (context, state) => ManualBookScreen(repo: ManualBookRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/emergency-override',
             name: 'emergency-override',
-            builder: (context, state) => EmergencyOverrideScreen(db: resolveDb()),
+            builder: (context, state) => EmergencyOverrideScreen(repo: EmergencyOverrideRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/complaints',
             name: 'complaints',
-            builder: (context, state) => ComplaintsAdminScreen(db: resolveDb()),
+            builder: (context, state) => ComplaintsAdminScreen(repo: ComplaintsAdminRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/announcements',
             name: 'announcements',
-            builder: (context, state) => AnnouncementsAdminScreen(db: resolveDb()),
+            builder: (context, state) => AnnouncementsAdminScreen(repo: AnnouncementsRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/faq',
             name: 'faq',
-            builder: (context, state) => FaqAdminScreen(repository: ContentRepository(resolveDb())),
+            builder: (context, state) => FaqAdminScreen(repository: ContentRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/payments',
             name: 'payments',
-            builder: (context, state) => PaymentsAdminScreen(db: resolveDb()),
+            builder: (context, state) => PaymentsAdminScreen(repo: PaymentsAdminRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/analytics',
             name: 'analytics',
             builder: (context, state) {
               final database = resolveDb();
-              return AnalyticsAdminScreen(client: database is SupabaseClient ? database : Supabase.instance.client);
+              return AnalyticsAdminScreen(client: database);
             },
           ),
         ],

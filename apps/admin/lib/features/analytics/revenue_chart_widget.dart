@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'analytics_repository.dart';
 import 'export_report_button.dart';
 
 typedef RevenueQueryFetcher = Future<List<Map<String, dynamic>>> Function();
@@ -8,11 +9,14 @@ typedef RevenueQueryFetcher = Future<List<Map<String, dynamic>>> Function();
 class RevenueChartWidget extends StatefulWidget {
   const RevenueChartWidget({
     super.key,
+    this.repo,
     this.client,
     this.fetchData,
     this.initialData,
   });
 
+  final AnalyticsRepository? repo;
+  // Retained solely for the export edge-function invocation.
   final SupabaseClient? client;
   final RevenueQueryFetcher? fetchData;
   final List<Map<String, dynamic>>? initialData;
@@ -32,7 +36,7 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
     if (widget.initialData != null) {
       _data = widget.initialData!;
       _loading = false;
-    } else if (widget.fetchData != null || widget.client != null) {
+    } else if (widget.fetchData != null || widget.repo != null) {
       _loadData();
     } else {
       _loading = false;
@@ -44,11 +48,8 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
       final List<Map<String, dynamic>> rows;
       if (widget.fetchData != null) {
         rows = await widget.fetchData!();
-      } else if (widget.client != null) {
-        final res = await widget.client!
-            .from('v_analytics_payments')
-            .select();
-        rows = List<Map<String, dynamic>>.from(res as List);
+      } else if (widget.repo != null) {
+        rows = (await widget.repo!.paymentRows()).fold((f) => throw f, (r) => r);
       } else {
         rows = [];
       }

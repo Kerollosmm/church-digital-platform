@@ -13,7 +13,7 @@ import 'package:admin/features/content/announcements_admin_screen.dart';
 import 'package:admin/features/content/faq_admin_screen.dart';
 import 'package:admin/features/payments/payments_admin_screen.dart';
 import 'package:admin/features/slots/slots_admin_screen.dart';
-import '../helpers/fake_supabase.dart';
+import '../helpers/mock_supabase.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -32,7 +32,7 @@ void main() {
     }
   });
 
-  Widget buildTestApp(FakeSupabase fake) {
+  Widget buildTestApp(SupabaseClient fake) {
     return ProviderScope(
       child: MaterialApp.router(
         routerConfig: createAdminRouter(
@@ -59,19 +59,19 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    final fake = FakeSupabase({
+    final fake = MockSupabase(tables: {
       'bookings': [],
       'service_slots': [],
-      'complaints': [],
+      'v_complaints': [],
       'announcements': [],
       'faq': [],
       'payments': [],
-    });
+      'v_available_slots': [],
+    }).build();
 
     await tester.pumpWidget(buildTestApp(fake));
     await tester.pump();
 
-    // Verify Arabic navigation items exist in ShellRoute drawer
     expect(find.text('الحجوزات'), findsWidgets);
     expect(find.text('المواعيد'), findsOneWidget);
     expect(find.text('حجز يدوي'), findsOneWidget);
@@ -82,49 +82,41 @@ void main() {
     expect(find.text('المدفوعات'), findsOneWidget);
     expect(find.text('التحليلات'), findsOneWidget);
 
-    // Navigate to 'حجز يدوي'
     await tester.tap(find.text('حجز يدوي'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(ManualBookScreen), findsOneWidget);
 
-    // Navigate to 'طوارئ'
     await tester.tap(find.text('طوارئ'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(EmergencyOverrideScreen), findsOneWidget);
 
-    // Navigate to 'الشكاوى'
     await tester.tap(find.text('الشكاوى'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(ComplaintsAdminScreen), findsOneWidget);
 
-    // Navigate to 'المواعيد'
     await tester.tap(find.text('المواعيد'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(SlotsAdminScreen), findsOneWidget);
 
-    // Navigate to 'الإعلانات'
     await tester.tap(find.text('الإعلانات'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(AnnouncementsAdminScreen), findsOneWidget);
 
-    // Navigate to 'الأسئلة الشائعة'
     await tester.tap(find.text('الأسئلة الشائعة'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(FaqAdminScreen), findsOneWidget);
 
-    // Navigate to 'المدفوعات'
     await tester.tap(find.text('المدفوعات'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byType(PaymentsAdminScreen), findsOneWidget);
 
-    // Navigate to 'التحليلات'
     await tester.tap(find.text('التحليلات'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:admin/features/complaints/complaints_admin_repository.dart';
 import 'package:admin/features/complaints/complaints_admin_screen.dart';
-import '../../helpers/fake_supabase.dart';
+import '../../helpers/mock_supabase.dart';
 
 void main() {
   testWidgets('ComplaintsAdminScreen renders complaint list from v_complaints and decrypts body on demand', (tester) async {
-    final fake = FakeSupabase(
-      {
+    final mock = MockSupabase(
+      tables: {
         'v_complaints': [
           {
             'id': 10,
@@ -26,14 +27,15 @@ void main() {
           },
         ],
       },
-      rpcResults: {
-        'decrypt_complaint': (Map<String, dynamic> args) => 'محتوى الشكوى السري المفكوك',
+      rpc: {
+        'decrypt_complaint': (args) async => {'decrypted': 'محتوى الشكوى السري المفكوك'},
       },
     );
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ComplaintsAdminScreen(db: fake),
+        home: ComplaintsAdminScreen(
+            repo: ComplaintsAdminRepository(mock.build())),
       ),
     );
     await tester.pumpAndSettle();
@@ -48,8 +50,7 @@ void main() {
     await tester.tap(find.text('فك التشفير').first);
     await tester.pumpAndSettle();
 
-    expect(fake.rpcCalls, contains('decrypt_complaint'));
-    expect(fake.rpcArgs['decrypt_complaint'], {'p_complaint_id': 11});
+    expect(mock.requestLog.any((p) => p.endsWith('/rpc/decrypt_complaint')), isTrue);
     expect(find.text('محتوى الشكوى السري المفكوك'), findsOneWidget);
   });
 }

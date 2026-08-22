@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'manual_book_repository.dart';
 
 class ManualBookScreen extends StatefulWidget {
-  const ManualBookScreen({super.key, this.db});
-  final dynamic db;
+  const ManualBookScreen({super.key, required this.repo});
+  final ManualBookRepository repo;
 
   @override
   State<ManualBookScreen> createState() => _ManualBookScreenState();
 }
 
 class _ManualBookScreenState extends State<ManualBookScreen> {
-  dynamic get _db => widget.db ?? Supabase.instance.client;
+  ManualBookRepository get _repo => widget.repo;
 
   List<Map<String, dynamic>> _slots = [];
   int? _selectedSlotId;
@@ -37,8 +37,8 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
 
   Future<void> _fetchSlots() async {
     try {
-      final res = await _db.from('v_available_slots').select().eq('slot_status', 'AVAILABLE');
-      final list = (res as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final res = await _repo.availableSlots();
+      final list = res.fold((f) => throw f, (rows) => rows);
       if (mounted) {
         setState(() {
           _slots = list;
@@ -49,7 +49,7 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _message = 'فشل في تحميل المواعيد: ${e.toString()}';
+          _message = '??? ?? ????? ????????: ${e.toString()}';
         });
       }
     }
@@ -59,23 +59,24 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
     if (_selectedSlotId == null) return;
     setState(() => _isSubmitting = true);
     try {
-      await _db.rpc('manual_book', params: {
-        'p_slot_id': _selectedSlotId,
-        'p_phone': _phoneController.text,
-        'p_opt_in': _optIn,
-        'p_notes': _notesController.text,
-      });
+      final outcome = await _repo.manualBook(
+        slotId: _selectedSlotId!,
+        phone: _phoneController.text,
+        optIn: _optIn,
+        notes: _notesController.text,
+      );
+      if (outcome.isLeft) throw (outcome as dynamic).value;
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _message = 'تم الحجز اليدوي بنجاح';
+          _message = '?? ????? ?????? ?????';
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _message = 'حدث خطأ: $e';
+          _message = '??? ???: $e';
         });
       }
     }
@@ -85,7 +86,7 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('حجز يدوي'),
+        title: const Text('??? ????'),
       ),
       body: Directionality(
         textDirection: TextDirection.rtl,
@@ -98,7 +99,7 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
                   children: [
                     DropdownButtonFormField<dynamic>(
                       decoration: const InputDecoration(
-                        labelText: 'الموعد المتاح',
+                        labelText: '?????? ??????',
                         border: OutlineInputBorder(),
                       ),
                       initialValue: _selectedSlotId,
@@ -116,14 +117,14 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
                       decoration: const InputDecoration(
-                        labelText: 'رقم الهاتف',
+                        labelText: '??? ??????',
                         border: OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 16),
                     CheckboxListTile(
                       key: const Key('opt_in_checkbox'),
-                      title: const Text('تفعيل إشعارات واتساب / الرسائل'),
+                      title: const Text('????? ??????? ?????? / ???????'),
                       value: _optIn,
                       onChanged: (val) => setState(() => _optIn = val ?? false),
                     ),
@@ -132,7 +133,7 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
                       key: const Key('notes_field'),
                       controller: _notesController,
                       decoration: const InputDecoration(
-                        labelText: 'ملاحظات',
+                        labelText: '???????',
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -146,14 +147,14 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('تأكيد الحجز'),
+                          : const Text('????? ?????'),
                     ),
                     if (_message != null) ...[
                       const SizedBox(height: 16),
                       Text(
                         _message!,
                         style: TextStyle(
-                          color: _message!.startsWith('حدث خطأ') ? Colors.red : Colors.green,
+                          color: _message!.startsWith('??? ???') ? Colors.red : Colors.green,
                         ),
                       ),
                     ],
@@ -164,4 +165,3 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
     );
   }
 }
-

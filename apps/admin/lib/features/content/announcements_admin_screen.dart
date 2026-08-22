@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'announcements_repository.dart';
 
 class AnnouncementsAdminScreen extends StatefulWidget {
-  const AnnouncementsAdminScreen({super.key, required this.db});
-  final dynamic db;
+  const AnnouncementsAdminScreen({super.key, required this.repo});
+  final AnnouncementsRepository repo;
   @override
   State<AnnouncementsAdminScreen> createState() => _AnnouncementsAdminScreenState();
 }
@@ -15,7 +16,7 @@ class _AnnouncementsAdminScreenState extends State<AnnouncementsAdminScreen> {
     _rows = _load();
   }
   Future<List<Map<String, dynamic>>> _load() async =>
-      ((await widget.db.from('announcements').select()) as List).map((r) => Map<String, dynamic>.from(r as Map)).toList();
+      (await widget.repo.list()).fold((f) => throw f, (rows) => rows);
 
   Future<void> _create() async {
     final title = TextEditingController();
@@ -33,12 +34,10 @@ class _AnnouncementsAdminScreenState extends State<AnnouncementsAdminScreen> {
           TextButton(
             onPressed: () async {
               if (title.text.trim().isEmpty || body.text.trim().isEmpty) return;
-              await widget.db.from('announcements').insert({
-                'title_ar': title.text.trim(),
-                'body_ar': body.text.trim(),
-                'tenant_id': 1,
-                'published_at': DateTime.now().toUtc().toIso8601String(),
-              });
+              await widget.repo.create(
+                titleAr: title.text.trim(),
+                bodyAr: body.text.trim(),
+              );
               if (ctx.mounted) Navigator.pop(ctx);
               final next = _load();
               setState(() {
@@ -70,7 +69,7 @@ class _AnnouncementsAdminScreenState extends State<AnnouncementsAdminScreen> {
               trailing: IconButton(
                 icon: const Icon(Icons.delete),
                 onPressed: () async {
-                  await widget.db.from('announcements').delete().eq('id', rows[i]['id']);
+                  await widget.repo.delete(rows[i]['id'] as int);
                   final next = _load();
                   setState(() {
                     _rows = next;
