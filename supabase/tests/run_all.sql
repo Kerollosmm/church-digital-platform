@@ -58,3 +58,4 @@
 \ir 0065_webhook_payment_rpc_test.sql
 \ir 0066_manual_payment_foundations_test.sql
 \ir 0067_submit_payment_proof_test.sql
+\ir 0068_payment_decision_rpcs_test.sql
