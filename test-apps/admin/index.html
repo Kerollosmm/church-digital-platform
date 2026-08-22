@@ -275,6 +275,10 @@
               <span>🔒 شكاوى واستفسارات الرعية</span>
               <span class="badge badge-pending" id="tab-badge-complaints" style="margin-right:6px; display:none;">0</span>
             </button>
+            <button class="tab-btn" data-tab="tab-proofs" onclick="window.AdminApp.switchTab('tab-proofs')">
+              <span>💳 مراجعة إثباتات الدفع</span>
+              <span class="badge badge-pending" id="tab-badge-proofs" style="margin-right:6px; display:none;">0</span>
+            </button>
             <button class="tab-btn" data-tab="tab-outbox" onclick="window.AdminApp.switchTab('tab-outbox')">
               <span>📤 مراقبة صندوق الإرسال (Outbox)</span>
             </button>
@@ -612,6 +616,62 @@
         </div>
 
         <!-- ================================================================ -->
+        <!-- TAB 6: PAYMENT PROOFS REVIEW QUEUE                              -->
+        <!-- ================================================================ -->
+        <div id="tab-proofs" class="tab-content" style="display:none;">
+          <div class="card">
+            <div class="card-header flex-wrap gap-3">
+              <div>
+                <div class="card-title">
+                  <span>💳 طابور مراجعة إثباتات الدفع والتحويل (Payment Proofs Review)</span>
+                </div>
+                <p class="text-xs text-muted" style="margin-top:2px;">
+                  مراجعة إيصالات فودافون كاش وإنستاباي والنقدية واعتمادها لتأكيد الحجز وتوليد إشعارات WhatsApp
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <select id="filter-proof-status" class="form-select" style="width:auto; padding:6px 12px; font-size:0.85rem;" onchange="window.AdminApp.filterProofs()">
+                  <option value="PENDING">قيد المراجعة فقط (PENDING)</option>
+                  <option value="ALL">جميع الحالات</option>
+                  <option value="APPROVED">المقبولة (APPROVED)</option>
+                  <option value="REJECTED">المرفوضة (REJECTED)</option>
+                </select>
+                <button onclick="window.AdminApp.loadPendingProofs()" class="btn btn-sm btn-secondary">
+                  <span>🔄 تحديث الإثباتات</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body" style="padding:0;">
+              <div class="table-responsive">
+                <table class="table table-hover table-striped" id="tbl-proofs">
+                  <thead>
+                    <tr>
+                      <th style="width:70px;"># المعرف</th>
+                      <th>رقم الحجز</th>
+                      <th>القناة والوسيلة</th>
+                      <th>الهاتف المحول منه</th>
+                      <th>رقم العملية / المرجع</th>
+                      <th>المبلغ المطالب به</th>
+                      <th>صورة الإشعار</th>
+                      <th>تاريخ الإرسال</th>
+                      <th>الحالة</th>
+                      <th style="text-align:center; min-width:180px;">إجراءات القرار</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-proofs">
+                    <tr>
+                      <td colspan="10" style="text-align:center; padding:30px;" class="text-muted">جاري تحميل إثباتات الدفع...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
         <!-- TAB 5: OUTBOX QUEUE INSPECTOR                                    -->
         <!-- ================================================================ -->
         <div id="tab-outbox" class="tab-content" style="display:none;">
@@ -835,6 +895,64 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal 5: Reject Payment Proof -->
+  <div id="modal-reject-proof" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width:540px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--danger);">❌ رفض إثبات الدفع</h3>
+        <button class="modal-close" onclick="window.AdminApp.closeModal('modal-reject-proof')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm" style="margin-bottom:12px;">
+          أنت على وشك رفض إثبات الدفع رقم <strong id="reject-proof-id-text" style="color:var(--gold);">#--</strong> للحجز رقم <strong id="reject-proof-booking-id-text">#--</strong> بمبلغ <strong id="reject-proof-amount-text">--</strong> ج.م.
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="reject-proof-reason-select">سبب الرفض (من كتالوج رسائل الخطأ العربي المعتمد):</label>
+          <select id="reject-proof-reason-select" class="form-select" required>
+            <option value="BAD_REQUEST">البيانات غير مطابقة لكشف الحساب / الرقم المرجعي خاطئ (BAD_REQUEST)</option>
+            <option value="FALLBACK">صورة الإيصال غير واضحة أو مقصوصة (FALLBACK)</option>
+            <option value="UPSTREAM_ERROR">لم يتم العثور على العملية في المحفظة (UPSTREAM_ERROR)</option>
+          </select>
+        </div>
+        <p class="text-xs text-muted">
+          ℹ️ سيتمكن المخدوم من إعادة إرسال إثبات جديد صحيح فوراً عبر تطبيقه دون إلغاء الحجز.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="window.AdminApp.closeModal('modal-reject-proof')">تراجع</button>
+        <button id="btn-confirm-reject-proof" class="btn btn-danger" onclick="window.AdminApp.executeRejectProof()">
+          <span>تأكيد رفض الإثبات</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: Approve Cash Proof Note -->
+  <div id="modal-approve-cash" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width:540px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--success);">💵 تأكيد استلام النقدية</h3>
+        <button class="modal-close" onclick="window.AdminApp.closeModal('modal-approve-cash')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm" style="margin-bottom:12px;">
+          تأكيد استلام المبلغ نقداً في الخزينة لإثبات الدفع <strong id="cash-proof-id-text">#--</strong>:
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="cash-collector-note">ملاحظة التحصيل / اسم المستلم:</label>
+          <input type="text" id="cash-collector-note" class="form-input" placeholder="استلمها بالخزينة: دياكون يوسف">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="window.AdminApp.closeModal('modal-approve-cash')">إلغاء</button>
+        <button id="btn-confirm-approve-cash" class="btn btn-success" onclick="window.AdminApp.executeApproveCashProof()">
+          <span>تأكيد الاستلام والاعتماد</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- Footer -->
   <footer class="portal-footer">

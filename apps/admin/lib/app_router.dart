@@ -21,6 +21,7 @@ import 'features/content/announcements_repository.dart';
 import 'features/payments/payments_admin_repository.dart';
 import 'features/content/content_repository.dart';
 import 'features/content/faq_admin_screen.dart';
+import 'features/payments/payment_review_queue_screen.dart';
 import 'features/payments/payments_admin_screen.dart';
 import 'features/slots/slots_admin_screen.dart';
 
@@ -91,6 +92,12 @@ class AdminShell extends StatelessWidget {
                     title: const Text('الأسئلة الشائعة'),
                     selected: location == '/faq',
                     onTap: () => context.go('/faq'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.verified),
+                    title: const Text('مراجعة إثباتات الدفع'),
+                    selected: location == '/payment-review',
+                    onTap: () => context.go('/payment-review'),
                   ),
                   ListTile(
                     leading: const Icon(Icons.payment),
@@ -202,6 +209,11 @@ GoRouter createAdminRouter({
             path: '/faq',
             name: 'faq',
             builder: (context, state) => FaqAdminScreen(repository: ContentRepository(resolveDb()!)),
+          ),
+          GoRoute(
+            path: '/payment-review',
+            name: 'payment-review',
+            builder: (context, state) => PaymentReviewQueueScreen(repo: PaymentsAdminRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/payments',

@@ -1,8 +1,10 @@
 import { assertEquals, assertNotEquals } from "jsr:@std/assert";
 import {
+  approvePaymentProof,
   createPendingPayment,
   markPaymentFailed,
   recordPaidPayment,
+  rejectPaymentProof,
   submitPaymentProof,
 } from "../_shared/payments-gateway.ts";
 
@@ -96,4 +98,36 @@ Deno.test("gateway: RPC error surfaces as failure result with frozen code", asyn
   };
   const res = await markPaymentFailed(failing as never, 1);
   assertNotEquals((res as { ok?: boolean }).ok, true);
+});
+
+Deno.test("gateway: approvePaymentProof calls approve_payment_proof RPC", async () => {
+  const calls: RpcCall[] = [];
+  const res = await approvePaymentProof(stubClient(calls) as never, {
+    proofId: 501,
+    collectorNote: "Collected by Deacon John",
+  });
+
+  assertEquals(res.ok, true);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0].fn, "approve_payment_proof");
+  assertEquals(calls[0].params, {
+    p_proof_id: 501,
+    p_collector_note: "Collected by Deacon John",
+  });
+});
+
+Deno.test("gateway: rejectPaymentProof calls reject_payment_proof RPC", async () => {
+  const calls: RpcCall[] = [];
+  const res = await rejectPaymentProof(stubClient(calls) as never, {
+    proofId: 502,
+    reasonCode: "BAD_REQUEST",
+  });
+
+  assertEquals(res.ok, true);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0].fn, "reject_payment_proof");
+  assertEquals(calls[0].params, {
+    p_proof_id: 502,
+    p_reason_code: "BAD_REQUEST",
+  });
 });

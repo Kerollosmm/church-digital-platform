@@ -19,9 +19,13 @@
     outbox: [],
     failedOutbox: [],
     announcements: [],
+    proofs: [],
     activeTab: 'tab-queue',
     autoRefreshTimer: null,
-    currentActionBookingId: null
+    currentActionBookingId: null,
+    currentActionProofId: null,
+    currentActionProofBookingId: null,
+    currentActionProofAmount: null
   };
 
   /**
@@ -376,7 +380,8 @@
         loadServicesAndSlots(),
         loadComplaints(),
         loadOutboxEvents(),
-        loadAnnouncements()
+        loadAnnouncements(),
+        loadPendingProofs()
       ]);
       updateTopStats();
     } catch (e) {
@@ -406,7 +411,8 @@
           await Promise.all([
             loadBookings(true),
             loadComplaints(true),
-            loadOutboxEvents(true)
+            loadOutboxEvents(true),
+            loadPendingProofs(true)
           ]);
           updateTopStats();
         }
@@ -444,6 +450,13 @@
     if (tabBadgeComplaints) {
       tabBadgeComplaints.textContent = newComplaintsCount;
       tabBadgeComplaints.style.display = newComplaintsCount > 0 ? 'inline-flex' : 'none';
+    }
+
+    const pendingProofsCount = state.proofs.filter(p => p.status === 'PENDING').length;
+    const tabBadgeProofs = document.getElementById('tab-badge-proofs');
+    if (tabBadgeProofs) {
+      tabBadgeProofs.textContent = pendingProofsCount;
+      tabBadgeProofs.style.display = pendingProofsCount > 0 ? 'inline-flex' : 'none';
     }
   }
 
@@ -1466,6 +1479,225 @@
 
   /**
    * =========================================================================
+   * TAB 6: PAYMENT PROOFS REVIEW QUEUE
+   * =========================================================================
+   */
+  async function loadPendingProofs(silent = false) {
+    const client = window.ChurchSupabase.getClient();
+    const { data: proofsData, error } = await client
+      .from('payment_proofs')
+      .select('*')
+      .order('id', { ascending: false });
+
+    if (error) {
+      if (!silent) console.warn('Error loading payment proofs:', error);
+      return;
+    }
+
+    state.proofs = proofsData || [];
+    renderPendingProofs();
+  }
+
+  function filterProofs() {
+    renderPendingProofs();
+  }
+
+  function renderPendingProofs() {
+    const tbody = document.getElementById('tbody-proofs');
+    if (!tbody) return;
+
+    const filterEl = document.getElementById('filter-proof-status');
+    const filter = filterEl ? filterEl.value : 'PENDING';
+
+    let list = state.proofs;
+    if (filter !== 'ALL') {
+      list = list.filter(p => p.status === filter);
+    }
+
+    if (list.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="10" style="text-align:center; padding:30px;" class="text-muted">
+            لا توجد إثباتات دفع مطابقة للفلاتر المحددة
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    const channelMap = {
+      'VODAFONE_CASH': 'فودافون كاش',
+      'INSTAPAY': 'إنستاباي',
+      'CASH': 'نقداً'
+    };
+
+    const statusBadgeMap = {
+      'PENDING': '<span class="badge badge-pending-payment">قيد المراجعة</span>',
+      'APPROVED': '<span class="badge badge-confirmed">مقبول (APPROVED)</span>',
+      'REJECTED': '<span class="badge badge-cancelled">مرفوض (REJECTED)</span>'
+    };
+
+    let html = '';
+    list.forEach(p => {
+      const channelLabel = channelMap[p.channel] || p.channel;
+      const statusHtml = statusBadgeMap[p.status] || `<span class="badge">${p.status}</span>`;
+      const dateStr = formatDate(p.created_at);
+
+      let imageHtml = '<span class="text-xs text-muted">بدون مرفق</span>';
+      if (p.image_path) {
+        const client = window.ChurchSupabase.getClient();
+        const { data: { publicUrl } } = client.storage.from('payment-proofs').getPublicUrl(p.image_path);
+        imageHtml = `<a href="${publicUrl}" target="_blank" class="btn btn-xs btn-outline" style="font-size:0.75rem;">🖼️ عرض الإشعار</a>`;
+      }
+
+      let actionsHtml = '--';
+      if (p.status === 'PENDING') {
+        actionsHtml = `
+          <div class="action-btn-group" style="justify-content:center;">
+            <button onclick="window.AdminApp.approveProof(${p.id}, '${p.channel}', ${p.booking_id}, ${p.amount_claimed})" class="btn btn-xs btn-success" title="اعتماد إثبات الدفع وتأكيد الحجز">
+              <span>✅ قبول</span>
+            </button>
+            <button onclick="window.AdminApp.openRejectProofModal(${p.id}, ${p.booking_id}, ${p.amount_claimed})" class="btn btn-xs btn-outline" style="color:var(--danger); border-color:var(--danger-border);" title="رفض إثبات الدفع مع توضيح السبب">
+              <span>❌ رفض</span>
+            </button>
+          </div>
+        `;
+      }
+
+      html += `
+        <tr>
+          <td><strong class="font-mono text-gold">#${p.id}</strong></td>
+          <td><strong class="font-mono">#${p.booking_id}</strong></td>
+          <td><span class="badge badge-open">${channelLabel}</span></td>
+          <td><span class="font-mono text-xs">${p.sender_phone || '--'}</span></td>
+          <td><span class="font-mono text-xs">${p.reference_number || '--'}</span></td>
+          <td><strong>${p.amount_claimed} ج.م</strong></td>
+          <td>${imageHtml}</td>
+          <td style="font-size:0.8rem;">${dateStr}</td>
+          <td>${statusHtml}</td>
+          <td style="text-align:center;">${actionsHtml}</td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+  }
+
+  async function approveProof(proofId, channel, bookingId, amount) {
+    if (channel === 'CASH') {
+      state.currentActionProofId = proofId;
+      const textEl = document.getElementById('cash-proof-id-text');
+      if (textEl) textEl.textContent = `#${proofId} (حجز #${bookingId})`;
+      const noteInput = document.getElementById('cash-collector-note');
+      if (noteInput) noteInput.value = '';
+      openModal('modal-approve-cash');
+      return;
+    }
+
+    const confirm = window.confirm(`هل أنت متأكد من قبول إثبات الدفع #${proofId} للحجز #${bookingId} بمبلغ ${amount} ج.م؟`);
+    if (!confirm) return;
+
+    window.ChurchSupabase.showToast(`جاري قبول واعتماد الإثبات #${proofId}...`, 'info', 2000);
+
+    try {
+      const { error, messageAr } = await window.ChurchSupabase.invokeRpc('approve_payment_proof', {
+        p_proof_id: proofId
+      });
+
+      if (error) {
+        throw new Error(messageAr || 'تعذر اعتماد إثبات الدفع');
+      }
+
+      window.ChurchSupabase.showToast(`تم قبول إثبات الدفع #${proofId} وتأكيد الحجز بنجاح!`, 'success');
+      await Promise.all([loadPendingProofs(), loadBookings(true), loadOutboxEvents(true)]);
+      updateTopStats();
+    } catch (e) {
+      window.ChurchSupabase.showToast(e.message, 'error');
+    }
+  }
+
+  async function executeApproveCashProof() {
+    const proofId = state.currentActionProofId;
+    if (!proofId) return;
+
+    const note = (document.getElementById('cash-collector-note').value || 'استلام نقدي بالخزينة').trim();
+    const btn = document.getElementById('btn-confirm-approve-cash');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> <span>جاري الاعتماد...</span>';
+
+    try {
+      const { error, messageAr } = await window.ChurchSupabase.invokeRpc('approve_payment_proof', {
+        p_proof_id: proofId,
+        p_collector_note: note
+      });
+
+      if (error) {
+        throw new Error(messageAr || 'تعذر اعتماد الدفع النقدي');
+      }
+
+      window.ChurchSupabase.showToast(`تم اعتماد استلام النقدية للإثبات #${proofId} بنجاح!`, 'success');
+      closeModal('modal-approve-cash');
+      await Promise.all([loadPendingProofs(), loadBookings(true), loadOutboxEvents(true)]);
+      updateTopStats();
+    } catch (e) {
+      window.ChurchSupabase.showToast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>تأكيد الاستلام والاعتماد</span>';
+    }
+  }
+
+  function openRejectProofModal(proofId, bookingId, amount) {
+    state.currentActionProofId = proofId;
+    state.currentActionProofBookingId = bookingId;
+    state.currentActionProofAmount = amount;
+
+    const idEl = document.getElementById('reject-proof-id-text');
+    const bookEl = document.getElementById('reject-proof-booking-id-text');
+    const amtEl = document.getElementById('reject-proof-amount-text');
+
+    if (idEl) idEl.textContent = `#${proofId}`;
+    if (bookEl) bookEl.textContent = `#${bookingId}`;
+    if (amtEl) amtEl.textContent = amount;
+
+    openModal('modal-reject-proof');
+  }
+
+  async function executeRejectProof() {
+    const proofId = state.currentActionProofId;
+    if (!proofId) return;
+
+    const reasonSelect = document.getElementById('reject-proof-reason-select');
+    const reasonCode = reasonSelect ? reasonSelect.value : 'BAD_REQUEST';
+
+    const btn = document.getElementById('btn-confirm-reject-proof');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> <span>جاري الرفض...</span>';
+
+    try {
+      const { error, messageAr } = await window.ChurchSupabase.invokeRpc('reject_payment_proof', {
+        p_proof_id: proofId,
+        p_reason_code: reasonCode
+      });
+
+      if (error) {
+        throw new Error(messageAr || 'تعذر رفض إثبات الدفع');
+      }
+
+      window.ChurchSupabase.showToast(`تم رفض إثبات الدفع #${proofId}. يمكن للمخدوم إعادة إرسال إثبات جديد`, 'info');
+      closeModal('modal-reject-proof');
+      await loadPendingProofs();
+      updateTopStats();
+    } catch (e) {
+      window.ChurchSupabase.showToast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>تأكيد رفض الإثبات</span>';
+    }
+  }
+
+  /**
+   * =========================================================================
    * TAB SWITCHING & MODAL HELPERS
    * =========================================================================
    */
@@ -1547,7 +1779,14 @@
     // Tab 5: Outbox
     loadOutboxEvents,
     handleResendOutboxEvent,
-    handleTriggerEventDispatcher
+    handleTriggerEventDispatcher,
+    // Tab 6: Payment Proofs
+    loadPendingProofs,
+    filterProofs,
+    approveProof,
+    executeApproveCashProof,
+    openRejectProofModal,
+    executeRejectProof
   };
 
   // Bootstrap when DOM is ready
@@ -1557,3 +1796,4 @@
     init();
   }
 })();
+

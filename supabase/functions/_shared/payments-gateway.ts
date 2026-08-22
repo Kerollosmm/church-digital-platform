@@ -97,3 +97,34 @@ export async function submitPaymentProof(
   if (error) return fail(error);
   return { ok: true, data: data as number };
 }
+
+export async function approvePaymentProof(
+  client: SupabaseClient,
+  opts: {
+    proofId: number;
+    collectorNote?: string | null;
+  },
+): Promise<GatewayResult<{ booking_id: number; payment_id: number }>> {
+  const { data, error } = await client.rpc("approve_payment_proof", {
+    p_proof_id: opts.proofId,
+    p_collector_note: opts.collectorNote ?? null,
+  });
+  if (error) return fail(error);
+  return { ok: true, data: data as { booking_id: number; payment_id: number } };
+}
+
+export async function rejectPaymentProof(
+  client: SupabaseClient,
+  opts: {
+    proofId: number;
+    reasonCode: string;
+  },
+): Promise<GatewayResult<void>> {
+  const { error } = await client.rpc("reject_payment_proof", {
+    p_proof_id: opts.proofId,
+    p_reason_code: opts.reasonCode,
+  });
+  if (error) return fail(error);
+  return { ok: true };
+}
+
