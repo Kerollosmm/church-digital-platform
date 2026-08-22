@@ -145,3 +145,57 @@ Deno.test("event-dispatcher: FCM_PUSH invalid private key -> FAILED", async () =
     fetchStub.restore();
   }
 });
+
+Deno.test("event-dispatcher: WHATSAPP booking_payment_received template sends with 2 parameters", async () => {
+  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
+  fake.seed("whatsapp_optins", [
+    { phone: "+201000000000" },
+  ]);
+  fake.seed("event_outbox", [
+    {
+      id: 30,
+      handler_type: "WHATSAPP",
+      payload: {
+        phone: "+201000000000",
+        template_name: "booking_payment_received",
+        params: {
+          booking_id: 101,
+          amount: 150,
+        },
+      },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  const calls: { url: string; init?: RequestInit }[] = [];
+  const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init });
+    return Promise.resolve(jsonRes({ messages: [{ id: "wamid.123" }] }));
+  });
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+      whatsappToken: "mock-wa-token",
+    });
+
+    assertEquals(res.status, 200);
+    assertEquals(calls.length, 1);
+    assertEquals(calls[0].url, "https://graph.facebook.com/v20.0/123456/messages");
+
+    const body = JSON.parse(String(calls[0].init?.body));
+    assertEquals(body.template.name, "booking_payment_received");
+    assertEquals(body.template.components[0].parameters, [
+      { type: "text", text: "101" },
+      { type: "text", text: "150" },
+    ]);
+
+    assertEquals(fake.tableRows("event_outbox")[0].status, "SENT");
+  } finally {
+    fetchStub.restore();
+  }
+});

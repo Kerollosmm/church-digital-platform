@@ -161,7 +161,7 @@ Monorepo (per plan.md): `supabase/migrations/`, `supabase/tests/`, `supabase/fun
 
 **Independent Test**: 0068 assertion (T016a) already proves enqueue on approve; this phase only verifies template/payload shape and best-effort degradation.
 
-- [ ] T041 [P] [US6] Verify + adjust template wiring: confirm `event-dispatcher` WhatsApp `booking_payment_received` payload built from approval path matches pre-011 shape (link param); if dispatcher test coverage lacks a proof-approval-shaped case, extend `supabase/functions/_tests/` accordingly; run `deno test` green; commit only if code changed: `chore(functions): notification trigger follows proof approval`
+- [x] T041 [P] [US6] Verify + adjust template wiring: confirm `event-dispatcher` WhatsApp `booking_payment_received` payload built from approval path matches pre-011 shape (link param); if dispatcher test coverage lacks a proof-approval-shaped case, extend `supabase/functions/_tests/` accordingly; run `deno test` green; commit only if code changed: `chore(functions): notification trigger follows proof approval`
 
 ---
 
