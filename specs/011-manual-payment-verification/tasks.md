@@ -24,8 +24,8 @@ Monorepo (per plan.md): `supabase/migrations/`, `supabase/tests/`, `supabase/fun
 
 **Purpose**: Baseline proof that all gates are green BEFORE any change.
 
-- [ ] T001 Run baseline gates and record counts: `node scripts/test-sql.js`, `deno test --allow-env --allow-net supabase/functions/`, `flutter analyze` + `flutter test` in `apps/mobile/` and `apps/admin/` — save summary to `.scratch/011-baseline.md`
-- [ ] T002 Create/verify feature branch `011-manual-payment-verification` (`git rev-parse --abbrev-ref HEAD`); spec-010 work must be merged or rebased first so migrations 0063–0065 are present
+- [x] T001 Run baseline gates and record counts: `node scripts/test-sql.js`, `deno test --allow-env --allow-net supabase/functions/`, `flutter analyze` + `flutter test` in `apps/mobile/` and `apps/admin/` — save summary to `.scratch/011-baseline.md`
+- [x] T002 Create/verify feature branch `011-manual-payment-verification` (`git rev-parse --abbrev-ref HEAD`); spec-010 work must be merged or rebased first so migrations 0063–0065 are present
 
 **Checkpoint**: Baseline green recorded; branch correct; 0065 is max applied migration.
 
@@ -35,10 +35,10 @@ Monorepo (per plan.md): `supabase/migrations/`, `supabase/tests/`, `supabase/fun
 
 **Purpose**: Schema, storage, and seed data every story depends on. No user story work before this lands.
 
-- [ ] T003 [P] Write failing SQL test `supabase/tests/0066_manual_payment_foundations_test.sql`: transactional BEGIN…ROLLBACK fixtures asserting — (a) `payment_channel` enum exists with exactly `VODAFONE_CASH|INSTAPAY|CASH`; (b) `payment_proofs` CHECKs enforced (wallet without `image_path` rejected, CASH with image rejected, REJECTED without reason rejected); (c) unique partial index allows one PENDING proof per booking, rejects second; (d) RLS: member SELECT limited to own-booking proofs, anon zero rows; (e) `payout_channels` SELECT granted to authenticated, UPDATE denied to ADMIN, allowed to SUPER_ADMIN (row_count semantics, never exceptions); (f) seed idempotency: re-running seed leaves exactly one row per wallet channel; (g) identity sequence `payment_proofs_id_seq` usable by `authenticated`
-- [ ] T004 [P] Register test in `supabase/tests/run_all.sql` with `\ir 0066_manual_payment_foundations_test.sql`; run `node scripts/test-sql.js` and confirm 0066 FAILS (red)
-- [ ] T005 Create migration `supabase/migrations/0066_manual_payment_foundations.sql` per data-model.md: `payment_channel` enum; `payment_proofs` + `payout_channels` tables with all CHECK constraints, tenant defaults, `ENABLE ROW LEVEL SECURITY` before policies; member/admin storage policies for private bucket `payment-proofs` (path scheme `{tenant_id}/{booking_id}/{proof_id}.<ext>`, explicit `ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY`, granular DML `TO authenticated`, admin read via `public.is_admin()`); idempotent seed inserts (VODAFONE_CASH + INSTAPAY rows, Arabic display names); `GRANT USAGE, SELECT ON SEQUENCE`; forward-only
-- [ ] T006 Run `npx supabase db reset` then `node scripts/test-sql.js` — expect 0066 PASS (green); commit `feat(sql): 0066 payment proof + payout channel foundations`
+- [x] T003 [P] Write failing SQL test `supabase/tests/0066_manual_payment_foundations_test.sql`: transactional BEGIN…ROLLBACK fixtures asserting — (a) `payment_channel` enum exists with exactly `VODAFONE_CASH|INSTAPAY|CASH`; (b) `payment_proofs` CHECKs enforced (wallet without `image_path` rejected, CASH with image rejected, REJECTED without reason rejected); (c) unique partial index allows one PENDING proof per booking, rejects second; (d) RLS: member SELECT limited to own-booking proofs, anon zero rows; (e) `payout_channels` SELECT granted to authenticated, UPDATE denied to ADMIN, allowed to SUPER_ADMIN (row_count semantics, never exceptions); (f) seed idempotency: re-running seed leaves exactly one row per wallet channel; (g) identity sequence `payment_proofs_id_seq` usable by `authenticated`
+- [x] T004 [P] Register test in `supabase/tests/run_all.sql` with `\ir 0066_manual_payment_foundations_test.sql`; run `node scripts/test-sql.js` and confirm 0066 FAILS (red)
+- [x] T005 Create migration `supabase/migrations/0066_manual_payment_foundations.sql` per data-model.md: `payment_channel` enum; `payment_proofs` + `payout_channels` tables with all CHECK constraints, tenant defaults, `ENABLE ROW LEVEL SECURITY` before policies; member/admin storage policies for private bucket `payment-proofs` (path scheme `{tenant_id}/{booking_id}/{proof_id}.<ext>`, explicit `ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY`, granular DML `TO authenticated`, admin read via `public.is_admin()`); idempotent seed inserts (VODAFONE_CASH + INSTAPAY rows, Arabic display names); `GRANT USAGE, SELECT ON SEQUENCE`; forward-only
+- [x] T006 Run `npx supabase db reset` then `node scripts/test-sql.js` — expect 0066 PASS (green); commit `feat(sql): 0066 payment proof + payout channel foundations`
 
 **Checkpoint**: Foundation ready — story phases may begin.
 

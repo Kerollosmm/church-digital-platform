@@ -56,3 +56,4 @@
 \ir 0063_service_role_grants_test.sql
 \ir 0064_transition_owner_guard_test.sql
 \ir 0065_webhook_payment_rpc_test.sql
+\ir 0066_manual_payment_foundations_test.sql
