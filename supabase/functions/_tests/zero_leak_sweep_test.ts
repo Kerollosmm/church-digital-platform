@@ -2,7 +2,6 @@ import { assertEquals } from "jsr:@std/assert";
 import { handleRequest as analyticsExport } from "../analytics-export/index.ts";
 import { handleRequest as diagnosticEngine } from "../diagnostic-engine/index.ts";
 import { handleRequest as eventDispatcher } from "../event-dispatcher/index.ts";
-import { handleRequest as offlineSync } from "../offline-sync/index.ts";
 
 // FR-005 sweep: every endpoint's unauthenticated failure body carries exactly
 // the frozen code + catalog Arabic sentence — never library/upstream text.
@@ -41,8 +40,4 @@ Deno.test("sweep: event-dispatcher", async () => {
     "event-dispatcher",
     await eventDispatcher(unauthenticated(), {} as never),
   );
-});
-
-Deno.test("sweep: offline-sync", async () => {
-  await assertZeroLeak("offline-sync", await offlineSync(unauthenticated()));
 });

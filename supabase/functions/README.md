@@ -22,7 +22,6 @@ All 5 functions disable gateway-level JWT verification in `supabase/config.toml`
 | `otp-sms` | StandardWebhooks | Dispatches SMS/WhatsApp OTP auth templates via Meta Graph API |
 | `diagnostic-engine` | Staff Bearer JWT (`auth({ requireStaff: true })`) | Executes security invariants, RLS penetration probes, and telemetry |
 | `analytics-export` | Staff Bearer JWT (`auth({ requireStaff: true })`) | Exports sanitized CSV reports (utilization, payments, bookings) |
-| `offline-sync` | User Bearer JWT (`auth()`) | Batch syncs mobile offline mutations via `sync_offline_mutations` RPC |
 
 ## 3. Core Invariants & Architecture Rules
 
