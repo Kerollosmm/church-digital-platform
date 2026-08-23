@@ -23,7 +23,7 @@ begin
 
   -- edge function inserts payment under service_role / postgres
   reset role;
-  perform set_config('request.jwt.claims', null, true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
   insert into public.payments (booking_id, amount, status, gateway_ref, merchant_order_id, tenant_id)
   values (v_book, 50, 'CREATED', null, 'order-1', public.tenant_id()) returning id into v_pay;
   -- apply_payment is service-role only (webhook edge fn)
@@ -49,8 +49,8 @@ begin
     then raise exception 'FAIL: late webhook must set REFUND_PENDING'; end if;
     if (select status from public.bookings where id = v_book) <> 'CANCELLED'
     then raise exception 'FAIL: late webhook must not revive a cancelled booking'; end if;
-    if not exists (select 1 from public.event_outbox where handler_type = 'PAYMOB_REFUND' and payload->>'payment_id' = v_pay2::text)
-    then raise exception 'FAIL: late webhook must enqueue a refund request'; end if;
+    if exists (select 1 from public.event_outbox where handler_type = 'PAYMOB_REFUND' and payload->>'payment_id' = v_pay2::text)
+    then raise exception 'FAIL: refund events are manual per ADR 0003 — none may be enqueued'; end if;
   end;
 end $$;
 

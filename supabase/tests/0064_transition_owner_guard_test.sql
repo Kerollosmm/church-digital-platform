@@ -5,11 +5,11 @@
 -- switch to service_role/authenticated explicitly.
 
 begin;
-select plan(9);
+select plan(11);
 
 -- ---------------------------------------------------------------- fixtures
 delete from public.payments where id in (99981, 99982, 99983);
-delete from public.bookings where id in (901, 902);
+delete from public.bookings where id in (901, 902, 903);
 delete from public.service_slots where id in (901, 902);
 delete from public.services where id in (901, 902);
 
@@ -34,7 +34,8 @@ insert into public.service_slots (id, service_id, tenant_id, starts_at, ends_at,
 insert into public.bookings (id, user_id, slot_id, tenant_id, status)
   overriding system value values
   (901, 'cccccccc-0000-0000-0000-000000006401'::uuid, 901, 1, 'PENDING_PAYMENT'),
-  (902, 'cccccccc-0000-0000-0000-000000006401'::uuid, 902, 1, 'PENDING_PAYMENT');
+  (902, 'cccccccc-0000-0000-0000-000000006401'::uuid, 902, 1, 'PENDING_PAYMENT'),
+  (903, 'cccccccc-0000-0000-0000-000000006401'::uuid, 902, 1, 'PENDING_PAYMENT');
 
 insert into public.payments (id, booking_id, amount, status, gateway_ref, tenant_id)
   overriding system value values
@@ -42,7 +43,7 @@ insert into public.payments (id, booking_id, amount, status, gateway_ref, tenant
   (99983, 902, 100, 'PAID',   'txn64_paid',   1);
 
 -- ------------------------------------------------- 1..4: ownership guard
--- 1. Non-owner CANNOT advance someone else's booking via apply_payment escape hatch
+-- 1. Non-owner CANNOT touch someone else's booking
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"cccccccc-0000-0000-0000-000000006402"}';
 select throws_ok(
@@ -51,25 +52,38 @@ select throws_ok(
   'non-owner must be denied even with p_action=apply_payment'
 );
 
--- 2. Owner CAN record own payment transition
+-- 2. Owner CANNOT self-advance to AWAITING_CALL any more: payment advancement
+--    goes through staff-only approve_payment_proof/mark_cash_received
 set local request.jwt.claims = '{"sub":"cccccccc-0000-0000-0000-000000006401"}';
+select throws_ok(
+  $$ select public.transition_booking_status(901, 'AWAITING_CALL', 'apply_payment') $$,
+  '42501', null,
+  'owner apply_payment escape hatch is closed'
+);
 select ok(
-  (public.transition_booking_status(901, 'AWAITING_CALL', 'apply_payment')).status = 'AWAITING_CALL',
-  'owner apply_payment advances own booking to AWAITING_CALL'
+  (select status::text from public.bookings where id = 901) = 'PENDING_PAYMENT',
+  'denied self-approval leaves the booking untouched'
+);
+
+-- 3. Owner can still cancel their own booking
+select ok(
+  (public.transition_booking_status(903, 'CANCELLED', 'member_cancel')).status = 'CANCELLED',
+  'owner cancels own booking'
 );
 reset role;
 
--- 3. audit row written for the owner transition (read as superuser: audit_log RLS)
+-- 3b. audit row written for the owner cancellation (read as superuser: audit_log RLS)
 select ok(
   exists (select 1 from public.audit_log
-          where entity_type = 'bookings' and entity_id = 901 and action = 'apply_payment'
-            and meta->>'new_status' = 'AWAITING_CALL'),
-  'audit row written for owner apply_payment transition'
+          where entity_type = 'bookings' and entity_id = 903 and action = 'member_cancel'
+            and meta->>'new_status' = 'CANCELLED'),
+  'audit row written for owner cancel transition'
 );
 
 -- 4. service_role CAN transition (admin-tier operations, e.g. confirmation)
 set local role service_role;
 set local request.jwt.claims = '{"role":"service_role"}';
+select public.transition_booking_status(901, 'AWAITING_CALL', 'apply_payment');
 select public.transition_booking_status(901, 'CONFIRMED', 'confirm_booking');
 reset role;
 select ok(

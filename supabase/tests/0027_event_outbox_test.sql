@@ -22,7 +22,7 @@ begin
 
   -- 1. apply_payment enqueues WHATSAPP booking_payment_received (runs under service_role / postgres)
   reset role;
-  perform set_config('request.jwt.claims', null, true);
+  perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
   insert into public.payments (booking_id, amount, status, tenant_id)
   values (v_book, 50, 'CREATED', 1) returning id into v_pay;
   perform public.apply_payment(v_pay);

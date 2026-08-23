@@ -5,6 +5,7 @@ import '../core/either.dart';
 import '../core/failure.dart';
 import '../models/available_slot.dart';
 import '../models/booking.dart';
+import '../models/payment_proof.dart';
 import '../models/payment_proof_input.dart';
 import '../models/payout_channel.dart';
 import '../services/app_supabase.dart';
@@ -80,7 +81,11 @@ class SupabaseBookingRepository implements BookingRepository {
   @override
   Future<Either<Failure, List<PayoutChannel>>> fetchPayoutChannels() async {
     try {
-      final rows = await _supabase.query('payout_channels', orderBy: 'id');
+      final rows = await _supabase.query(
+        'payout_channels',
+        filters: const {'is_active': true},
+        orderBy: 'id',
+      );
       final channels = rows.map(PayoutChannel.fromJson).toList();
       return Right(channels);
     } on PostgrestException catch (e) {
@@ -96,6 +101,23 @@ class SupabaseBookingRepository implements BookingRepository {
       );
       return Left(BookingFailure(e.toString(), originalError: e));
     }
+  }
+
+  int? _cachedTenantId;
+
+  Future<int?> _resolveTenantId() async {
+    if (_cachedTenantId != null) return _cachedTenantId;
+    try {
+      final res = await _supabase.rpc('tenant_id', const {});
+      if (res is num) {
+        _cachedTenantId = res.toInt();
+      } else if (res != null) {
+        _cachedTenantId = int.parse(res.toString());
+      }
+    } catch (e) {
+      developer.log('tenant_id lookup failed: $e', name: 'BookingRepository');
+    }
+    return _cachedTenantId;
   }
 
   @override
@@ -132,7 +154,11 @@ class SupabaseBookingRepository implements BookingRepository {
     required String filename,
   }) async {
     try {
-      final path = '1/$bookingId/$filename';
+      final tenantId = await _resolveTenantId();
+      if (tenantId == null) {
+        return const Left(AuthFailure('UNAUTHORIZED', code: '28000'));
+      }
+      final path = '$tenantId/$bookingId/$filename';
       final res = await _supabase.uploadStorage(
         'payment-proofs',
         path,
@@ -149,6 +175,54 @@ class SupabaseBookingRepository implements BookingRepository {
     } catch (e) {
       developer.log(
         'uploadProofImage unexpected error: $e',
+        name: 'BookingRepository',
+      );
+      return Left(BookingFailure(e.toString(), originalError: e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, PaymentProof>> fetchLatestProof(int bookingId) async {
+    try {
+      final rows = await _supabase.query(
+        'payment_proofs',
+        filters: {'booking_id': bookingId},
+        orderBy: 'created_at',
+        ascending: false,
+      );
+      if (rows.isEmpty) {
+        return Left(BookingFailure('no proof for booking $bookingId'));
+      }
+      return Right(PaymentProof.fromJson(rows.first));
+    } on PostgrestException catch (e) {
+      developer.log(
+        'fetchLatestProof failed: ${e.message}',
+        name: 'BookingRepository',
+      );
+      return Left(BookingFailure(e.message, code: e.code, originalError: e));
+    } catch (e) {
+      developer.log(
+        'fetchLatestProof unexpected error: $e',
+        name: 'BookingRepository',
+      );
+      return Left(BookingFailure(e.toString(), originalError: e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteProofImage(String path) async {
+    try {
+      await _supabase.deleteStorage('payment-proofs', path);
+      return const Right(null);
+    } on StorageException catch (e) {
+      developer.log(
+        'deleteProofImage failed: ${e.message}',
+        name: 'BookingRepository',
+      );
+      return Left(BookingFailure(e.message, code: e.statusCode, originalError: e));
+    } catch (e) {
+      developer.log(
+        'deleteProofImage unexpected error: $e',
         name: 'BookingRepository',
       );
       return Left(BookingFailure(e.toString(), originalError: e));
@@ -197,6 +271,12 @@ class EmptyBookingRepository implements BookingRepository {
     required Uint8List bytes,
     required String filename,
   }) async => const Left(BookingFailure('Empty booking repository'));
+  @override
+  Future<Either<Failure, PaymentProof>> fetchLatestProof(int bookingId) async =>
+      const Left(BookingFailure('Empty booking repository'));
+  @override
+  Future<Either<Failure, void>> deleteProofImage(String path) async =>
+      const Right(null);
   @override
   Future<void> cancelBooking(int bookingId) async => Future.value();
   @override

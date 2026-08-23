@@ -46,6 +46,9 @@ class FakeAppSupabase implements AppSupabase {
     String? contentType,
   }) async => path;
 
+  @override
+  Future<void> deleteStorage(String bucket, String path) async {}
+
   FakeQuery from(String table) => FakeQuery([]);
 }
 

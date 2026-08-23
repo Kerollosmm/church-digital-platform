@@ -19,6 +19,7 @@ abstract interface class AppSupabase {
     List<int> bytes, {
     String? contentType,
   });
+  Future<void> deleteStorage(String bucket, String path);
 }
 
 class SupabaseAppSupabase implements AppSupabase {
@@ -79,6 +80,11 @@ class SupabaseAppSupabase implements AppSupabase {
     );
     return path;
   }
+
+  @override
+  Future<void> deleteStorage(String bucket, String path) async {
+    await _client.storage.from(bucket).remove([path]);
+  }
 }
 
 class UnimplementedAppSupabase implements AppSupabase {
@@ -108,4 +114,9 @@ class UnimplementedAppSupabase implements AppSupabase {
   }) => throw UnimplementedError(
     'uploadStorage called in test dependencies',
   );
+  @override
+  Future<void> deleteStorage(String bucket, String path) =>
+      throw UnimplementedError(
+        'deleteStorage called in test dependencies',
+      );
 }

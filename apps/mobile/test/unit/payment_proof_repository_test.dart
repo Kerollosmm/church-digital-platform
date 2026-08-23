@@ -56,6 +56,11 @@ class MockAppSupabase implements AppSupabase {
     storageCalls.add('$bucket/$path');
     return path;
   }
+
+  @override
+  Future<void> deleteStorage(String bucket, String path) async {
+    storageCalls.add('delete:$bucket/$path');
+  }
 }
 
 void main() {

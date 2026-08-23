@@ -55,9 +55,9 @@ begin
                  where handler_type = 'WHATSAPP' and payload->>'template_name' = 'booking_apology'
                    and (payload->>'booking_id' = v_book::text or payload->'params'->>'booking_id' = v_book::text))
   then raise exception 'FAIL: apology template must be enqueued'; end if;
-  if not exists (select 1 from public.event_outbox
-                 where handler_type = 'PAYMOB_REFUND' and payload->>'payment_id' = v_pay::text and status = 'PENDING')
-  then raise exception 'FAIL: refund request must be enqueued for paid payment'; end if;
+  if exists (select 1 from public.event_outbox
+             where handler_type = 'PAYMOB_REFUND' and payload->>'payment_id' = v_pay::text)
+  then raise exception 'FAIL: refunds are manual per ADR 0003 — override must not enqueue refund events'; end if;
 
   -- PARISHIONER cannot override
   set local role authenticated;

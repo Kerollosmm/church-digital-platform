@@ -7,6 +7,7 @@ import 'package:mobile/features/booking/payment_proof_screen.dart';
 import 'package:mobile/models/available_slot.dart';
 import 'package:mobile/models/booking.dart';
 import 'package:mobile/models/payment_channel.dart';
+import 'package:mobile/models/payment_proof.dart';
 import 'package:mobile/models/payment_proof_input.dart';
 import 'package:mobile/models/payout_channel.dart';
 import 'package:mobile/repositories/booking_repository.dart';
@@ -74,6 +75,12 @@ class FakeProofBookingRepository implements BookingRepository {
   Future<void> confirmBooking(int bookingId) async {}
   @override
   Future<void> completeBooking(int bookingId) async {}
+  @override
+  Future<Either<Failure, PaymentProof>> fetchLatestProof(int bookingId) async =>
+      const Left(BookingFailure('no proof'));
+  @override
+  Future<Either<Failure, void>> deleteProofImage(String path) async =>
+      const Right(null);
 }
 
 void main() {

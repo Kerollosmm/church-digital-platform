@@ -12,7 +12,10 @@ class FaqAdminScreen extends StatefulWidget {
 class _FaqAdminScreenState extends State<FaqAdminScreen> {
   late Future<List<Map<String, dynamic>>> _rows;
   @override
-  void initState() { super.initState(); _rows = widget.repository.faq().then(unwrapOrThrow); }
+  void initState() {
+    super.initState();
+    _rows = widget.repository.faq().then(unwrapOrThrow);
+  }
 
   Future<void> _add() async {
     final q = TextEditingController();
@@ -30,8 +33,11 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
           TextButton(
             onPressed: () async {
               (await widget.repository.createFaq({
-                'question_ar': q.text, 'answer_ar': a.text,
-                'position': 999, 'published': true, 'tenant_id': 1,
+                'question_ar': q.text,
+                'answer_ar': a.text,
+                'position': 999,
+                'published': true,
+                'tenant_id': 1,
               })).fold((f) => throw f, (_) => {});
               if (ctx.mounted) Navigator.pop(ctx);
               setState(() {
@@ -50,7 +56,8 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('الأسئلة الشائعة')),
       floatingActionButton: FloatingActionButton(
-        onPressed: _add, child: const Text('إضافة سؤال'),
+        onPressed: _add,
+        child: const Text('إضافة سؤال'),
       ),
       body: FutureBuilder(
         future: _rows,
@@ -67,7 +74,11 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
                   icon: const Icon(Icons.delete),
                   onPressed: () async {
                     (await widget.repository.deleteFaq(r['id'] as int)).fold((f) => throw f, (_) => {});
-
+                    if (mounted) {
+                      setState(() {
+                        _rows = widget.repository.faq().then(unwrapOrThrow);
+                      });
+                    }
                   },
                 ),
               );

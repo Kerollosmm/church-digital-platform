@@ -67,4 +67,9 @@ class TestAppSupabase implements AppSupabase {
     rpcCalls.add('uploadStorage:$bucket/$path');
     return path;
   }
+
+  @override
+  Future<void> deleteStorage(String bucket, String path) async {
+    rpcCalls.add('deleteStorage:$bucket/$path');
+  }
 }

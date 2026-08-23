@@ -4,7 +4,7 @@
 -- gates, seed idempotency, identity sequence grant.
 
 begin;
-select plan(16);
+select plan(18);
 
 -- ---------------------------------------------------------------- fixtures
 delete from public.payment_proofs where booking_id in (661, 662);
@@ -114,9 +114,11 @@ reset role;
 update public.users set role = 'ADMIN' where id = 'cccccccc-0000-0000-0000-000000006602'::uuid;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"cccccccc-0000-0000-0000-000000006602"}';
-update public.payout_channels set account_number = 'hacked' where channel = 'INSTAPAY';
+with updated as (
+  update public.payout_channels set account_number = 'hacked' where channel = 'INSTAPAY' returning *
+)
 select is(
-  (select account_number from public.payout_channels where channel = 'INSTAPAY'), '01011112222',
+  (select count(*) from updated), 0::bigint,
   'ADMIN payout UPDATE affects zero rows (tier gate)'
 );
 reset role;
@@ -135,7 +137,7 @@ update public.users set role = 'USER' where id = 'cccccccc-0000-0000-0000-000000
 -- ------------------------------------------------- 14..15: seed idempotency structure
 insert into public.payout_channels (channel, display_name_ar, account_number, holder_name)
 values ('VODAFONE_CASH', 'فودافون كاش', '01000000000', 'الكنيسة')
-on conflict (channel) do update set display_name_ar = excluded.display_name_ar;
+on conflict (tenant_id, channel) do update set display_name_ar = excluded.display_name_ar;
 
 select is(
   (select count(*) from public.payout_channels where channel = 'VODAFONE_CASH'), 1::bigint,
@@ -146,12 +148,23 @@ select ok(
   exists (
     select 1 from pg_constraint c
     where c.conrelid = 'public.payout_channels'::regclass
-      and c.contype = 'u' and array_to_string(c.conkey, ',') = (
-        select array_to_string(array_agg(attnum order by attnum), ',')
-        from pg_attribute
-        where attrelid = 'public.payout_channels'::regclass and attname = 'channel')
+      and c.contype = 'u' and c.conname = 'payout_channels_tenant_channel_key'
   ),
-  'payout_channels.channel carries a unique constraint (seed idempotent by construction)'
+  'payout_channels carries a per-tenant (tenant_id, channel) unique constraint'
+);
+
+-- ------------------------------------------------- 15b: placeholder seeds ship inactive
+select is(
+  (select count(*) from public.payout_channels where is_active), 0::bigint,
+  'placeholder wallet seeds are inactive until a super-admin configures them'
+);
+
+select ok(
+  exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'payout_channels' and column_name = 'is_active'
+  ),
+  'payout_channels exposes an is_active gate'
 );
 
 -- ------------------------------------------------- 16: identity sequence grant

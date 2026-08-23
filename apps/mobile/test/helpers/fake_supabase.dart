@@ -124,5 +124,10 @@ class FakeSupabase implements AppSupabase {
     return path;
   }
 
+  @override
+  Future<void> deleteStorage(String bucket, String path) async {
+    rpcCalls.add('deleteStorage:$bucket/$path');
+  }
+
   FakeAuth get auth => FakeAuth(currentUser);
 }

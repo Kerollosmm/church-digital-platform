@@ -49,7 +49,7 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _message = '??? ?? ????? ????????: ${e.toString()}';
+          _message = 'فشل في تحميل المواعيد: ${e.toString()}';
         });
       }
     }
@@ -69,14 +69,14 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _message = '?? ????? ?????? ?????';
+          _message = 'تم تسجيل الحجز بنجاح';
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isSubmitting = false;
-          _message = '??? ???: $e';
+          _message = 'حدث خطأ: $e';
         });
       }
     }
@@ -86,7 +86,7 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('??? ????'),
+        title: const Text('حجز يدوي'),
       ),
       body: Directionality(
         textDirection: TextDirection.rtl,
@@ -99,7 +99,7 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
                   children: [
                     DropdownButtonFormField<dynamic>(
                       decoration: const InputDecoration(
-                        labelText: '?????? ??????',
+                        labelText: 'الموعد المتاح',
                         border: OutlineInputBorder(),
                       ),
                       initialValue: _selectedSlotId,
@@ -117,14 +117,14 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
                       decoration: const InputDecoration(
-                        labelText: '??? ??????',
+                        labelText: 'رقم الهاتف',
                         border: OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 16),
                     CheckboxListTile(
                       key: const Key('opt_in_checkbox'),
-                      title: const Text('????? ??????? ?????? / ???????'),
+                      title: const Text('تفعيل إشعارات واتساب / الرسائل'),
                       value: _optIn,
                       onChanged: (val) => setState(() => _optIn = val ?? false),
                     ),
@@ -133,7 +133,7 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
                       key: const Key('notes_field'),
                       controller: _notesController,
                       decoration: const InputDecoration(
-                        labelText: '???????',
+                        labelText: 'ملاحظات',
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -147,14 +147,16 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('????? ?????'),
+                          : const Text('تأكيد الحجز'),
                     ),
                     if (_message != null) ...[
                       const SizedBox(height: 16),
                       Text(
                         _message!,
                         style: TextStyle(
-                          color: _message!.startsWith('??? ???') ? Colors.red : Colors.green,
+                          color: (_message!.startsWith('حدث خطأ') || _message!.startsWith('فشل'))
+                              ? Colors.red
+                              : Colors.green,
                         ),
                       ),
                     ],

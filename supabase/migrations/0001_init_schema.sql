@@ -8,6 +8,7 @@ create type public.booking_status as enum ('PENDING_PAYMENT','AWAITING_CALL','CO
 create type public.payment_status as enum ('CREATED','PAID','FAILED','REFUNDED','REFUND_PENDING','PENDING');
 create type public.video_privacy as enum ('PUBLIC','UNLISTED','PRIVATE');
 create type public.complaint_status as enum ('NEW','ASSIGNED','RESOLVED');
+create type public.payment_channel as enum ('VODAFONE_CASH','INSTAPAY','CASH');
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'event_handler_type') then

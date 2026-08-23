@@ -31,9 +31,10 @@ begin
   select public.active_booking_count(v_slot) into v_n;
   if v_n <> 1 then raise exception 'FAIL: active_booking_count must be 1'; end if;
 
-  -- 2. engine transition + single audit row
+  -- 2. engine transition + single audit row (staff-driven: AWAITING_CALL is
+  --    reached only via admin approve/mark_cash_received -> apply_payment)
   reset role;
-  perform set_config('request.jwt.claims', null, true);
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000242', 'role', 'authenticated')::text, true);
   v_res := public.transition_booking_status(v_book, 'AWAITING_CALL', 'apply_payment');
   if v_res.status <> 'AWAITING_CALL' then raise exception 'FAIL: engine must flip status'; end if;
   if v_res.locked_until is not null then raise exception 'FAIL: engine must clear lock outside PENDING_PAYMENT'; end if;

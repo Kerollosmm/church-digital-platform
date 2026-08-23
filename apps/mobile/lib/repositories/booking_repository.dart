@@ -3,6 +3,7 @@ import '../core/either.dart';
 import '../core/failure.dart';
 import '../models/available_slot.dart';
 import '../models/booking.dart';
+import '../models/payment_proof.dart';
 import '../models/payment_proof_input.dart';
 import '../models/payout_channel.dart';
 
@@ -25,6 +26,8 @@ abstract interface class BookingRepository {
     required Uint8List bytes,
     required String filename,
   });
+  Future<Either<Failure, PaymentProof>> fetchLatestProof(int bookingId);
+  Future<Either<Failure, void>> deleteProofImage(String path);
 
   Future<void> cancelBooking(int bookingId);
   Future<void> confirmBooking(int bookingId);

@@ -34,6 +34,9 @@ class FakePortalSupabase implements AppSupabase {
     List<int> bytes, {
     String? contentType,
   }) async => path;
+
+  @override
+  Future<void> deleteStorage(String bucket, String path) async {}
 }
 
 void main() {

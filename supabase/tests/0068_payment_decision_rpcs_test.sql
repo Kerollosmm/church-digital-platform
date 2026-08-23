@@ -177,8 +177,8 @@ select is(
 
 select is(
   (select status::text from public.payments where id = 684),
-  'CREATED',
-  'rejection leaves payment in CREATED status with zero financial writes'
+  'FAILED',
+  'rejection voids the linked CREATED payment snapshot'
 );
 
 -- Member resubmits new proof after rejection (0067 flow)

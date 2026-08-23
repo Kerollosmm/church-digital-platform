@@ -31,6 +31,53 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
     return unwrapOrThrow(result);
   }
 
+  void _viewReceiptImage(PaymentProofReview proof) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('إشعار التحويل — حجز #${proof.bookingId}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('المرجع: ${proof.referenceNumber}'),
+            Text('المبلغ: ${proof.amountClaimed} جنيه'),
+            const SizedBox(height: 8),
+            Text(
+              'المسار: ${proof.imagePath}',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              height: 160,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.blueGrey.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blueGrey.shade200),
+              ),
+              alignment: Alignment.center,
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.image, size: 48, color: Colors.blueGrey),
+                  SizedBox(height: 8),
+                  Text('صورة الإشعار المرفقة من المخدوم', style: TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _handleApprove(PaymentProofReview proof) async {
     String? collectorNote;
     if (proof.channel == 'CASH') {
@@ -250,7 +297,15 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
                       Text('رقم المعاملة / المرجع: ${p.referenceNumber}'),
                       if (p.imagePath != null) ...[
                         const SizedBox(height: 8),
-                        Text('مسار صورة الإشعار: ${p.imagePath}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        Row(
+                          children: [
+                            TextButton.icon(
+                              icon: const Icon(Icons.image, size: 18),
+                              label: const Text('معاينة صورة الإشعار'),
+                              onPressed: () => _viewReceiptImage(p),
+                            ),
+                          ],
+                        ),
                       ],
                       const SizedBox(height: 12),
                       Row(

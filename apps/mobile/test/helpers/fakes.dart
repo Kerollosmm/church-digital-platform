@@ -3,6 +3,7 @@ import 'package:mobile/core/either.dart';
 import 'package:mobile/core/failure.dart';
 import 'package:mobile/models/available_slot.dart';
 import 'package:mobile/models/booking.dart';
+import 'package:mobile/models/payment_proof.dart';
 import 'package:mobile/models/payment_proof_input.dart';
 import 'package:mobile/models/payout_channel.dart';
 import 'package:mobile/repositories/booking_repository.dart';
@@ -101,6 +102,14 @@ class FakeBookingRepository implements BookingRepository {
   Future<void> completeBooking(int bookingId) async {}
   @override
   Future<List<AvailableSlot>> fetchAvailableSlots() async => [];
+  @override
+  Future<Either<Failure, PaymentProof>> fetchLatestProof(int bookingId) async =>
+      const Left(BookingFailure('no proof in fake'));
+  @override
+  Future<Either<Failure, void>> deleteProofImage(String path) async {
+    calls.add('deleteProofImage:$path');
+    return const Right(null);
+  }
 }
 
 final fakeBooking = Booking(
