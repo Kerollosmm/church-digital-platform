@@ -38,6 +38,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
   Future<void> _loadEventTypes() async {
     setState(() => _isLoading = true);
     final res = await widget.repository.fetchEventTypes();
+    if (!mounted) return;
     res.fold(
       (fail) => setState(() {
         _error = fail.message;
@@ -62,6 +63,9 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
       _selectedQuantities.clear();
     });
     final res = await widget.repository.fetchExtraServicesForEvent(type.id);
+    if (!mounted) return;
+    // Guard against out-of-order responses overwriting newer selections
+    if (_selectedEventType?.id != type.id) return;
     res.fold((fail) {}, (extras) => setState(() => _availableExtras = extras));
   }
 
@@ -103,9 +107,8 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
           : _notesController.text.trim(),
     );
 
-    setState(() => _isSubmitting = false);
-
     if (!mounted) return;
+    setState(() => _isSubmitting = false);
 
     res.fold(
       (fail) {

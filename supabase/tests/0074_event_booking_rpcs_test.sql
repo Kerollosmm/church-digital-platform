@@ -3,7 +3,7 @@
 -- Stored Procedures (submit_event_booking, admin_confirm_booking, admin_reject_booking, admin_record_cash_payment)
 
 begin;
-select plan(12);
+select plan(16);
 
 -- ---------------------------------------------------------------- fixtures
 insert into auth.users (id, email, phone) values
@@ -126,7 +126,24 @@ select is(
   'booking status updated to CONFIRMED'
 );
 
--- ------------------------------------------------- 8..9: admin_record_cash_payment
+-- ------------------------------------------------- 8..11: admin_record_cash_payment
+-- Negative test: non-admin cannot record cash payment
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"ffffffff-0000-0000-0000-000000007401"}';
+select throws_ok(
+  $$
+    select public.admin_record_cash_payment(
+      (select id from public.event_bookings where customer_id = 'ffffffff-0000-0000-0000-000000007401'::uuid limit 1),
+      20000,
+      'محاولة غير مصرح بها'
+    )
+  $$,
+  '42501',
+  null,
+  'regular user cannot record cash payment (FORBIDDEN)'
+);
+reset role;
+
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"ffffffff-0000-0000-0000-000000007402"}';
 
@@ -167,7 +184,7 @@ select is(
   'immutable payment audit log recorded 2 cash entries'
 );
 
--- ------------------------------------------------- 10: admin_reject_booking
+-- ------------------------------------------------- 12..14: admin_reject_booking
 -- Create a new booking to test rejection
 insert into public.event_bookings (
   id, customer_id, event_type_id, start_time, end_time, status, tenant_id
@@ -181,6 +198,22 @@ insert into public.event_bookings (
   1
 );
 
+-- Negative test: non-admin cannot reject booking
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"ffffffff-0000-0000-0000-000000007401"}';
+select throws_ok(
+  $$
+    select public.admin_reject_booking(
+      'dddddddd-1111-1111-1111-111111111111'::uuid,
+      'محاولة غير مصرح بها'
+    )
+  $$,
+  '42501',
+  null,
+  'regular user cannot reject booking (FORBIDDEN)'
+);
+reset role;
+
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"ffffffff-0000-0000-0000-000000007402"}';
 select lives_ok(
@@ -191,6 +224,46 @@ select lives_ok(
     )
   $$,
   'admin rejects booking with reason'
+);
+reset role;
+
+-- ------------------------------------------------- 15..16: admin_create_manual_booking
+-- Negative test: non-admin cannot create manual booking
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"ffffffff-0000-0000-0000-000000007401"}';
+select throws_ok(
+  $$
+    select public.admin_create_manual_booking(
+      'ffffffff-0000-0000-0000-000000007401'::uuid,
+      'aaaaaaaa-1111-1111-1111-111111111111'::uuid,
+      'cccccccc-2222-2222-2222-222222222222'::uuid,
+      now() + interval '12 days',
+      now() + interval '12 days 1 hour',
+      '[]'::jsonb
+    )
+  $$,
+  '42501',
+  null,
+  'regular user cannot create manual booking (FORBIDDEN)'
+);
+reset role;
+
+-- Positive test: admin creates manual booking
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"ffffffff-0000-0000-0000-000000007402"}';
+select lives_ok(
+  $$
+    select public.admin_create_manual_booking(
+      'ffffffff-0000-0000-0000-000000007401'::uuid,
+      'aaaaaaaa-1111-1111-1111-111111111111'::uuid,
+      'cccccccc-2222-2222-2222-222222222222'::uuid,
+      now() + interval '12 days',
+      now() + interval '12 days 1 hour',
+      '[]'::jsonb,
+      'حجز يدوي بواسطة الإدارة'
+    )
+  $$,
+  'admin creates manual booking successfully'
 );
 reset role;
 
