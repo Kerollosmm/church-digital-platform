@@ -16,6 +16,7 @@ BEGIN
       'SUBMITTED',
       'AWAITING_CALL',
       'CONFIRMED',
+      'PENDING_PAYMENT',
       'PAID',
       'COMPLETED',
       'REJECTED',

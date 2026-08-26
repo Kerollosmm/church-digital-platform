@@ -69,15 +69,17 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     res.fold((fail) {}, (extras) => setState(() => _availableExtras = extras));
   }
 
-  int get _calculatedTotalEgp {
+  int get _calculatedTotalPiastres {
     if (_selectedEventType == null) return 0;
-    int total = _selectedEventType!.basePriceEgp;
+    int total = _selectedEventType!.basePricePiastres;
     for (final extra in _availableExtras) {
       final qty = _selectedQuantities[extra.id] ?? 0;
-      total += extra.priceEgp * qty;
+      total += extra.pricePiastres * qty;
     }
     return total;
   }
+
+  double get _calculatedTotalEgp => _calculatedTotalPiastres / 100.0;
 
   Future<void> _submit() async {
     if (_selectedEventType == null) return;
@@ -149,12 +151,14 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                       return DropdownMenuItem(
                         value: type,
                         child: Text(
-                          '${type.nameAr} (${type.basePriceEgp} ج.م)',
+                          '${type.nameAr} (${type.basePriceEgp.toStringAsFixed(type.basePriceEgp.truncateToDouble() == type.basePriceEgp ? 0 : 2)} ج.م)',
                         ),
                       );
                     }).toList(),
                     onChanged: (val) {
-                      if (val != null) _onEventTypeSelected(val);
+                      if (val != null) {
+                        _onEventTypeSelected(val);
+                      }
                     },
                     decoration: const InputDecoration(
                       border: OutlineInputBorder(),
@@ -174,7 +178,9 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                       final currentQty = _selectedQuantities[extra.id] ?? 0;
                       return CheckboxListTile(
                         title: Text(extra.nameAr),
-                        subtitle: Text('${extra.priceEgp} ج.م'),
+                        subtitle: Text(
+                          '${extra.priceEgp.toStringAsFixed(extra.priceEgp.truncateToDouble() == extra.priceEgp ? 0 : 2)} ج.م',
+                        ),
                         value: currentQty > 0,
                         onChanged: (checked) {
                           setState(() {
@@ -213,8 +219,9 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                                 const Duration(days: 365),
                               ),
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setState(() => _selectedDate = picked);
+                            }
                           },
                         ),
                       ),
@@ -228,8 +235,9 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                               context: context,
                               initialTime: _selectedTime,
                             );
-                            if (picked != null)
+                            if (picked != null) {
                               setState(() => _selectedTime = picked);
+                            }
                           },
                         ),
                       ),
@@ -260,7 +268,7 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                             ),
                           ),
                           Text(
-                            '$_calculatedTotalEgp ج.م',
+                            '${_calculatedTotalEgp.toStringAsFixed(_calculatedTotalEgp.truncateToDouble() == _calculatedTotalEgp ? 0 : 2)} ج.م',
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,

@@ -445,15 +445,16 @@ BEGIN
   WHERE id = p_booking_id AND tenant_id = public.tenant_id()
   FOR UPDATE;
 
-  IF v_booking.id IS NULL OR v_booking.status IN ('CANCELLED', 'REJECTED') THEN
+  IF v_booking.id IS NULL OR v_booking.status NOT IN ('CONFIRMED', 'PENDING_PAYMENT') THEN
     RAISE EXCEPTION 'BAD_REQUEST';
   END IF;
 
   v_new_paid := v_booking.paid_amount_piastres + p_amount_piastres;
-  v_new_status := v_booking.status;
-
-  IF v_new_paid >= v_booking.total_price_piastres AND v_booking.status = 'CONFIRMED' THEN
+  
+  IF v_new_paid >= v_booking.total_price_piastres THEN
     v_new_status := 'PAID';
+  ELSE
+    v_new_status := 'PENDING_PAYMENT';
   END IF;
 
   UPDATE public.event_bookings

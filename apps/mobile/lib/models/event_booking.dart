@@ -15,7 +15,7 @@ class EventType {
   final int defaultDurationMinutes;
   final bool isActive;
 
-  int get basePriceEgp => basePricePiastres ~/ 100;
+  double get basePriceEgp => basePricePiastres / 100.0;
 
   factory EventType.fromJson(Map<String, dynamic> json) => EventType(
     id: json['id'] as String? ?? '',
@@ -56,7 +56,7 @@ class ExtraService {
   final int maxQuantity;
   final bool isActive;
 
-  int get priceEgp => pricePiastres ~/ 100;
+  double get priceEgp => pricePiastres / 100.0;
 
   factory ExtraService.fromJson(Map<String, dynamic> json) => ExtraService(
     id: json['id'] as String? ?? '',
@@ -116,10 +116,10 @@ class EventBooking {
   final int paidAmountPiastres;
   final DateTime? createdAt;
 
-  int get totalPriceEgp => totalPricePiastres ~/ 100;
-  int get paidAmountEgp => paidAmountPiastres ~/ 100;
-  int get remainingAmountEgp =>
-      (totalPricePiastres - paidAmountPiastres) ~/ 100;
+  double get totalPriceEgp => totalPricePiastres / 100.0;
+  double get paidAmountEgp => paidAmountPiastres / 100.0;
+  double get remainingAmountEgp =>
+      (totalPricePiastres - paidAmountPiastres) / 100.0;
 
   factory EventBooking.fromJson(Map<String, dynamic> json) => EventBooking(
     id: json['id'] as String? ?? '',
