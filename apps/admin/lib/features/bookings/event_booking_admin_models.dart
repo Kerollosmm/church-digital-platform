@@ -39,10 +39,10 @@ class EventBookingAdminItem {
   final int paidAmountPiastres;
   final DateTime? createdAt;
 
-  int get totalPriceEgp => totalPricePiastres ~/ 100;
-  int get paidAmountEgp => paidAmountPiastres ~/ 100;
-  int get remainingAmountEgp =>
-      (totalPricePiastres - paidAmountPiastres) ~/ 100;
+  double get totalPriceEgp => totalPricePiastres / 100.0;
+  double get paidAmountEgp => paidAmountPiastres / 100.0;
+  double get remainingAmountEgp =>
+      (totalPricePiastres - paidAmountPiastres) / 100.0;
 
   factory EventBookingAdminItem.fromJson(
     Map<String, dynamic> json,

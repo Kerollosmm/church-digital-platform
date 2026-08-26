@@ -19,7 +19,13 @@ class _EventBookingsAdminScreenState extends State<EventBookingsAdminScreen> {
   List<EventBookingAdminItem> _bookings = [];
   List<VenueResourceItem> _venues = [];
 
-  final List<String> _statuses = ['SUBMITTED', 'CONFIRMED', 'PAID', 'REJECTED'];
+  final List<String> _statuses = [
+    'SUBMITTED',
+    'CONFIRMED',
+    'PENDING_PAYMENT',
+    'PAID',
+    'REJECTED',
+  ];
 
   @override
   void initState() {
