@@ -31,7 +31,9 @@ class FakeBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<Either<Failure, int>> submitPaymentProof(PaymentProofInput input) async {
+  Future<Either<Failure, int>> submitPaymentProof(
+    PaymentProofInput input,
+  ) async {
     calls.add('submitPaymentProof');
     lastSubmittedProof = input;
     return const Right(1);

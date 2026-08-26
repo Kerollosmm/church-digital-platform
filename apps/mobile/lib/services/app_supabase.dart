@@ -70,14 +70,13 @@ class SupabaseAppSupabase implements AppSupabase {
     String? contentType,
   }) async {
     final uint8List = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
-    await _client.storage.from(bucket).uploadBinary(
-      path,
-      uint8List,
-      fileOptions: FileOptions(
-        contentType: contentType,
-        upsert: true,
-      ),
-    );
+    await _client.storage
+        .from(bucket)
+        .uploadBinary(
+          path,
+          uint8List,
+          fileOptions: FileOptions(contentType: contentType, upsert: true),
+        );
     return path;
   }
 
@@ -111,12 +110,8 @@ class UnimplementedAppSupabase implements AppSupabase {
     String path,
     List<int> bytes, {
     String? contentType,
-  }) => throw UnimplementedError(
-    'uploadStorage called in test dependencies',
-  );
+  }) => throw UnimplementedError('uploadStorage called in test dependencies');
   @override
   Future<void> deleteStorage(String bucket, String path) =>
-      throw UnimplementedError(
-        'deleteStorage called in test dependencies',
-      );
+      throw UnimplementedError('deleteStorage called in test dependencies');
 }

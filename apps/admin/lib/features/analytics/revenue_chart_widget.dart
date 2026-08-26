@@ -49,7 +49,10 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
       if (widget.fetchData != null) {
         rows = await widget.fetchData!();
       } else if (widget.repo != null) {
-        rows = (await widget.repo!.paymentRows()).fold((f) => throw f, (r) => r);
+        rows = (await widget.repo!.paymentRows()).fold(
+          (f) => throw f,
+          (r) => r,
+        );
       } else {
         rows = [];
       }
@@ -92,8 +95,8 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
                     child: Text(
                       'توزيع الإيرادات والمدفوعات',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -114,7 +117,9 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
                   child: Center(
                     child: Text(
                       _errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                   ),
                 )
@@ -124,12 +129,7 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
                   child: Center(child: Text('لا توجد بيانات متاحة')),
                 )
               else
-                SizedBox(
-                  height: 280,
-                  child: PieChart(
-                    _buildChartData(),
-                  ),
-                ),
+                SizedBox(height: 280, child: PieChart(_buildChartData())),
             ],
           ),
         ),
@@ -235,9 +235,7 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
       sections: sections,
       centerSpaceRadius: 40,
       sectionsSpace: 3,
-      pieTouchData: PieTouchData(
-        enabled: true,
-      ),
+      pieTouchData: PieTouchData(enabled: true),
     );
   }
 }

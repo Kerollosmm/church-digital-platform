@@ -52,7 +52,9 @@ class _CashReceivedSheetState extends State<CashReceivedSheet> {
   @override
   void initState() {
     super.initState();
-    _amountController = TextEditingController(text: widget.initialAmount.toString());
+    _amountController = TextEditingController(
+      text: widget.initialAmount.toString(),
+    );
     _noteController = TextEditingController(text: 'استلام نقدي بالخزينة');
   }
 
@@ -78,25 +80,26 @@ class _CashReceivedSheetState extends State<CashReceivedSheet> {
     final res = await widget.repository.markCashReceived(
       widget.bookingId,
       amount,
-      collectorNote: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+      collectorNote: _noteController.text.trim().isEmpty
+          ? null
+          : _noteController.text.trim(),
     );
 
     if (!mounted) return;
     setState(() => _loading = false);
 
-    res.fold(
-      (fail) => setState(() => _error = fail.message),
-      (_) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم تسجيل استلام النقدية للحجز #${widget.bookingId} بنجاح'),
-            backgroundColor: Colors.green,
+    res.fold((fail) => setState(() => _error = fail.message), (_) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'تم تسجيل استلام النقدية للحجز #${widget.bookingId} بنجاح',
           ),
-        );
-        widget.onSuccess?.call();
-      },
-    );
+          backgroundColor: Colors.green,
+        ),
+      );
+      widget.onSuccess?.call();
+    });
   }
 
   @override
@@ -194,7 +197,10 @@ class _CashReceivedSheetState extends State<CashReceivedSheet> {
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
                     )
                   : const Icon(Icons.check_circle_outline, color: Colors.black),
               label: Text(

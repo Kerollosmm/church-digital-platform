@@ -69,9 +69,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
 
   PayoutChannel? get _currentPayoutChannel {
     try {
-      return _payoutChannels.firstWhere(
-        (c) => c.channel == _selectedChannel,
-      );
+      return _payoutChannels.firstWhere((c) => c.channel == _selectedChannel);
     } catch (_) {
       return null;
     }
@@ -109,7 +107,8 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedChannel != PaymentChannel.cash && _selectedImageBytes == null) {
+    if (_selectedChannel != PaymentChannel.cash &&
+        _selectedImageBytes == null) {
       setState(() {
         _imageError = AppStrings.proofImageRequired;
       });
@@ -122,7 +121,8 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
     });
 
     String? imagePath;
-    if (_selectedChannel != PaymentChannel.cash && _selectedImageBytes != null) {
+    if (_selectedChannel != PaymentChannel.cash &&
+        _selectedImageBytes != null) {
       final uploadRes = await widget.repository.uploadProofImage(
         bookingId: widget.bookingId,
         bytes: _selectedImageBytes!,
@@ -131,9 +131,9 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
 
       final uploadFailed = uploadRes.fold(
         (failure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(failure.message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(failure.message)));
           return true;
         },
         (path) {
@@ -148,7 +148,8 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
       }
     }
 
-    final amountVal = int.tryParse(_amountController.text.trim()) ?? widget.amount;
+    final amountVal =
+        int.tryParse(_amountController.text.trim()) ?? widget.amount;
     final input = PaymentProofInput(
       bookingId: widget.bookingId,
       channel: _selectedChannel,
@@ -168,9 +169,9 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
         if (imagePath != null) {
           widget.repository.deleteProofImage(imagePath!);
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(failure.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(failure.message)));
       },
       (proofId) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -231,7 +232,10 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                       selected: _selectedChannel == PaymentChannel.vodafoneCash,
                       onSelected: (selected) {
                         if (selected) {
-                          setState(() => _selectedChannel = PaymentChannel.vodafoneCash);
+                          setState(
+                            () =>
+                                _selectedChannel = PaymentChannel.vodafoneCash,
+                          );
                         }
                       },
                     ),
@@ -240,7 +244,9 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                       selected: _selectedChannel == PaymentChannel.instaPay,
                       onSelected: (selected) {
                         if (selected) {
-                          setState(() => _selectedChannel = PaymentChannel.instaPay);
+                          setState(
+                            () => _selectedChannel = PaymentChannel.instaPay,
+                          );
                         }
                       },
                     ),
@@ -249,7 +255,9 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                       selected: _selectedChannel == PaymentChannel.cash,
                       onSelected: (selected) {
                         if (selected) {
-                          setState(() => _selectedChannel = PaymentChannel.cash);
+                          setState(
+                            () => _selectedChannel = PaymentChannel.cash,
+                          );
                         }
                       },
                     ),
@@ -258,12 +266,15 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                 const SizedBox(height: AppSpacing.sm),
 
                 // Church payout details card
-                if (_selectedChannel != PaymentChannel.cash && activePayout != null) ...[
+                if (_selectedChannel != PaymentChannel.cash &&
+                    activePayout != null) ...[
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(AppSpacing.sm),
                     decoration: BoxDecoration(
-                      color: AppColors.secondaryContainer.withValues(alpha: 0.3),
+                      color: AppColors.secondaryContainer.withValues(
+                        alpha: 0.3,
+                      ),
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                       border: Border.all(
                         color: AppColors.secondary.withValues(alpha: 0.3),
@@ -299,7 +310,9 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                               icon: const Icon(Icons.copy, size: 18),
                               onPressed: () {
                                 Clipboard.setData(
-                                  ClipboardData(text: activePayout.accountNumber),
+                                  ClipboardData(
+                                    text: activePayout.accountNumber,
+                                  ),
                                 );
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
@@ -402,7 +415,10 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                     const SizedBox(height: 4),
                     Text(
                       _imageError!,
-                      style: const TextStyle(color: AppColors.error, fontSize: 12),
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                   const SizedBox(height: AppSpacing.md),

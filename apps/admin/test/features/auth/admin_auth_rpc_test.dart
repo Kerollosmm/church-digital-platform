@@ -34,8 +34,8 @@ void main() {
               'phone': '+201234567890',
               'app_metadata': {'provider': 'phone'},
               'user_metadata': {},
-              'created_at': '2026-01-01T00:00:00.000Z'
-            }
+              'created_at': '2026-01-01T00:00:00.000Z',
+            },
           }),
           200,
           request: request,
@@ -84,30 +84,35 @@ void main() {
     return container;
   }
 
-  test('ADMIN identity check never calls removed is_admin_or_priest; one users round-trip',
-      () async {
-    final container = await runIdentityCheck('ADMIN');
+  test(
+    'ADMIN identity check never calls removed is_admin_or_priest; one users round-trip',
+    () async {
+      final container = await runIdentityCheck('ADMIN');
 
-    expect(
-      requestLog.where((p) => p.contains('is_admin_or_priest')),
-      isEmpty,
-      reason: 'removed priest-era function must not be requested',
-    );
-    expect(
-      requestLog.where((p) => p.contains('/rest/v1/users')).length,
-      1,
-      reason: 'exactly one role round-trip expected',
-    );
-    expect(container.read(adminAuthProvider).status, AdminAuthStatus.pinRequired);
-  });
+      expect(
+        requestLog.where((p) => p.contains('is_admin_or_priest')),
+        isEmpty,
+        reason: 'removed priest-era function must not be requested',
+      );
+      expect(
+        requestLog.where((p) => p.contains('/rest/v1/users')).length,
+        1,
+        reason: 'exactly one role round-trip expected',
+      );
+      expect(
+        container.read(adminAuthProvider).status,
+        AdminAuthStatus.pinRequired,
+      );
+    },
+  );
 
   test('USER-role member denied without dead-RPC fallback', () async {
     final container = await runIdentityCheck('USER');
 
+    expect(requestLog.any((p) => p.contains('is_admin_or_priest')), isFalse);
     expect(
-      requestLog.any((p) => p.contains('is_admin_or_priest')),
-      isFalse,
+      container.read(adminAuthProvider).status,
+      AdminAuthStatus.accessDenied,
     );
-    expect(container.read(adminAuthProvider).status, AdminAuthStatus.accessDenied);
   });
 }

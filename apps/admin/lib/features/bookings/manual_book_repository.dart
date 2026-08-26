@@ -28,12 +28,15 @@ class ManualBookRepository {
     required String notes,
   }) async {
     try {
-      await _db.rpc('manual_book', params: {
-        'p_slot_id': slotId,
-        'p_phone': phone,
-        'p_opt_in': optIn,
-        'p_notes': notes,
-      });
+      await _db.rpc(
+        'manual_book',
+        params: {
+          'p_slot_id': slotId,
+          'p_phone': phone,
+          'p_opt_in': optIn,
+          'p_notes': notes,
+        },
+      );
       return const Right(null);
     } catch (e) {
       return Left(Failure.from(e));

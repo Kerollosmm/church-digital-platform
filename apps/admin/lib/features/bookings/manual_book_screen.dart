@@ -85,9 +85,7 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('حجز يدوي'),
-      ),
+      appBar: AppBar(title: const Text('حجز يدوي')),
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: _isLoading
@@ -106,10 +104,13 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
                       items: _slots.map((slot) {
                         return DropdownMenuItem<dynamic>(
                           value: slot['slot_id'],
-                          child: Text('${slot['title_ar']} - ${slot['starts_at']}'),
+                          child: Text(
+                            '${slot['title_ar']} - ${slot['starts_at']}',
+                          ),
                         );
                       }).toList(),
-                      onChanged: (val) => setState(() => _selectedSlotId = val as int?),
+                      onChanged: (val) =>
+                          setState(() => _selectedSlotId = val as int?),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -154,7 +155,9 @@ class _ManualBookScreenState extends State<ManualBookScreen> {
                       Text(
                         _message!,
                         style: TextStyle(
-                          color: (_message!.startsWith('حدث خطأ') || _message!.startsWith('فشل'))
+                          color:
+                              (_message!.startsWith('حدث خطأ') ||
+                                  _message!.startsWith('فشل'))
                               ? Colors.red
                               : Colors.green,
                         ),

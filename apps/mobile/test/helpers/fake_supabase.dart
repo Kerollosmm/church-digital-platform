@@ -107,10 +107,7 @@ class FakeSupabase implements AppSupabase {
   }) async {
     rpcCalls.add(fn);
     if (body != null) rpcArgs[fn] = Map<String, Object?>.from(body);
-    return {
-      'rpc': fn,
-      'args': body,
-    };
+    return {'rpc': fn, 'args': body};
   }
 
   @override

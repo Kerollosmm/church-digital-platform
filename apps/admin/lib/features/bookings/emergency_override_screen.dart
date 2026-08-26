@@ -6,7 +6,8 @@ class EmergencyOverrideScreen extends StatefulWidget {
   final EmergencyOverrideRepository repo;
 
   @override
-  State<EmergencyOverrideScreen> createState() => _EmergencyOverrideScreenState();
+  State<EmergencyOverrideScreen> createState() =>
+      _EmergencyOverrideScreenState();
 }
 
 class _EmergencyOverrideScreenState extends State<EmergencyOverrideScreen> {
@@ -61,17 +62,14 @@ class _EmergencyOverrideScreenState extends State<EmergencyOverrideScreen> {
         newSlotId: _selectedNewSlotId!,
         refund: _refund,
       );
-      outcome.fold(
-        (f) => throw f,
-        (_) {
-          if (mounted) {
-            setState(() {
-              _isSubmitting = false;
-              _message = 'تم تعديل الطوارئ بنجاح';
-            });
-          }
-        },
-      );
+      outcome.fold((f) => throw f, (_) {
+        if (mounted) {
+          setState(() {
+            _isSubmitting = false;
+            _message = 'تم تعديل الطوارئ بنجاح';
+          });
+        }
+      });
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -85,9 +83,7 @@ class _EmergencyOverrideScreenState extends State<EmergencyOverrideScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('طوارئ / نقل حجز'),
-      ),
+      appBar: AppBar(title: const Text('طوارئ / نقل حجز')),
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: _isLoading
@@ -116,10 +112,13 @@ class _EmergencyOverrideScreenState extends State<EmergencyOverrideScreen> {
                       items: _slots.map((slot) {
                         return DropdownMenuItem<dynamic>(
                           value: slot['slot_id'],
-                          child: Text('${slot['title_ar']} - ${slot['starts_at']}'),
+                          child: Text(
+                            '${slot['title_ar']} - ${slot['starts_at']}',
+                          ),
                         );
                       }).toList(),
-                      onChanged: (val) => setState(() => _selectedNewSlotId = val as int?),
+                      onChanged: (val) =>
+                          setState(() => _selectedNewSlotId = val as int?),
                     ),
                     const SizedBox(height: 16),
                     SwitchListTile(
@@ -145,7 +144,9 @@ class _EmergencyOverrideScreenState extends State<EmergencyOverrideScreen> {
                       Text(
                         _message!,
                         style: TextStyle(
-                          color: _message!.startsWith('حدث خطأ') ? Colors.red : Colors.green,
+                          color: _message!.startsWith('حدث خطأ')
+                              ? Colors.red
+                              : Colors.green,
                         ),
                       ),
                     ],
@@ -156,4 +157,3 @@ class _EmergencyOverrideScreenState extends State<EmergencyOverrideScreen> {
     );
   }
 }
-

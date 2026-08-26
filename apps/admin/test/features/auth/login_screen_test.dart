@@ -24,12 +24,14 @@ void main() {
   testWidgets('renders phone field and sends OTP', (tester) async {
     final gateway = FakeAuthGateway();
     var navigated = false;
-    await tester.pumpWidget(MaterialApp(
-      home: LoginScreen(
-        gateway: gateway,
-        onOtpSent: (phone) => navigated = true,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(
+          gateway: gateway,
+          onOtpSent: (phone) => navigated = true,
+        ),
       ),
-    ));
+    );
 
     expect(find.text('تسجيل الدخول'), findsOneWidget);
 
@@ -43,9 +45,11 @@ void main() {
 
   testWidgets('shows validation error for short phone', (tester) async {
     final gateway = FakeAuthGateway();
-    await tester.pumpWidget(MaterialApp(
-      home: LoginScreen(gateway: gateway, onOtpSent: (_) {}),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(gateway: gateway, onOtpSent: (_) {}),
+      ),
+    );
 
     await tester.enterText(find.byType(TextField), '123');
     await tester.tap(find.text('إرسال الرمز'));
@@ -57,9 +61,11 @@ void main() {
 
   testWidgets('shows error message when SMS send fails', (tester) async {
     final gateway = FakeAuthGateway()..sendSucceeds = false;
-    await tester.pumpWidget(MaterialApp(
-      home: LoginScreen(gateway: gateway, onOtpSent: (_) {}),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(gateway: gateway, onOtpSent: (_) {}),
+      ),
+    );
 
     await tester.enterText(find.byType(TextField), '01000000002');
     await tester.tap(find.text('إرسال الرمز'));

@@ -7,7 +7,9 @@ import '../../helpers/mock_supabase.dart';
 
 void main() {
   group('CashReceivedSheet Widget Tests', () {
-    testWidgets('renders initial amount and submittal triggers repository', (tester) async {
+    testWidgets('renders initial amount and submittal triggers repository', (
+      tester,
+    ) async {
       Map<String, dynamic>? calledArgs;
       final mock = MockSupabase(
         rpc: {
@@ -54,7 +56,9 @@ void main() {
       expect(successCalled, isTrue);
     });
 
-    testWidgets('shows validation error when amount is invalid', (tester) async {
+    testWidgets('shows validation error when amount is invalid', (
+      tester,
+    ) async {
       final mock = MockSupabase();
       final repo = PaymentsAdminRepository(mock.build());
 
@@ -123,4 +127,3 @@ void main() {
     });
   });
 }
-

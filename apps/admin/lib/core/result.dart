@@ -23,7 +23,9 @@ class Left<L, R> extends Either<L, R> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Left<L, R> && runtimeType == other.runtimeType && value == other.value;
+      other is Left<L, R> &&
+          runtimeType == other.runtimeType &&
+          value == other.value;
 
   @override
   int get hashCode => Object.hash(runtimeType, value);
@@ -36,7 +38,9 @@ class Right<L, R> extends Either<L, R> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Right<L, R> && runtimeType == other.runtimeType && value == other.value;
+      other is Right<L, R> &&
+          runtimeType == other.runtimeType &&
+          value == other.value;
 
   @override
   int get hashCode => Object.hash(runtimeType, value);

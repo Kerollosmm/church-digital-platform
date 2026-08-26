@@ -41,29 +41,27 @@ void main() {
   testWidgets(
     'my bookings shows chips and retry button navigates to PaymentProofScreen',
     (tester) async {
-      final fake = TestAppSupabase(
-        {
-          'bookings': [
-            {
-              'id': 7,
-              'slot_id': 1,
-              'status': 'PENDING_PAYMENT',
-              'paid_amount': 150,
-              'created_at': '2026-08-09T08:00:00+02:00',
-            },
-          ],
-          'payout_channels': [
-            {
-              'id': 1,
-              'channel': 'VODAFONE_CASH',
-              'display_name_ar': 'فودافون كاش',
-              'account_number': '01000000000',
-              'holder_name': 'الكنيسة القبطية',
-              'is_active': true,
-            },
-          ],
-        },
-      );
+      final fake = TestAppSupabase({
+        'bookings': [
+          {
+            'id': 7,
+            'slot_id': 1,
+            'status': 'PENDING_PAYMENT',
+            'paid_amount': 150,
+            'created_at': '2026-08-09T08:00:00+02:00',
+          },
+        ],
+        'payout_channels': [
+          {
+            'id': 1,
+            'channel': 'VODAFONE_CASH',
+            'display_name_ar': 'فودافون كاش',
+            'account_number': '01000000000',
+            'holder_name': 'الكنيسة القبطية',
+            'is_active': true,
+          },
+        ],
+      });
       final repo = SupabaseBookingRepository(fake);
       await pumpWithRouter(
         tester,

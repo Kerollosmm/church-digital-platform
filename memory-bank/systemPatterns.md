@@ -33,14 +33,13 @@
 │  ├──────────────────────────────────────────────────┤  │
 │  │ SECURITY DEFINER RPC Write Seam                  │  │
 │  │ • book_slot()           • manual_book()          │  │
-│  │ • create_pending_payment• mark_payment_failed    │  │
-│  │ • record_booking_payment• apply_payment() (srv)  │  │
-│  │ • confirm_booking()     • complete_booking()     │  │
+│  │ • submit_event_booking  • admin_confirm_booking  │  │
+│  │ • admin_reject_booking  • admin_record_cash_pay  │  │
 │  │ • submit_complaint_sec()• decrypt_complaint()    │  │
 │  ├──────────────────────────────────────────────────┤  │
 │  │ State Machine Triggers & Exclusion Constraints   │  │
 │  │ • transition_booking_status (Owner Guarded)      │  │
-│  │ • (resource_id, tstzrange) exclusion             │  │
+│  │ • (assigned_venue_id, tstzrange) GiST exclusion  │  │
 │  ├──────────────────────────────────────────────────┤  │
 │  │ Transactional Event Outbox (event_outbox)        │  │
 │  │ • FOR UPDATE SKIP LOCKED drain (Meta WhatsApp)   │  │

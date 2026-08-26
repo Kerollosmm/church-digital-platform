@@ -16,6 +16,7 @@ class FakeQuery implements Future<List<Row>> {
     }
     return this;
   }
+
   FakeQuery order(String col, {bool ascending = true}) {
     final rows = [..._rows]
       ..sort((a, b) {
@@ -25,6 +26,7 @@ class FakeQuery implements Future<List<Row>> {
       });
     return FakeQuery(ascending ? rows : rows.reversed.toList());
   }
+
   FakeQuery limit(int n) => FakeQuery(_rows.take(n).toList());
   Future<Row?> maybeSingle() async => _rows.isEmpty ? null : _rows.first;
   Future<Row> single() async {
@@ -35,14 +37,20 @@ class FakeQuery implements Future<List<Row>> {
   @override
   Stream<List<Row>> asStream() => Stream.value(_rows);
   @override
-  Future<List<Row>> catchError(Function onError, {bool Function(Object error)? test}) =>
-      Future.value(_rows).catchError(onError, test: test);
+  Future<List<Row>> catchError(
+    Function onError, {
+    bool Function(Object error)? test,
+  }) => Future.value(_rows).catchError(onError, test: test);
   @override
-  Future<R> then<R>(FutureOr<R> Function(List<Row> value) onValue, {Function? onError}) =>
-      Future.value(_rows).then(onValue, onError: onError);
+  Future<R> then<R>(
+    FutureOr<R> Function(List<Row> value) onValue, {
+    Function? onError,
+  }) => Future.value(_rows).then(onValue, onError: onError);
   @override
-  Future<List<Row>> timeout(Duration timeLimit, {FutureOr<List<Row>> Function()? onTimeout}) =>
-      Future.value(_rows).timeout(timeLimit, onTimeout: onTimeout);
+  Future<List<Row>> timeout(
+    Duration timeLimit, {
+    FutureOr<List<Row>> Function()? onTimeout,
+  }) => Future.value(_rows).timeout(timeLimit, onTimeout: onTimeout);
   @override
   Future<List<Row>> whenComplete(FutureOr<void> Function() action) =>
       Future.value(_rows).whenComplete(action);
@@ -56,6 +64,7 @@ class FakeTable {
   Future<void> insert(Map<String, dynamic> row) async {
     _rows.add(row);
   }
+
   FakeUpdate update(Map<String, dynamic> vals) => FakeUpdate(_rows, vals);
   FakeDelete delete() => FakeDelete(_rows);
 }
@@ -102,7 +111,9 @@ class FakeRealtimeChannel {
     return this;
   }
 
-  FakeRealtimeChannel subscribe([void Function(dynamic status, dynamic error)? callback]) {
+  FakeRealtimeChannel subscribe([
+    void Function(dynamic status, dynamic error)? callback,
+  ]) {
     isSubscribed = true;
     callback?.call('SUBSCRIBED', null);
     return this;
@@ -154,7 +165,11 @@ class FakeSupabase {
   final FakeFunctions functions = FakeFunctions();
   Map<String, dynamic>? currentUser = {'id': 'u1'};
   FakeTable from(String table) => FakeTable(data[table] ?? []);
-  Future<dynamic> rpc(String fn, [dynamic positionalArgs, Object? unused]) async {
+  Future<dynamic> rpc(
+    String fn, [
+    dynamic positionalArgs,
+    Object? unused,
+  ]) async {
     return _handleRpc(fn, positionalArgs);
   }
 
@@ -164,9 +179,14 @@ class FakeSupabase {
       final fn = invocation.positionalArguments[0] as String;
       Map<String, Object?> args = const {};
       if (invocation.namedArguments.containsKey(#params)) {
-        args = Map<String, Object?>.from(invocation.namedArguments[#params] as Map);
-      } else if (invocation.positionalArguments.length > 1 && invocation.positionalArguments[1] is Map) {
-        args = Map<String, Object?>.from(invocation.positionalArguments[1] as Map);
+        args = Map<String, Object?>.from(
+          invocation.namedArguments[#params] as Map,
+        );
+      } else if (invocation.positionalArguments.length > 1 &&
+          invocation.positionalArguments[1] is Map) {
+        args = Map<String, Object?>.from(
+          invocation.positionalArguments[1] as Map,
+        );
       }
       return _handleRpc(fn, args);
     }
@@ -174,7 +194,9 @@ class FakeSupabase {
   }
 
   Future<dynamic> _handleRpc(String fn, dynamic args) async {
-    final Map<String, Object?> mapArgs = args is Map ? Map<String, Object?>.from(args) : const {};
+    final Map<String, Object?> mapArgs = args is Map
+        ? Map<String, Object?>.from(args)
+        : const {};
     rpcCalls.add(fn);
     rpcArgs[fn] = mapArgs;
     if (rpcResults.containsKey(fn)) {
@@ -186,18 +208,19 @@ class FakeSupabase {
     }
     return {'id': 42, 'rpc': fn, 'args': mapArgs};
   }
+
   FakeRealtimeChannel channel(String name) {
     final ch = FakeRealtimeChannel(name);
     channels.add(ch);
     return ch;
   }
+
   Future<String> removeChannel(dynamic channel) async {
     if (channel is FakeRealtimeChannel) {
       channels.remove(channel);
     }
     return 'ok';
   }
+
   dynamic get auth => {'currentUser': currentUser};
 }
-
-

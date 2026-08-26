@@ -24,13 +24,15 @@ void main() {
   testWidgets('verifies OTP and reports success', (tester) async {
     final gateway = FakeAuthGateway();
     var signedIn = false;
-    await tester.pumpWidget(MaterialApp(
-      home: OtpScreen(
-        phone: '01000000002',
-        gateway: gateway,
-        onVerified: () => signedIn = true,
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OtpScreen(
+          phone: '01000000002',
+          gateway: gateway,
+          onVerified: () => signedIn = true,
+        ),
       ),
-    ));
+    );
 
     expect(find.text('رمز التحقق'), findsOneWidget);
 
@@ -44,9 +46,15 @@ void main() {
 
   testWidgets('shows error for wrong code', (tester) async {
     final gateway = FakeAuthGateway()..acceptCode = false;
-    await tester.pumpWidget(MaterialApp(
-      home: OtpScreen(phone: '01000000002', gateway: gateway, onVerified: () {}),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OtpScreen(
+          phone: '01000000002',
+          gateway: gateway,
+          onVerified: () {},
+        ),
+      ),
+    );
 
     await tester.enterText(find.byType(TextField), '000000');
     await tester.tap(find.text('تأكيد'));

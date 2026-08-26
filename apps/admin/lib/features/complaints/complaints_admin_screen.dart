@@ -59,7 +59,9 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
             textDirection: TextDirection.rtl,
             child: AlertDialog(
               title: Text('محتوى الشكوى #$complaintId'),
-              content: SelectableText(decryptedText.isEmpty ? 'لا يوجد نص' : decryptedText),
+              content: SelectableText(
+                decryptedText.isEmpty ? 'لا يوجد نص' : decryptedText,
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
@@ -74,7 +76,9 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
       debugPrint('Complaint decryption failure: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('فشل فك التشفير. يرجى المحاولة لاحقاً.')),
+          const SnackBar(
+            content: Text('فشل فك التشفير. يرجى المحاولة لاحقاً.'),
+          ),
         );
       }
     }
@@ -89,8 +93,10 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
         .toList();
 
     final filteredComplaints = _allComplaints.where((c) {
-      if (_selectedStatus != null && c['status'] != _selectedStatus) return false;
-      if (_selectedCategory != null && c['category'] != _selectedCategory) return false;
+      if (_selectedStatus != null && c['status'] != _selectedStatus)
+        return false;
+      if (_selectedCategory != null && c['category'] != _selectedCategory)
+        return false;
       return true;
     }).toList();
 
@@ -111,113 +117,134 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? Center(child: Text('خطأ: $_error'))
-                : Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              OutlinedButton(
-                                style: OutlinedButton.styleFrom(
-                                  backgroundColor: _selectedStatus == null ? Colors.blue.withValues(alpha: 0.1) : null,
-                                ),
-                                onPressed: () => setState(() => _selectedStatus = null),
-                                child: const Text('الكل'),
-                              ),
-                              const SizedBox(width: 8),
-                              for (final status in statuses) ...[
-                                OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    backgroundColor: _selectedStatus == status ? Colors.blue.withValues(alpha: 0.1) : null,
-                                  ),
-                                  onPressed: () => setState(() => _selectedStatus = status),
-                                  child: Text('حالة: '),
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                              if (categories.isNotEmpty) ...[
-                                const VerticalDivider(width: 16),
-                                DropdownButton<String?>(
-                                  value: _selectedCategory,
-                                  hint: const Text('تصفية حسب الفئة'),
-                                  items: [
-                                    const DropdownMenuItem<String?>(
-                                      value: null,
-                                      child: Text('كل الفئات'),
-                                    ),
-                                    ...categories.map(
-                                      (cat) => DropdownMenuItem<String?>(
-                                        value: cat,
-                                        child: Text('تصنيف: '),
-                                      ),
-                                    ),
-                                  ],
-                                  onChanged: (val) => setState(() => _selectedCategory = val),
-                                ),
-                              ],
-                            ],
+            ? Center(child: Text('خطأ: $_error'))
+            : Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: _selectedStatus == null
+                                  ? Colors.blue.withValues(alpha: 0.1)
+                                  : null,
+                            ),
+                            onPressed: () =>
+                                setState(() => _selectedStatus = null),
+                            child: const Text('الكل'),
                           ),
-                        ),
-                      ),
-                      const Divider(height: 1),
-                      Expanded(
-                        child: filteredComplaints.isEmpty
-                            ? const Center(child: Text('لا توجد شكاوى'))
-                            : ListView.builder(
-                                itemCount: filteredComplaints.length,
-                                itemBuilder: (context, index) {
-                                  final item = filteredComplaints[index];
-                                  final id = item['id'] as int;
-                                  final status = item['status'] as String? ?? 'NEW';
-                                  final category = item['category'] as String? ?? '';
-                                  final assignedTo = item['assigned_to']?.toString();
-                                  final createdAt = item['created_at']?.toString() ?? '';
-
-                                  return Card(
-                                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                    child: ListTile(
-                                      title: Row(
-                                        children: [
-                                          Text('شكوى #$id'),
-                                          const SizedBox(width: 12),
-                                          Chip(
-                                            label: Text(
-                                              status,
-                                              style: const TextStyle(fontSize: 11, color: Colors.white),
-                                            ),
-                                            backgroundColor: status == 'NEW'
-                                                ? Colors.blue
-                                                : status == 'ASSIGNED'
-                                                    ? Colors.orange
-                                                    : Colors.green,
-                                            visualDensity: VisualDensity.compact,
-                                          ),
-                                        ],
-                                      ),
-                                      subtitle: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const SizedBox(height: 4),
-                                          Text('الفئة: $category'),
-                                          if (assignedTo != null) Text('مسندة إلى: $assignedTo'),
-                                          Text('تاريخ الإنشاء: $createdAt'),
-                                        ],
-                                      ),
-                                      trailing: ElevatedButton.icon(
-                                        icon: const Icon(Icons.lock_open, size: 16),
-                                        label: const Text('فك التشفير'),
-                                        onPressed: () => _decryptComplaint(id),
-                                      ),
-                                    ),
-                                  );
-                                },
+                          const SizedBox(width: 8),
+                          for (final status in statuses) ...[
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: _selectedStatus == status
+                                    ? Colors.blue.withValues(alpha: 0.1)
+                                    : null,
                               ),
+                              onPressed: () =>
+                                  setState(() => _selectedStatus = status),
+                              child: Text('حالة: '),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          if (categories.isNotEmpty) ...[
+                            const VerticalDivider(width: 16),
+                            DropdownButton<String?>(
+                              value: _selectedCategory,
+                              hint: const Text('تصفية حسب الفئة'),
+                              items: [
+                                const DropdownMenuItem<String?>(
+                                  value: null,
+                                  child: Text('كل الفئات'),
+                                ),
+                                ...categories.map(
+                                  (cat) => DropdownMenuItem<String?>(
+                                    value: cat,
+                                    child: Text('تصنيف: '),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (val) =>
+                                  setState(() => _selectedCategory = val),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
+                    ),
                   ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: filteredComplaints.isEmpty
+                        ? const Center(child: Text('لا توجد شكاوى'))
+                        : ListView.builder(
+                            itemCount: filteredComplaints.length,
+                            itemBuilder: (context, index) {
+                              final item = filteredComplaints[index];
+                              final id = item['id'] as int;
+                              final status = item['status'] as String? ?? 'NEW';
+                              final category =
+                                  item['category'] as String? ?? '';
+                              final assignedTo = item['assigned_to']
+                                  ?.toString();
+                              final createdAt =
+                                  item['created_at']?.toString() ?? '';
+
+                              return Card(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 6,
+                                ),
+                                child: ListTile(
+                                  title: Row(
+                                    children: [
+                                      Text('شكوى #$id'),
+                                      const SizedBox(width: 12),
+                                      Chip(
+                                        label: Text(
+                                          status,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        backgroundColor: status == 'NEW'
+                                            ? Colors.blue
+                                            : status == 'ASSIGNED'
+                                            ? Colors.orange
+                                            : Colors.green,
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                    ],
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const SizedBox(height: 4),
+                                      Text('الفئة: $category'),
+                                      if (assignedTo != null)
+                                        Text('مسندة إلى: $assignedTo'),
+                                      Text('تاريخ الإنشاء: $createdAt'),
+                                    ],
+                                  ),
+                                  trailing: ElevatedButton.icon(
+                                    icon: const Icon(Icons.lock_open, size: 16),
+                                    label: const Text('فك التشفير'),
+                                    onPressed: () => _decryptComplaint(id),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
       ),
     );
   }

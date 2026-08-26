@@ -53,4 +53,3 @@ class EmptyPortalRepository implements PortalRepository {
   @override
   Future<List<SocialLinkItem>> socialLinks() async => [];
 }
-

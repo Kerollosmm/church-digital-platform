@@ -17,7 +17,10 @@ class AnalyticsAdminScreen extends StatelessWidget {
         title: const Text('لوحة التحليلات'),
         actions: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
             child: ExportReportButton(client: client),
           ),
         ],

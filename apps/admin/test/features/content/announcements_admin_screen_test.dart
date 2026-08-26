@@ -6,12 +6,20 @@ import '../../helpers/mock_supabase.dart';
 
 void main() {
   testWidgets('announcements admin lists and deletes', (tester) async {
-    final mock = MockSupabase(tables: {
-      'announcements': [
-        {'id': 1, 'title_ar': 'أ', 'body_ar': 'ب', 'published_at': null}
-      ],
-    });
-    await tester.pumpWidget(MaterialApp(home: AnnouncementsAdminScreen(repo: AnnouncementsRepository(mock.build()))));
+    final mock = MockSupabase(
+      tables: {
+        'announcements': [
+          {'id': 1, 'title_ar': 'أ', 'body_ar': 'ب', 'published_at': null},
+        ],
+      },
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AnnouncementsAdminScreen(
+          repo: AnnouncementsRepository(mock.build()),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('أ'), findsOneWidget);
     await tester.tap(find.byIcon(Icons.delete));

@@ -23,11 +23,13 @@ class ComplaintsAdminRepository {
 
   Future<Either<Failure, String>> decrypt(int complaintId) async {
     try {
-      final res = await _db.rpc('decrypt_complaint', params: {
-        'p_complaint_id': complaintId,
-      });
-      final decryptedText =
-          res is Map ? (res['decrypted'] ?? res.toString()) : res.toString();
+      final res = await _db.rpc(
+        'decrypt_complaint',
+        params: {'p_complaint_id': complaintId},
+      );
+      final decryptedText = res is Map
+          ? (res['decrypted'] ?? res.toString())
+          : res.toString();
       return Right(decryptedText as String);
     } catch (e) {
       return Left(Failure.from(e));

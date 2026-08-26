@@ -12,7 +12,11 @@ class PaymentsAdminScreen extends StatefulWidget {
 class _PaymentsAdminScreenState extends State<PaymentsAdminScreen> {
   late Future<List<Map<String, dynamic>>> _rows;
   @override
-  void initState() { super.initState(); _rows = _load(); }
+  void initState() {
+    super.initState();
+    _rows = _load();
+  }
+
   Future<List<Map<String, dynamic>>> _load() async =>
       unwrapOrThrow(await widget.repo.list());
 
@@ -23,7 +27,8 @@ class _PaymentsAdminScreenState extends State<PaymentsAdminScreen> {
       body: FutureBuilder(
         future: _rows,
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData)
+            return const Center(child: CircularProgressIndicator());
           final rows = snapshot.data!;
           return ListView.builder(
             itemCount: rows.length,

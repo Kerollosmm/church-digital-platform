@@ -2,7 +2,11 @@ import 'package:admin/core/auth/auth_gateway.dart';
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, required this.gateway, required this.onOtpSent});
+  const LoginScreen({
+    super.key,
+    required this.gateway,
+    required this.onOtpSent,
+  });
   final AuthGateway gateway;
   final void Function(String phone) onOtpSent;
 
@@ -25,9 +29,9 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (_) {
       if (mounted) {
         setState(() => _sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر إرسال الرمز')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('تعذر إرسال الرمز')));
       }
     }
   }
@@ -43,7 +47,10 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('تسجيل الدخول', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                const Text(
+                  'تسجيل الدخول',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 16),
                 SizedBox(
                   width: 280,
@@ -55,8 +62,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: '01xxxxxxxxx',
                       border: OutlineInputBorder(),
                     ),
-                    validator: (v) =>
-                        (v == null || v.trim().length < 10) ? 'رقم غير صحيح' : null,
+                    validator: (v) => (v == null || v.trim().length < 10)
+                        ? 'رقم غير صحيح'
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 16),

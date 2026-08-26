@@ -62,3 +62,5 @@
 \ir 0070_drop_paymob_stack_test.sql
 \ir 0071_review_fixes_test.sql
 \ir 0072_security_hardening_test.sql
+\ir 0073_event_booking_schema_test.sql
+\ir 0074_event_booking_rpcs_test.sql

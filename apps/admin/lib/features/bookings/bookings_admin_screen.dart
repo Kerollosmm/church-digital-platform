@@ -69,17 +69,21 @@ class BookingsAdminScreen extends ConsumerWidget {
                           if (r['status'] == 'AWAITING_CALL')
                             IconButton(
                               icon: const Icon(Icons.check_circle),
-                              onPressed: () => notifier.confirmBooking(r['id'] as int),
+                              onPressed: () =>
+                                  notifier.confirmBooking(r['id'] as int),
                             ),
                           if (r['status'] == 'CONFIRMED')
                             IconButton(
                               icon: const Icon(Icons.done_all),
-                              onPressed: () => notifier.completeBooking(r['id'] as int),
+                              onPressed: () =>
+                                  notifier.completeBooking(r['id'] as int),
                             ),
-                          if (r['status'] == 'PENDING_PAYMENT' || r['status'] == 'AWAITING_CALL')
+                          if (r['status'] == 'PENDING_PAYMENT' ||
+                              r['status'] == 'AWAITING_CALL')
                             IconButton(
                               icon: const Icon(Icons.cancel),
-                              onPressed: () => notifier.cancelBooking(r['id'] as int),
+                              onPressed: () =>
+                                  notifier.cancelBooking(r['id'] as int),
                             ),
                         ],
                       ),

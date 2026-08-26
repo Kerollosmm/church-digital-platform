@@ -101,7 +101,8 @@ class AppStrings {
   static const amountClaimedLabel = 'المبلغ المحول';
   static const attachProofImage = 'إرفاق صورة التحويل';
   static const proofImageRequired = 'يرجى إرفاق صورة إشعار التحويل';
-  static const proofSubmittedSuccess = 'تم إرسال إثبات الدفع بنجاح — بانتظار المراجعة';
+  static const proofSubmittedSuccess =
+      'تم إرسال إثبات الدفع بنجاح — بانتظار المراجعة';
   static const submitProof = 'إرسال الإثبات';
   static const submitting = 'جاري الإرسال...';
   static const copy = 'نسخ';

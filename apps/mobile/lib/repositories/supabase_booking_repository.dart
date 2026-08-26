@@ -121,9 +121,14 @@ class SupabaseBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<Either<Failure, int>> submitPaymentProof(PaymentProofInput input) async {
+  Future<Either<Failure, int>> submitPaymentProof(
+    PaymentProofInput input,
+  ) async {
     try {
-      final res = await _supabase.rpc('submit_payment_proof', input.toRpcParams());
+      final res = await _supabase.rpc(
+        'submit_payment_proof',
+        input.toRpcParams(),
+      );
       final proofId = (res is num) ? res.toInt() : int.parse(res.toString());
       return Right(proofId);
     } on PostgrestException catch (e) {
@@ -131,7 +136,8 @@ class SupabaseBookingRepository implements BookingRepository {
         'submit_payment_proof RPC failed: ${e.message}',
         name: 'BookingRepository',
       );
-      if (e.code == '28000' || e.message.toUpperCase().contains('UNAUTHORIZED')) {
+      if (e.code == '28000' ||
+          e.message.toUpperCase().contains('UNAUTHORIZED')) {
         return Left(AuthFailure(e.message, code: e.code, originalError: e));
       }
       if (e.code == '42501' || e.message.toUpperCase().contains('FORBIDDEN')) {
@@ -171,7 +177,9 @@ class SupabaseBookingRepository implements BookingRepository {
         'uploadProofImage failed: ${e.message}',
         name: 'BookingRepository',
       );
-      return Left(BookingFailure(e.message, code: e.statusCode, originalError: e));
+      return Left(
+        BookingFailure(e.message, code: e.statusCode, originalError: e),
+      );
     } catch (e) {
       developer.log(
         'uploadProofImage unexpected error: $e',
@@ -219,7 +227,9 @@ class SupabaseBookingRepository implements BookingRepository {
         'deleteProofImage failed: ${e.message}',
         name: 'BookingRepository',
       );
-      return Left(BookingFailure(e.message, code: e.statusCode, originalError: e));
+      return Left(
+        BookingFailure(e.message, code: e.statusCode, originalError: e),
+      );
     } catch (e) {
       developer.log(
         'deleteProofImage unexpected error: $e',

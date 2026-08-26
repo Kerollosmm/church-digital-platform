@@ -27,11 +27,14 @@ class EmergencyOverrideRepository {
     required bool refund,
   }) async {
     try {
-      await _db.rpc('emergency_override', params: {
-        'p_booking_id': bookingId,
-        'p_new_slot_id': newSlotId,
-        'p_refund': refund,
-      });
+      await _db.rpc(
+        'emergency_override',
+        params: {
+          'p_booking_id': bookingId,
+          'p_new_slot_id': newSlotId,
+          'p_refund': refund,
+        },
+      );
       return const Right(null);
     } catch (e) {
       return Left(Failure.from(e));

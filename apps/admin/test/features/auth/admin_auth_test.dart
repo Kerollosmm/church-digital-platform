@@ -42,8 +42,8 @@ SupabaseClient createMockSupabaseClient(
             'phone': '+201234567890',
             'app_metadata': {'provider': 'phone'},
             'user_metadata': {},
-            'created_at': '2026-01-01T00:00:00.000Z'
-          }
+            'created_at': '2026-01-01T00:00:00.000Z',
+          },
         }),
         200,
         request: request,
@@ -107,9 +107,7 @@ SupabaseClient createMockSupabaseClient(
 
 Widget createTestApp(SupabaseClient supabaseClient) {
   return ProviderScope(
-    overrides: [
-      supabaseClientProvider.overrideWithValue(supabaseClient),
-    ],
+    overrides: [supabaseClientProvider.overrideWithValue(supabaseClient)],
     child: const MaterialApp(
       locale: Locale('ar'),
       supportedLocales: [Locale('ar')],
@@ -125,7 +123,9 @@ Widget createTestApp(SupabaseClient supabaseClient) {
 
 void main() {
   group('Admin Auth & Role Access Control Tests', () {
-    testWidgets('USER receives "Access Denied / غير مصرح" and is signed out', (tester) async {
+    testWidgets('USER receives "Access Denied / غير مصرح" and is signed out', (
+      tester,
+    ) async {
       final supabaseClient = createMockSupabaseClient('USER');
 
       await tester.pumpWidget(createTestApp(supabaseClient));
@@ -149,27 +149,40 @@ void main() {
       expect(supabaseClient.auth.currentUser, isNull);
     });
 
-    testWidgets('SUPER_ADMIN user with SET pin enters 3-step login successfully', (tester) async {
-      final supabaseClient = createMockSupabaseClient('SUPER_ADMIN', pinStatus: 'SET', pinValid: true);
+    testWidgets(
+      'SUPER_ADMIN user with SET pin enters 3-step login successfully',
+      (tester) async {
+        final supabaseClient = createMockSupabaseClient(
+          'SUPER_ADMIN',
+          pinStatus: 'SET',
+          pinValid: true,
+        );
 
-      await tester.pumpWidget(createTestApp(supabaseClient));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createTestApp(supabaseClient));
+        await tester.pumpAndSettle();
 
-      final phoneField = find.byType(TextFormField).first;
-      await tester.enterText(phoneField, '01234567890');
-      await tester.tap(find.text('إرسال الرمز'));
-      await tester.pumpAndSettle();
+        final phoneField = find.byType(TextFormField).first;
+        await tester.enterText(phoneField, '01234567890');
+        await tester.tap(find.text('إرسال الرمز'));
+        await tester.pumpAndSettle();
 
-      final otpField = find.byType(TextFormField).last;
-      await tester.enterText(otpField, '123456');
-      await tester.tap(find.text('تأكيد الرمز'));
-      await tester.pumpAndSettle();
+        final otpField = find.byType(TextFormField).last;
+        await tester.enterText(otpField, '123456');
+        await tester.tap(find.text('تأكيد الرمز'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('أدخل رمز PIN'), findsOneWidget);
-    });
+        expect(find.text('أدخل رمز PIN'), findsOneWidget);
+      },
+    );
 
-    testWidgets('ADMIN user with SET pin enters 3-step login successfully', (tester) async {
-      final supabaseClient = createMockSupabaseClient('ADMIN', pinStatus: 'SET', pinValid: true);
+    testWidgets('ADMIN user with SET pin enters 3-step login successfully', (
+      tester,
+    ) async {
+      final supabaseClient = createMockSupabaseClient(
+        'ADMIN',
+        pinStatus: 'SET',
+        pinValid: true,
+      );
 
       await tester.pumpWidget(createTestApp(supabaseClient));
       await tester.pumpAndSettle();
@@ -194,8 +207,14 @@ void main() {
       expect(supabaseClient.auth.currentUser, isNotNull);
     });
 
-    testWidgets('ADMIN user enters wrong PIN and shows error message', (tester) async {
-      final supabaseClient = createMockSupabaseClient('ADMIN', pinStatus: 'SET', pinValid: false);
+    testWidgets('ADMIN user enters wrong PIN and shows error message', (
+      tester,
+    ) async {
+      final supabaseClient = createMockSupabaseClient(
+        'ADMIN',
+        pinStatus: 'SET',
+        pinValid: false,
+      );
 
       await tester.pumpWidget(createTestApp(supabaseClient));
       await tester.pumpAndSettle();
@@ -222,37 +241,48 @@ void main() {
       expect(find.text('رمز PIN غير صحيح'), findsOneWidget);
     });
 
-    testWidgets('ADMIN user with UNSET pin sees setup form and completes setup', (tester) async {
-      final supabaseClient = createMockSupabaseClient('ADMIN', pinStatus: 'UNSET');
+    testWidgets(
+      'ADMIN user with UNSET pin sees setup form and completes setup',
+      (tester) async {
+        final supabaseClient = createMockSupabaseClient(
+          'ADMIN',
+          pinStatus: 'UNSET',
+        );
 
-      await tester.pumpWidget(createTestApp(supabaseClient));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(createTestApp(supabaseClient));
+        await tester.pumpAndSettle();
 
-      // Step 1: Phone
-      final phoneField = find.byType(TextFormField).first;
-      await tester.enterText(phoneField, '01234567890');
-      await tester.tap(find.text('إرسال الرمز'));
-      await tester.pumpAndSettle();
+        // Step 1: Phone
+        final phoneField = find.byType(TextFormField).first;
+        await tester.enterText(phoneField, '01234567890');
+        await tester.tap(find.text('إرسال الرمز'));
+        await tester.pumpAndSettle();
 
-      // Step 2: OTP
-      final otpField = find.byType(TextFormField).last;
-      await tester.enterText(otpField, '123456');
-      await tester.tap(find.text('تأكيد الرمز'));
-      await tester.pumpAndSettle();
+        // Step 2: OTP
+        final otpField = find.byType(TextFormField).last;
+        await tester.enterText(otpField, '123456');
+        await tester.tap(find.text('تأكيد الرمز'));
+        await tester.pumpAndSettle();
 
-      // Step 3: Setup PIN
-      expect(find.text('إعداد رمز PIN جديد'), findsOneWidget);
-      final fields = find.byType(TextFormField);
-      expect(fields, findsNWidgets(2)); // pin & confirm pin
+        // Step 3: Setup PIN
+        expect(find.text('إعداد رمز PIN جديد'), findsOneWidget);
+        final fields = find.byType(TextFormField);
+        expect(fields, findsNWidgets(2)); // pin & confirm pin
 
-      await tester.enterText(fields.at(0), '1234');
-      await tester.enterText(fields.at(1), '1234');
-      await tester.tap(find.text('حفظ رمز PIN والدخول'));
-      expect(supabaseClient.auth.currentUser, isNotNull);
-    });
+        await tester.enterText(fields.at(0), '1234');
+        await tester.enterText(fields.at(1), '1234');
+        await tester.tap(find.text('حفظ رمز PIN والدخول'));
+        expect(supabaseClient.auth.currentUser, isNotNull);
+      },
+    );
 
-    testWidgets('ADMIN user with LOCKED status receives lockout error', (tester) async {
-      final supabaseClient = createMockSupabaseClient('ADMIN', pinStatus: 'LOCKED');
+    testWidgets('ADMIN user with LOCKED status receives lockout error', (
+      tester,
+    ) async {
+      final supabaseClient = createMockSupabaseClient(
+        'ADMIN',
+        pinStatus: 'LOCKED',
+      );
 
       await tester.pumpWidget(createTestApp(supabaseClient));
       await tester.pumpAndSettle();
@@ -270,42 +300,58 @@ void main() {
       expect(find.textContaining('الحساب مغلق'), findsOneWidget);
     });
 
-    test('AdminAuthNotifier state transitions require PIN before AdminAuthStatus.authenticated', () async {
-      final supabaseClient = createMockSupabaseClient('ADMIN', pinStatus: 'SET', pinValid: true);
-      final container = ProviderContainer(
-        overrides: [
-          supabaseClientProvider.overrideWithValue(supabaseClient),
-        ],
-      );
-      addTearDown(container.dispose);
+    test(
+      'AdminAuthNotifier state transitions require PIN before AdminAuthStatus.authenticated',
+      () async {
+        final supabaseClient = createMockSupabaseClient(
+          'ADMIN',
+          pinStatus: 'SET',
+          pinValid: true,
+        );
+        final container = ProviderContainer(
+          overrides: [supabaseClientProvider.overrideWithValue(supabaseClient)],
+        );
+        addTearDown(container.dispose);
 
-      final notifier = container.read(adminAuthProvider.notifier);
-      expect(container.read(adminAuthProvider).status, AdminAuthStatus.unauthenticated);
-      expect(container.read(adminAuthProvider).isAuthenticated, isFalse);
+        final notifier = container.read(adminAuthProvider.notifier);
+        expect(
+          container.read(adminAuthProvider).status,
+          AdminAuthStatus.unauthenticated,
+        );
+        expect(container.read(adminAuthProvider).isAuthenticated, isFalse);
 
-      // Verify OTP
-      await notifier.sendOtp('01234567890');
-      final otpSuccess = await notifier.verifyOtp('01234567890', '123456');
-      expect(otpSuccess, isTrue);
+        // Verify OTP
+        await notifier.sendOtp('01234567890');
+        final otpSuccess = await notifier.verifyOtp('01234567890', '123456');
+        expect(otpSuccess, isTrue);
 
-      // Supabase user session exists, but status is pinRequired (NOT authenticated)
-      expect(supabaseClient.auth.currentUser, isNotNull);
-      expect(container.read(adminAuthProvider).status, AdminAuthStatus.pinRequired);
-      expect(container.read(adminAuthProvider).isAuthenticated, isFalse);
+        // Supabase user session exists, but status is pinRequired (NOT authenticated)
+        expect(supabaseClient.auth.currentUser, isNotNull);
+        expect(
+          container.read(adminAuthProvider).status,
+          AdminAuthStatus.pinRequired,
+        );
+        expect(container.read(adminAuthProvider).isAuthenticated, isFalse);
 
-      // Verify PIN succeeds
-      final pinSuccess = await notifier.verifyPin('1234');
-      expect(pinSuccess, isTrue);
-      expect(container.read(adminAuthProvider).status, AdminAuthStatus.authenticated);
-      expect(container.read(adminAuthProvider).isAuthenticated, isTrue);
-    });
+        // Verify PIN succeeds
+        final pinSuccess = await notifier.verifyPin('1234');
+        expect(pinSuccess, isTrue);
+        expect(
+          container.read(adminAuthProvider).status,
+          AdminAuthStatus.authenticated,
+        );
+        expect(container.read(adminAuthProvider).isAuthenticated, isTrue);
+      },
+    );
 
     test('AdminAuthNotifier keeps pinRequired status on wrong PIN', () async {
-      final supabaseClient = createMockSupabaseClient('ADMIN', pinStatus: 'SET', pinValid: false);
+      final supabaseClient = createMockSupabaseClient(
+        'ADMIN',
+        pinStatus: 'SET',
+        pinValid: false,
+      );
       final container = ProviderContainer(
-        overrides: [
-          supabaseClientProvider.overrideWithValue(supabaseClient),
-        ],
+        overrides: [supabaseClientProvider.overrideWithValue(supabaseClient)],
       );
       addTearDown(container.dispose);
 
@@ -313,16 +359,24 @@ void main() {
       await notifier.sendOtp('01234567890');
       await notifier.verifyOtp('01234567890', '123456');
 
-      expect(container.read(adminAuthProvider).status, AdminAuthStatus.pinRequired);
+      expect(
+        container.read(adminAuthProvider).status,
+        AdminAuthStatus.pinRequired,
+      );
       expect(container.read(adminAuthProvider).isAuthenticated, isFalse);
 
       // Wrong PIN
       final pinSuccess = await notifier.verifyPin('0000');
       expect(pinSuccess, isFalse);
-      expect(container.read(adminAuthProvider).status, AdminAuthStatus.pinRequired);
+      expect(
+        container.read(adminAuthProvider).status,
+        AdminAuthStatus.pinRequired,
+      );
       expect(container.read(adminAuthProvider).isAuthenticated, isFalse);
-      expect(container.read(adminAuthProvider).errorMessage, 'رمز PIN غير صحيح');
+      expect(
+        container.read(adminAuthProvider).errorMessage,
+        'رمز PIN غير صحيح',
+      );
     });
   });
 }
-

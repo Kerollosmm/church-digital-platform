@@ -51,10 +51,7 @@ class TestAppSupabase implements AppSupabase {
       final res = await handler(body ?? {});
       if (res is Map) return Map<String, dynamic>.from(res);
     }
-    return {
-      'fn': fn,
-      'body': body,
-    };
+    return {'fn': fn, 'body': body};
   }
 
   @override

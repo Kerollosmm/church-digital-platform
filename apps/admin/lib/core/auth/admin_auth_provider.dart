@@ -223,12 +223,12 @@ class AdminAuthNotifier extends Notifier<AdminAuthState> {
     }
   }
 
-
   Future<void> signOut() async {
     await _client.auth.signOut();
     state = const AdminAuthState(status: AdminAuthStatus.unauthenticated);
   }
 }
 
-final adminAuthProvider =
-    NotifierProvider<AdminAuthNotifier, AdminAuthState>(AdminAuthNotifier.new);
+final adminAuthProvider = NotifierProvider<AdminAuthNotifier, AdminAuthState>(
+  AdminAuthNotifier.new,
+);

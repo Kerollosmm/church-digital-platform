@@ -17,7 +17,10 @@ Future<void> main() async {
       'Missing SUPABASE_ANON_KEY. Pass via --dart-define=SUPABASE_ANON_KEY=<key>',
     );
   }
-  await Supabase.initialize(url: _supabaseUrl, publishableKey: _supabasePublishableKey);
+  await Supabase.initialize(
+    url: _supabaseUrl,
+    publishableKey: _supabasePublishableKey,
+  );
   runApp(const ProviderScope(child: ChurchApp()));
 }
 
@@ -41,4 +44,3 @@ class ChurchApp extends ConsumerWidget {
     );
   }
 }
-

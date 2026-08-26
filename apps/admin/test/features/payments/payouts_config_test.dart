@@ -25,65 +25,77 @@ void main() {
   ];
 
   group('PayoutsConfigScreen Widget Tests', () {
-    testWidgets('renders payout channels and hides edit buttons for regular ADMIN', (tester) async {
-      final mock = MockSupabase(tables: {'payout_channels': sampleChannels});
-      final repo = PaymentsAdminRepository(mock.build());
+    testWidgets(
+      'renders payout channels and hides edit buttons for regular ADMIN',
+      (tester) async {
+        final mock = MockSupabase(tables: {'payout_channels': sampleChannels});
+        final repo = PaymentsAdminRepository(mock.build());
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: PayoutsConfigScreen(repo: repo, isSuperAdminOverride: false),
-        ),
-      );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PayoutsConfigScreen(repo: repo, isSuperAdminOverride: false),
+          ),
+        );
 
-      await tester.pump();
-      await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pumpAndSettle();
 
-      expect(find.text('فودافون كاش'), findsOneWidget);
-      expect(find.text('01012345678'), findsOneWidget);
-      expect(find.text('إنستاباي'), findsOneWidget);
-      expect(find.text('church@instapay'), findsOneWidget);
+        expect(find.text('فودافون كاش'), findsOneWidget);
+        expect(find.text('01012345678'), findsOneWidget);
+        expect(find.text('إنستاباي'), findsOneWidget);
+        expect(find.text('church@instapay'), findsOneWidget);
 
-      // Read-only notice present
-      expect(find.textContaining('عرض تفاصيل الحسابات متاح للقراءة فقط'), findsOneWidget);
+        // Read-only notice present
+        expect(
+          find.textContaining('عرض تفاصيل الحسابات متاح للقراءة فقط'),
+          findsOneWidget,
+        );
 
-      // Edit buttons hidden
-      expect(find.byIcon(Icons.edit), findsNothing);
-    });
+        // Edit buttons hidden
+        expect(find.byIcon(Icons.edit), findsNothing);
+      },
+    );
 
-    testWidgets('shows edit buttons for SUPER_ADMIN and permits editing channel', (tester) async {
-      final mock = MockSupabase(tables: {'payout_channels': sampleChannels});
-      final repo = PaymentsAdminRepository(mock.build());
+    testWidgets(
+      'shows edit buttons for SUPER_ADMIN and permits editing channel',
+      (tester) async {
+        final mock = MockSupabase(tables: {'payout_channels': sampleChannels});
+        final repo = PaymentsAdminRepository(mock.build());
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: PayoutsConfigScreen(repo: repo, isSuperAdminOverride: true),
-        ),
-      );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: PayoutsConfigScreen(repo: repo, isSuperAdminOverride: true),
+          ),
+        );
 
-      await tester.pump();
-      await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pumpAndSettle();
 
-      // Read-only notice absent
-      expect(find.textContaining('عرض تفاصيل الحسابات متاح للقراءة فقط'), findsNothing);
+        // Read-only notice absent
+        expect(
+          find.textContaining('عرض تفاصيل الحسابات متاح للقراءة فقط'),
+          findsNothing,
+        );
 
-      // Edit buttons present
-      final editBtns = find.byIcon(Icons.edit);
-      expect(editBtns, findsNWidgets(2));
+        // Edit buttons present
+        final editBtns = find.byIcon(Icons.edit);
+        expect(editBtns, findsNWidgets(2));
 
-      // Tap first edit button
-      await tester.tap(editBtns.first);
-      await tester.pumpAndSettle();
+        // Tap first edit button
+        await tester.tap(editBtns.first);
+        await tester.pumpAndSettle();
 
-      expect(find.text('تعديل بيانات فودافون كاش'), findsOneWidget);
+        expect(find.text('تعديل بيانات فودافون كاش'), findsOneWidget);
 
-      // Tap cancel
-      final cancelBtn = find.widgetWithText(TextButton, 'إلغاء');
-      expect(cancelBtn, findsOneWidget);
-      await tester.tap(cancelBtn);
-      await tester.pumpAndSettle();
+        // Tap cancel
+        final cancelBtn = find.widgetWithText(TextButton, 'إلغاء');
+        expect(cancelBtn, findsOneWidget);
+        await tester.tap(cancelBtn);
+        await tester.pumpAndSettle();
 
-      expect(find.text('تعديل بيانات فودافون كاش'), findsNothing);
-    });
+        expect(find.text('تعديل بيانات فودافون كاش'), findsNothing);
+      },
+    );
 
     testWidgets('shows error state when load fails', (tester) async {
       final repo = FailingPayoutsRepository();
@@ -119,16 +131,20 @@ void main() {
       final mock = MockSupabase(tables: {'payout_channels': sampleChannels});
       final repo = PaymentsAdminRepository(mock.build());
 
-      final res = await repo.upsertPayoutChannel(const PayoutChannel(
-        channel: 'VODAFONE_CASH',
-        displayNameAr: 'فودافون كاش المحدث',
-        accountNumber: '01099999999',
-        holderName: 'مطرانية الكنيسة',
-      ));
+      final res = await repo.upsertPayoutChannel(
+        const PayoutChannel(
+          channel: 'VODAFONE_CASH',
+          displayNameAr: 'فودافون كاش المحدث',
+          accountNumber: '01099999999',
+          holderName: 'مطرانية الكنيسة',
+        ),
+      );
 
       if (res.isLeft) {
         // ignore: avoid_print
-        print('upsertPayoutChannel error: ${res.leftOrNull?.message} (${res.leftOrNull?.code})');
+        print(
+          'upsertPayoutChannel error: ${res.leftOrNull?.message} (${res.leftOrNull?.code})',
+        );
       }
       expect(res.isRight, isTrue);
     });
@@ -140,7 +156,8 @@ class FailingPayoutsRepository extends PaymentsAdminRepository {
 
   @override
   Future<Either<Failure, List<PayoutChannel>>> listPayoutChannels() async {
-    return const Left(Failure(code: 'NETWORK_ERROR', message: 'فشل في جلب البيانات'));
+    return const Left(
+      Failure(code: 'NETWORK_ERROR', message: 'فشل في جلب البيانات'),
+    );
   }
 }
-

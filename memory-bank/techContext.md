@@ -29,6 +29,9 @@
 - **Communication & Push Gateways**:
   - **Meta Cloud API**: WhatsApp Business Graph API for transactional message templates
   - **Google Firebase**: FCM v1 HTTP API with OAuth2 bearer token exchange for push notifications
+- **AI Agent Context & Research Tooling**:
+  - **mem0 Vector Memory MCP**: Cross-session preferences and persistent facts
+  - **NotebookLM MCP (`notebooklm-mcp`)**: Source-grounded architecture & domain research engine connected to curated project notebook `Flutter with Supabase Research` (`63ddabc2-5d6c-493c-8e2d-d61271d0c4db`, 30 sources) containing official Flutter/Supabase guides, temporal constraints, pgTAP patterns, and Spec 008 architecture blueprints.
 
 ## Development & Test Execution Workflows
 

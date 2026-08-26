@@ -41,7 +41,9 @@ class FakeProofBookingRepository implements BookingRepository {
   }
 
   @override
-  Future<Either<Failure, int>> submitPaymentProof(PaymentProofInput input) async {
+  Future<Either<Failure, int>> submitPaymentProof(
+    PaymentProofInput input,
+  ) async {
     lastSubmittedInput = input;
     return submitResult;
   }
@@ -58,7 +60,9 @@ class FakeProofBookingRepository implements BookingRepository {
   @override
   Future<List<Map<String, dynamic>>> fetchServices() async => [];
   @override
-  Future<List<Map<String, dynamic>>> fetchSlotsForService(int serviceId) async => [];
+  Future<List<Map<String, dynamic>>> fetchSlotsForService(
+    int serviceId,
+  ) async => [];
   @override
   Future<List<AvailableSlot>> fetchAvailableSlots() async => [];
   @override
@@ -67,8 +71,7 @@ class FakeProofBookingRepository implements BookingRepository {
   Future<Either<Failure, Booking>> reserveAndPay({
     required int slotId,
     bool whatsappOptIn = false,
-  }) async =>
-      const Left(BookingFailure('Unused in this test'));
+  }) async => const Left(BookingFailure('Unused in this test'));
   @override
   Future<void> cancelBooking(int bookingId) async {}
   @override
@@ -112,7 +115,9 @@ void main() {
       expect(find.text(AppStrings.submitProof), findsOneWidget);
     });
 
-    testWidgets('shows error when submitting wallet without image attached', (tester) async {
+    testWidgets('shows error when submitting wallet without image attached', (
+      tester,
+    ) async {
       await tester.pumpWidget(buildTestWidget());
       await tester.pumpAndSettle();
 
@@ -134,50 +139,56 @@ void main() {
       expect(repository.lastSubmittedInput, isNull);
     });
 
-    testWidgets('submits successfully when cash channel selected (no image needed)', (tester) async {
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'submits successfully when cash channel selected (no image needed)',
+      (tester) async {
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
 
-      // Switch to CASH
-      await tester.tap(find.text(AppStrings.cashInPerson));
-      await tester.pumpAndSettle();
+        // Switch to CASH
+        await tester.tap(find.text(AppStrings.cashInPerson));
+        await tester.pumpAndSettle();
 
-      final textFields = find.byType(TextFormField);
-      await tester.enterText(textFields.at(0), '01012345678');
-      await tester.enterText(textFields.at(1), 'TALAB123');
-      await tester.pumpAndSettle();
+        final textFields = find.byType(TextFormField);
+        await tester.enterText(textFields.at(0), '01012345678');
+        await tester.enterText(textFields.at(1), 'TALAB123');
+        await tester.pumpAndSettle();
 
-      final submitBtn = find.text(AppStrings.submitProof);
-      await tester.ensureVisible(submitBtn);
-      await tester.pumpAndSettle();
+        final submitBtn = find.text(AppStrings.submitProof);
+        await tester.ensureVisible(submitBtn);
+        await tester.pumpAndSettle();
 
-      await tester.tap(submitBtn);
-      await tester.pumpAndSettle();
+        await tester.tap(submitBtn);
+        await tester.pumpAndSettle();
 
-      expect(repository.lastSubmittedInput, isNotNull);
-      expect(repository.lastSubmittedInput!.channel, PaymentChannel.cash);
-      expect(repository.lastSubmittedInput!.referenceNumber, 'TALAB123');
-      expect(repository.lastSubmittedInput!.imagePath, isNull);
-      expect(find.text(AppStrings.proofSubmittedSuccess), findsOneWidget);
-    });
+        expect(repository.lastSubmittedInput, isNotNull);
+        expect(repository.lastSubmittedInput!.channel, PaymentChannel.cash);
+        expect(repository.lastSubmittedInput!.referenceNumber, 'TALAB123');
+        expect(repository.lastSubmittedInput!.imagePath, isNull);
+        expect(find.text(AppStrings.proofSubmittedSuccess), findsOneWidget);
+      },
+    );
 
-    testWidgets('dynamically renders updated payout channels returned by repository', (tester) async {
-      repository.payoutChannels = [
-        const PayoutChannel(
-          id: 10,
-          channel: PaymentChannel.vodafoneCash,
-          displayNameAr: 'محفظة الكنيسة المحدثة',
-          accountNumber: '01099998888',
-          holderName: 'أبونا مقار',
-        ),
-      ];
+    testWidgets(
+      'dynamically renders updated payout channels returned by repository',
+      (tester) async {
+        repository.payoutChannels = [
+          const PayoutChannel(
+            id: 10,
+            channel: PaymentChannel.vodafoneCash,
+            displayNameAr: 'محفظة الكنيسة المحدثة',
+            accountNumber: '01099998888',
+            holderName: 'أبونا مقار',
+          ),
+        ];
 
-      await tester.pumpWidget(buildTestWidget());
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildTestWidget());
+        await tester.pumpAndSettle();
 
-      expect(find.text('محفظة الكنيسة المحدثة'), findsOneWidget);
-      expect(find.text('01099998888'), findsWidgets);
-      expect(find.text('أبونا مقار'), findsOneWidget);
-    });
+        expect(find.text('محفظة الكنيسة المحدثة'), findsOneWidget);
+        expect(find.text('01099998888'), findsWidgets);
+        expect(find.text('أبونا مقار'), findsOneWidget);
+      },
+    );
   });
 }

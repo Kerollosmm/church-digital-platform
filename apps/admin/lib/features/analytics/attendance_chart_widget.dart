@@ -48,7 +48,10 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget> {
       if (widget.fetchData != null) {
         rows = await widget.fetchData!();
       } else if (widget.repo != null) {
-        rows = (await widget.repo!.utilizationRows()).fold((f) => throw f, (r) => r);
+        rows = (await widget.repo!.utilizationRows()).fold(
+          (f) => throw f,
+          (r) => r,
+        );
       } else {
         rows = [];
       }
@@ -86,9 +89,9 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget> {
             children: [
               Text(
                 'نسبة الحضور والإشغال للمواظبين والحجوزات',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               _buildLegend(),
@@ -104,7 +107,9 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget> {
                   child: Center(
                     child: Text(
                       _errorMessage!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                   ),
                 )
@@ -114,12 +119,7 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget> {
                   child: Center(child: Text('لا توجد بيانات متاحة')),
                 )
               else
-                SizedBox(
-                  height: 280,
-                  child: BarChart(
-                    _buildChartData(),
-                  ),
-                ),
+                SizedBox(height: 280, child: BarChart(_buildChartData())),
             ],
           ),
         ),
@@ -164,8 +164,15 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget> {
 
     for (int i = 0; i < _data.length; i++) {
       final item = _data[i];
-      final capacity = ((item['slots_total'] ?? item['capacity'] ?? 100) as num).toDouble();
-      final booked = ((item['slots_booked'] ?? item['attendees'] ?? item['actual_attendees'] ?? 0) as num).toDouble();
+      final capacity = ((item['slots_total'] ?? item['capacity'] ?? 100) as num)
+          .toDouble();
+      final booked =
+          ((item['slots_booked'] ??
+                      item['attendees'] ??
+                      item['actual_attendees'] ??
+                      0)
+                  as num)
+              .toDouble();
 
       if (capacity > maxY) maxY = capacity;
       if (booked > maxY) maxY = booked;
@@ -210,7 +217,9 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget> {
       titlesData: FlTitlesData(
         show: true,
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
         leftTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
@@ -236,7 +245,10 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget> {
                 padding: const EdgeInsets.only(top: 6.0),
                 child: Text(
                   _getServiceTitle(index),
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               );
             },
@@ -247,10 +259,8 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget> {
         show: true,
         drawVerticalLine: false,
         horizontalInterval: maxY > 50 ? (maxY / 5).clamp(10, 100) : 10,
-        getDrawingHorizontalLine: (value) => FlLine(
-          color: Colors.grey.shade200,
-          strokeWidth: 1,
-        ),
+        getDrawingHorizontalLine: (value) =>
+            FlLine(color: Colors.grey.shade200, strokeWidth: 1),
       ),
       borderData: FlBorderData(show: false),
       barGroups: barGroups,
@@ -260,6 +270,7 @@ class _AttendanceChartWidgetState extends State<AttendanceChartWidget> {
   String _getServiceTitle(int index) {
     if (index < 0 || index >= _data.length) return '';
     final item = _data[index];
-    return (item['title_ar'] ?? item['service_name'] ?? item['title'] ?? 'قداس').toString();
+    return (item['title_ar'] ?? item['service_name'] ?? item['title'] ?? 'قداس')
+        .toString();
   }
 }

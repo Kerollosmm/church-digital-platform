@@ -61,37 +61,40 @@ void main() {
       expect(item.position, 1);
     });
 
-    test('SupabasePortalRepository.socialLinks queries social_links table and maps entities', () async {
-      final fakeDb = FakePortalSupabase({
-        'social_links': [
-          {
-            'id': 1,
-            'platform': 'FACEBOOK',
-            'title_ar': 'الصفحة الرسمية',
-            'url': 'https://facebook.com/church',
-            'icon_name': 'facebook',
-            'position': 1,
-          },
-          {
-            'id': 2,
-            'platform': 'MAPS',
-            'title_ar': 'موقع الكنيسة',
-            'url': 'https://maps.google.com/?q=church',
-            'icon_name': 'location_on',
-            'position': 2,
-          },
-        ],
-      });
+    test(
+      'SupabasePortalRepository.socialLinks queries social_links table and maps entities',
+      () async {
+        final fakeDb = FakePortalSupabase({
+          'social_links': [
+            {
+              'id': 1,
+              'platform': 'FACEBOOK',
+              'title_ar': 'الصفحة الرسمية',
+              'url': 'https://facebook.com/church',
+              'icon_name': 'facebook',
+              'position': 1,
+            },
+            {
+              'id': 2,
+              'platform': 'MAPS',
+              'title_ar': 'موقع الكنيسة',
+              'url': 'https://maps.google.com/?q=church',
+              'icon_name': 'location_on',
+              'position': 2,
+            },
+          ],
+        });
 
-      final repo = SupabasePortalRepository(fakeDb);
-      final links = await repo.socialLinks();
+        final repo = SupabasePortalRepository(fakeDb);
+        final links = await repo.socialLinks();
 
-      expect(links.length, 2);
-      expect(links.first.platform, 'FACEBOOK');
-      expect(links.first.titleAr, 'الصفحة الرسمية');
-      expect(links.last.platform, 'MAPS');
-      expect(links.last.url, 'https://maps.google.com/?q=church');
-    });
+        expect(links.length, 2);
+        expect(links.first.platform, 'FACEBOOK');
+        expect(links.first.titleAr, 'الصفحة الرسمية');
+        expect(links.last.platform, 'MAPS');
+        expect(links.last.url, 'https://maps.google.com/?q=church');
+      },
+    );
 
     test('EmptyPortalRepository returns empty list for socialLinks', () async {
       final emptyRepo = EmptyPortalRepository();

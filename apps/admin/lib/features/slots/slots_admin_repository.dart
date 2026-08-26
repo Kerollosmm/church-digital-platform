@@ -19,7 +19,10 @@ class SlotsAdminRepository {
 
   Future<Either<Failure, void>> closeSlot(int slotId) async {
     try {
-      await _db.from('service_slots').update({'status': 'CLOSED'}).eq('id', slotId);
+      await _db
+          .from('service_slots')
+          .update({'status': 'CLOSED'})
+          .eq('id', slotId);
       return const Right(null);
     } catch (e) {
       return Left(Failure.from(e));

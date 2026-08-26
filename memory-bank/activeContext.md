@@ -1,15 +1,15 @@
 # Active Context: Church Digital Platform
 
 ## Current Focus & Status
-- **Current Milestone**: Feature 011 (Manual Payment Verification — ADR 0003) & Code Health Hardening — **100% Completed & Verified**.
+- **Current Milestone**: Feature 008 (Event Booking with Extra Services — ADR 0002) — **100% Completed & Verified**.
 - **All Verification Gates Passing**:
-  - PostgreSQL Schema: Migrations 0001 through 0072 applied; 62 / 62 SQL suites PASS (`node scripts/test-sql.js`).
-  - Deno Edge Functions: 63 / 63 test suites PASS (`deno test --allow-env --allow-net supabase/functions/`).
-  - Flutter Mobile: 80 / 80 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/mobile/`).
-  - Flutter Admin: 64 / 64 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/admin/`).
-- **Code Health Hardening**: Fixed empty catch blocks with structured `debugPrint` logging in `phone_verify_gate.dart`, `app_router.dart`, and analytics screens. Retained intentional test dependencies `UnimplementedAppSupabase` and `UnimplementedAuthGateway`.
-- **Repository State**: Working branch `011-manual-payment-verification` with atomic conventional commits.
-- **Next Immediate Step**: Proceed to Feature 008 (Event Booking with Extra Services domain implementation).
+  - PostgreSQL Schema: Migrations 0001 through 0074 applied; 64 / 64 SQL suites PASS (`node scripts/test-sql.js`).
+  - Deno Edge Functions: 58 / 58 test suites PASS (`deno test --allow-env --allow-net supabase/functions/`).
+  - Flutter Mobile: 81 / 81 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/mobile/`).
+  - Flutter Admin: 65 / 65 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/admin/`).
+- **Research Tooling Integration**: Configured `notebooklm-mcp` in `~/.gemini/antigravity/mcp_config.json` and `~/.gemini/config/mcp_config.json` with authenticated access to project research notebook `Flutter with Supabase Research` (`63ddabc2-5d6c-493c-8e2d-d61271d0c4db`, 30 sources). Integrated into `/memory-bank` protocol and `techContext.md`.
+- **Repository State**: Working branch `008-event-booking-extra-services` with verified end-to-end integration.
+- **Next Immediate Step**: Review and integrate branch changes into main.
 
 ---
 

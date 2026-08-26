@@ -15,7 +15,9 @@ class AnalyticsRepository {
   Future<Either<Failure, List<Map<String, dynamic>>>> utilizationRows() =>
       _readView('v_analytics_utilization');
 
-  Future<Either<Failure, List<Map<String, dynamic>>>> _readView(String view) async {
+  Future<Either<Failure, List<Map<String, dynamic>>>> _readView(
+    String view,
+  ) async {
     try {
       final res = await _db.from(view).select();
       final list = (res as List)

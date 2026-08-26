@@ -5,12 +5,14 @@ import '../../helpers/mock_supabase.dart';
 void main() {
   group('ContentRepository', () {
     test('faq returns sorted items or failure', () async {
-      final mock = MockSupabase(tables: {
-        'faq': [
-          {'id': 2, 'question_ar': 'سؤال 2', 'position': 2},
-          {'id': 1, 'question_ar': 'سؤال 1', 'position': 1},
-        ],
-      });
+      final mock = MockSupabase(
+        tables: {
+          'faq': [
+            {'id': 2, 'question_ar': 'سؤال 2', 'position': 2},
+            {'id': 1, 'question_ar': 'سؤال 1', 'position': 1},
+          ],
+        },
+      );
       final repo = ContentRepository(mock.build());
       final res = await repo.faq();
       expect(res.isRight, isTrue);
@@ -19,11 +21,12 @@ void main() {
     });
 
     test('createFaq and deleteFaq mutations succeed', () async {
-      final mock = MockSupabase(tables: {
-        'faq': [],
-      });
+      final mock = MockSupabase(tables: {'faq': []});
       final repo = ContentRepository(mock.build());
-      final createRes = await repo.createFaq({'id': 10, 'question_ar': 'سؤال جديد'});
+      final createRes = await repo.createFaq({
+        'id': 10,
+        'question_ar': 'سؤال جديد',
+      });
       expect(createRes.isRight, isTrue);
       expect(mock.data['faq']!.length, 1);
 
@@ -33,11 +36,13 @@ void main() {
     });
 
     test('socialLinks CRUD works', () async {
-      final mock = MockSupabase(tables: {
-        'social_links': [],
-      });
+      final mock = MockSupabase(tables: {'social_links': []});
       final repo = ContentRepository(mock.build());
-      final createRes = await repo.createSocialLink({'id': 1, 'platform': 'facebook', 'url': 'https://fb.com'});
+      final createRes = await repo.createSocialLink({
+        'id': 1,
+        'platform': 'facebook',
+        'url': 'https://fb.com',
+      });
       expect(createRes.isRight, isTrue);
 
       final listRes = await repo.socialLinks();

@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-
 typedef Row = Map<String, dynamic>;
 typedef RpcHandler = Future<Object?> Function(Map<String, dynamic> args);
 
@@ -11,11 +10,18 @@ typedef RpcHandler = Future<Object?> Function(Map<String, dynamic> args);
 /// Repositories under test are the production classes — only the transport
 /// is faked (AGENTS.md "Direct Repository Testing").
 class MockSupabase {
-  MockSupabase({Map<String, List<Map<String, dynamic>>>? tables, Map<String, RpcHandler>? rpc})
-      : data = tables != null
-            ? tables.map((k, v) => MapEntry(k, v.map((r) => Map<String, dynamic>.from(r)).toList()))
-            : {},
-        rpcHandlers = rpc ?? {};
+  MockSupabase({
+    Map<String, List<Map<String, dynamic>>>? tables,
+    Map<String, RpcHandler>? rpc,
+  }) : data = tables != null
+           ? tables.map(
+               (k, v) => MapEntry(
+                 k,
+                 v.map((r) => Map<String, dynamic>.from(r)).toList(),
+               ),
+             )
+           : {},
+       rpcHandlers = rpc ?? {};
 
   final Map<String, List<Row>> data;
   final Map<String, RpcHandler> rpcHandlers;
@@ -39,7 +45,11 @@ class MockSupabase {
       final fn = path.split('/rest/v1/rpc/').last;
       final handler = rpcHandlers[fn];
       if (handler == null) {
-        return http.Response('{"message":"function not found"}', 404, request: req);
+        return http.Response(
+          '{"message":"function not found"}',
+          404,
+          request: req,
+        );
       }
       final args = req.body.isEmpty
           ? <String, dynamic>{}
@@ -71,7 +81,8 @@ class MockSupabase {
           200,
           headers: {
             'content-type': 'application/json; charset=utf-8',
-            'content-range': '0-${out.isEmpty ? 0 : out.length - 1}/${out.length}',
+            'content-range':
+                '0-${out.isEmpty ? 0 : out.length - 1}/${out.length}',
           },
           request: req,
         );
@@ -92,7 +103,9 @@ class MockSupabase {
         );
       case 'PATCH':
         final patch = Map<String, dynamic>.from(jsonDecode(req.body) as Row);
-        for (final r in rows.where((r) => idFilter == null || r['id'] == idFilter)) {
+        for (final r in rows.where(
+          (r) => idFilter == null || r['id'] == idFilter,
+        )) {
           r.addAll(patch);
         }
         return http.Response('', 204, request: req);

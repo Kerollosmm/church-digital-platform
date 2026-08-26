@@ -117,9 +117,7 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('تسجيل دخول المشرفين'),
-        ),
+        appBar: AppBar(title: const Text('تسجيل دخول المشرفين')),
         body: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
@@ -161,7 +159,10 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     if (isPinReq) ...[
                       const Text(
                         'أدخل رمز PIN',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -176,7 +177,9 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton(
-                        onPressed: authState.isLoading ? null : _handleVerifyPin,
+                        onPressed: authState.isLoading
+                            ? null
+                            : _handleVerifyPin,
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),
                         ),
@@ -187,7 +190,10 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                     ] else if (isPinSetupReq) ...[
                       const Text(
                         'إعداد رمز PIN جديد',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -255,7 +261,9 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton(
-                        onPressed: authState.isLoading ? null : _handleVerifyOtp,
+                        onPressed: authState.isLoading
+                            ? null
+                            : _handleVerifyOtp,
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),
                         ),

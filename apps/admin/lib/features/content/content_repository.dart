@@ -47,7 +47,9 @@ class ContentRepository {
     }
   }
 
-  Future<Either<Failure, void>> createSocialLink(Map<String, dynamic> row) async {
+  Future<Either<Failure, void>> createSocialLink(
+    Map<String, dynamic> row,
+  ) async {
     try {
       await _db.from('social_links').insert(row);
       return const Right(null);

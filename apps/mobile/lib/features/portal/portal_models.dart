@@ -92,4 +92,3 @@ class SocialLinkItem {
     position: (json['position'] as num?)?.toInt() ?? 0,
   );
 }
-

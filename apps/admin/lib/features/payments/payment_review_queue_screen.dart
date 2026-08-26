@@ -8,7 +8,8 @@ class PaymentReviewQueueScreen extends StatefulWidget {
   final PaymentsAdminRepository repo;
 
   @override
-  State<PaymentReviewQueueScreen> createState() => _PaymentReviewQueueScreenState();
+  State<PaymentReviewQueueScreen> createState() =>
+      _PaymentReviewQueueScreenState();
 }
 
 class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
@@ -62,7 +63,10 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
                 children: [
                   Icon(Icons.image, size: 48, color: Colors.blueGrey),
                   SizedBox(height: 8),
-                  Text('صورة الإشعار المرفقة من المخدوم', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    'صورة الإشعار المرفقة من المخدوم',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
             ),
@@ -89,7 +93,9 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('المبلغ: ${proof.amountClaimed} جنيه (حجز #${proof.bookingId})'),
+              Text(
+                'المبلغ: ${proof.amountClaimed} جنيه (حجز #${proof.bookingId})',
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: noteController,
@@ -113,7 +119,9 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
         ),
       );
       if (confirm != true) return;
-      collectorNote = noteController.text.trim().isNotEmpty ? noteController.text.trim() : null;
+      collectorNote = noteController.text.trim().isNotEmpty
+          ? noteController.text.trim()
+          : null;
     } else {
       final confirm = await showDialog<bool>(
         context: context,
@@ -137,12 +145,17 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
       if (confirm != true) return;
     }
 
-    final res = await widget.repo.approveProof(proof.id, collectorNote: collectorNote);
+    final res = await widget.repo.approveProof(
+      proof.id,
+      collectorNote: collectorNote,
+    );
     if (!mounted) return;
 
     if (res.isRight) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تم قبول إثبات الدفع للحجز #${proof.bookingId} بنجاح')),
+        SnackBar(
+          content: Text('تم قبول إثبات الدفع للحجز #${proof.bookingId} بنجاح'),
+        ),
       );
       _load();
     } else {
@@ -156,7 +169,10 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
     const reasons = [
       {'code': 'BAD_REQUEST', 'label': 'البيانات غير متطابقة مع كشف الحساب'},
       {'code': 'FALLBACK', 'label': 'صورة الإشعار غير واضحة أو غير مكتملة'},
-      {'code': 'UPSTREAM_ERROR', 'label': 'لم يتم العثور على المعاملة بالمحفظة'},
+      {
+        'code': 'UPSTREAM_ERROR',
+        'label': 'لم يتم العثور على المعاملة بالمحفظة',
+      },
     ];
 
     String selectedCode = reasons.first['code']!;
@@ -170,17 +186,24 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('حجز #${proof.bookingId} — مبلغ: ${proof.amountClaimed} جنيه'),
+              Text(
+                'حجز #${proof.bookingId} — مبلغ: ${proof.amountClaimed} جنيه',
+              ),
               const SizedBox(height: 12),
-              const Text('سبب الرفض (سيظهر للمخدوم لإعادة الإرسال):', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'سبب الرفض (سيظهر للمخدوم لإعادة الإرسال):',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 initialValue: selectedCode,
                 items: reasons
-                    .map((r) => DropdownMenuItem(
-                          value: r['code'],
-                          child: Text(r['label']!),
-                        ))
+                    .map(
+                      (r) => DropdownMenuItem(
+                        value: r['code'],
+                        child: Text(r['label']!),
+                      ),
+                    )
                     .toList(),
                 onChanged: (val) {
                   if (val != null) setDialogState(() => selectedCode = val);
@@ -197,7 +220,10 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('تأكيد الرفض', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'تأكيد الرفض',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -245,9 +271,15 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('حدث خطأ: ${snapshot.error}', style: const TextStyle(color: Colors.red)),
+                  Text(
+                    'حدث خطأ: ${snapshot.error}',
+                    style: const TextStyle(color: Colors.red),
+                  ),
                   const SizedBox(height: 12),
-                  ElevatedButton(onPressed: _load, child: const Text('إعادة المحاولة')),
+                  ElevatedButton(
+                    onPressed: _load,
+                    child: const Text('إعادة المحاولة'),
+                  ),
                 ],
               ),
             );
@@ -281,7 +313,10 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
                         children: [
                           Text(
                             'حجز #${p.bookingId}',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           Chip(
                             label: Text(p.channelDisplayName),
@@ -291,7 +326,13 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
                       ),
                       const Divider(),
                       const SizedBox(height: 6),
-                      Text('المبلغ المطلوب: ${p.amountClaimed} جنيه', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(
+                        'المبلغ المطلوب: ${p.amountClaimed} جنيه',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Text('رقم الهاتف المحول منه: ${p.senderPhone}'),
                       Text('رقم المعاملة / المرجع: ${p.referenceNumber}'),
@@ -313,7 +354,10 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
                         children: [
                           OutlinedButton.icon(
                             icon: const Icon(Icons.close, color: Colors.red),
-                            label: const Text('رفض', style: TextStyle(color: Colors.red)),
+                            label: const Text(
+                              'رفض',
+                              style: TextStyle(color: Colors.red),
+                            ),
                             onPressed: () => _handleReject(p),
                           ),
                           const SizedBox(width: 12),

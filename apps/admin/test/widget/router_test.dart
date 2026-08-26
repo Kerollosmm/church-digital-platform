@@ -53,89 +53,94 @@ void main() {
     );
   }
 
-  testWidgets('ShellRoute drawer navigation renders all items and navigates correctly', (tester) async {
-    tester.view.physicalSize = const Size(1920, 1200);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+  testWidgets(
+    'ShellRoute drawer navigation renders all items and navigates correctly',
+    (tester) async {
+      tester.view.physicalSize = const Size(1920, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    final fake = MockSupabase(tables: {
-      'bookings': [],
-      'service_slots': [],
-      'v_complaints': [],
-      'announcements': [],
-      'faq': [],
-      'payments': [],
-      'payment_proofs': [],
-      'payout_channels': [],
-      'v_available_slots': [],
-    }).build();
+      final fake = MockSupabase(
+        tables: {
+          'bookings': [],
+          'service_slots': [],
+          'v_complaints': [],
+          'announcements': [],
+          'faq': [],
+          'payments': [],
+          'payment_proofs': [],
+          'payout_channels': [],
+          'v_available_slots': [],
+        },
+      ).build();
 
-    await tester.pumpWidget(buildTestApp(fake));
-    await tester.pump();
+      await tester.pumpWidget(buildTestApp(fake));
+      await tester.pump();
 
-    expect(find.text('الحجوزات'), findsWidgets);
-    expect(find.text('المواعيد'), findsOneWidget);
-    expect(find.text('حجز يدوي'), findsOneWidget);
-    expect(find.text('طوارئ'), findsOneWidget);
-    expect(find.text('الشكاوى'), findsOneWidget);
-    expect(find.text('الإعلانات'), findsOneWidget);
-    expect(find.text('الأسئلة الشائعة'), findsOneWidget);
-    expect(find.text('مراجعة إثباتات الدفع'), findsOneWidget);
-    expect(find.text('المدفوعات'), findsOneWidget);
-    expect(find.text('حسابات التحصيل'), findsOneWidget);
-    expect(find.text('التحليلات'), findsOneWidget);
+      expect(find.text('الحجوزات'), findsWidgets);
+      expect(find.text('المواعيد'), findsOneWidget);
+      expect(find.text('حجز يدوي'), findsOneWidget);
+      expect(find.text('طوارئ'), findsOneWidget);
+      expect(find.text('الشكاوى'), findsOneWidget);
+      expect(find.text('الإعلانات'), findsOneWidget);
+      expect(find.text('الأسئلة الشائعة'), findsOneWidget);
+      expect(find.text('مراجعة إثباتات الدفع'), findsOneWidget);
+      expect(find.text('المدفوعات'), findsOneWidget);
+      expect(find.text('حسابات التحصيل'), findsOneWidget);
+      expect(find.text('التحليلات'), findsOneWidget);
 
-    await tester.tap(find.text('حجز يدوي'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(ManualBookScreen), findsOneWidget);
+      await tester.tap(find.text('حجز يدوي'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(ManualBookScreen), findsOneWidget);
 
-    await tester.tap(find.text('طوارئ'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(EmergencyOverrideScreen), findsOneWidget);
+      await tester.tap(find.text('طوارئ'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(EmergencyOverrideScreen), findsOneWidget);
 
-    await tester.tap(find.text('الشكاوى'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(ComplaintsAdminScreen), findsOneWidget);
+      await tester.tap(find.text('الشكاوى'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(ComplaintsAdminScreen), findsOneWidget);
 
-    await tester.tap(find.text('المواعيد'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(SlotsAdminScreen), findsOneWidget);
+      await tester.tap(find.text('المواعيد'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(SlotsAdminScreen), findsOneWidget);
 
-    await tester.tap(find.text('الإعلانات'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(AnnouncementsAdminScreen), findsOneWidget);
+      await tester.tap(find.text('الإعلانات'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(AnnouncementsAdminScreen), findsOneWidget);
 
-    await tester.tap(find.text('الأسئلة الشائعة'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(FaqAdminScreen), findsOneWidget);
+      await tester.tap(find.text('الأسئلة الشائعة'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(FaqAdminScreen), findsOneWidget);
 
-    await tester.tap(find.text('مراجعة إثباتات الدفع'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(PaymentReviewQueueScreen), findsOneWidget);
+      await tester.tap(find.text('مراجعة إثباتات الدفع'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(PaymentReviewQueueScreen), findsOneWidget);
 
-    await tester.tap(find.text('المدفوعات'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(PaymentsAdminScreen), findsOneWidget);
+      await tester.tap(find.text('المدفوعات'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(PaymentsAdminScreen), findsOneWidget);
 
-    await tester.tap(find.text('حسابات التحصيل'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(PayoutsConfigScreen), findsOneWidget);
+      await tester.tap(find.text('حسابات التحصيل'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(PayoutsConfigScreen), findsOneWidget);
 
-    await tester.tap(find.text('التحليلات'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.byType(AnalyticsAdminScreen), findsOneWidget);
-  });
+      await tester.tap(find.text('التحليلات'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(AnalyticsAdminScreen), findsOneWidget);
+    },
+  );
 }

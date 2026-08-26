@@ -24,10 +24,10 @@ class PayoutChannel {
   }
 
   Map<String, dynamic> toJson() => {
-        if (id != null) 'id': id,
-        'channel': channel,
-        'display_name_ar': displayNameAr,
-        'account_number': accountNumber,
-        'holder_name': holderName,
-      };
+    if (id != null) 'id': id,
+    'channel': channel,
+    'display_name_ar': displayNameAr,
+    'account_number': accountNumber,
+    'holder_name': holderName,
+  };
 }

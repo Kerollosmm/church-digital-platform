@@ -4,54 +4,36 @@
 
 | Component | Status | Test / Gate Outcome | Notes |
 | :--- | :--- | :--- | :--- |
-| **PostgreSQL Schema (0001-0072)** | **100% Passing** | 62/62 SQL suites registered | Migrations 0066–0072: Manual payments, proof review, Paymob drop, security hardening |
-| **Deno Edge Functions** | **100% Passing** | 63/63 tests PASS (100%) | 5 edge functions, payments gateway RPC wrapper, zero-leak contract |
-| **Flutter Mobile App** | **100% Passing** | 80/80 tests PASS, 0 lints | PaymentProofScreen, direct booking reservation, Arabic UI, hardened catch blocks |
-| **Flutter Web Admin App** | **100% Passing** | 64/64 tests PASS, 0 lints | PaymentReviewQueue, CashReceivedSheet, PayoutsConfigScreen, error logging |
-| **Feature 011 (Manual Payments)** | **Completed** | All 9 phases & 6 stories done | Commits: `09b5cd3`, `c357eb2`, `8880d5d`, `14c92f4`, `5916ba7`, `1114cc6`, `f2951b0`, `becb266`, `710daa1` |
-| **Code Health Hardening** | **Completed** | Error logging + dead code audit | Resolved empty catch blocks across mobile/admin, validated test fixtures |
+| **PostgreSQL Schema (0001-0074)** | **100% Passing** | 64/64 SQL suites registered | Migrations 0073–0074: Event booking schema, GiST exclusion, price snapshots, RPCs |
+| **Deno Edge Functions** | **100% Passing** | 58/58 tests PASS (100%) | 5 edge functions, payments gateway RPC wrapper, zero-leak contract |
+| **Flutter Mobile App** | **100% Passing** | 81/81 tests PASS, 0 lints | EventBookingScreen, SupabaseEventBookingRepository, price calculation, Arabic UI |
+| **Flutter Web Admin App** | **100% Passing** | 65/65 tests PASS, 0 lints | EventBookingsAdminScreen, SupabaseEventBookingsAdminRepository, venue dialogs |
+| **Feature 008 (Event Booking)** | **Completed** | 100% Verified | Database schema, GiST range exclusion, state machine RPCs, mobile & admin apps |
 
 ---
 
 ## What Works (Completed & Verified)
 
-1. **Sacramental & Event Slot Booking**:
-   - Atomic reservation with `SELECT capacity FOR UPDATE` in `book_slot()`.
-   - Realtime exhaustion broadcast (`SLOT_EXHAUSTED`).
-   - Order-processing transition model (`PENDING_PAYMENT` -> `AWAITING_CALL` -> `CONFIRMED` -> `COMPLETED`).
+1. **Spec 008: Event Booking with Extra Services (ADR 0002)**:
+   - Separate domain entities: `event_types`, `extra_services`, `event_type_extra_services`, `venues_resources`, `event_bookings`, `booking_extra_services`, `payment_audit_logs`.
+   - GiST temporal range exclusion constraint on `(assigned_venue_id, booking_range)` preventing venue double-booking.
+   - Price snapshotting in integer piastres on line items (`booking_extra_services`).
+   - Atomic state machine RPCs: `submit_event_booking`, `admin_confirm_booking`, `admin_reject_booking`, `admin_record_cash_payment`, `admin_create_manual_booking`.
+   - Transactional WhatsApp outbox template integration (`event_booking_submitted`, `event_booking_confirmed`, `event_booking_rejected`, `event_booking_payment_received`).
+   - Flutter Mobile screen `EventBookingScreen` with interactive extra services selection and live EGP totalizer.
+   - Flutter Admin Web screen `EventBookingsAdminScreen` with queue tabs, venue assignment dialog, and cash collection sheet.
 2. **Manual Payment Verification Rail (Feature 011 / ADR 0003)**:
    - Dynamic payout channel configuration for Vodafone Cash, InstaPay, Cash.
    - Member payment proof upload to Supabase Storage (`payment-proofs`) and submission RPC (`submit_payment_proof`).
    - Staff review queue with receipt preview, approval modal, and rejection reason tracking.
    - Cash receipt recording via `mark_cash_received` RPC.
    - Complete decommissioning of Paymob gateway endpoints, webhooks, crons, and client files.
-3. **Zero-Leak Error Contract**:
+3. **Zero-Leak Error Contract & Security Hardening**:
    - Frozen error codes (`UNAUTHORIZED`, `FORBIDDEN`, `BAD_REQUEST`, `UPSTREAM_ERROR`, `INTERNAL`).
    - Catalog-driven Arabic message delivery with zero stack trace/internal exception leak.
-4. **Admin Architecture & Typed Seams**:
-   - Clean 3-step auth (Phone + OTP + PIN) with RBAC (`ADMIN`, `SUPER_ADMIN`).
-   - Typed repositories across Content, Slots, Bookings, Complaints, Payments, Analytics.
-5. **Encrypted Complaints System**:
-   - PGCrypto encryption with Supabase Vault key (`submit_complaint_secure`).
-   - Definer-rights view `v_complaints` and `decrypt_complaint()` RPC for authorized admins.
-6. **Transactional Outbox & Notifications**:
-   - `event_outbox` with `FOR UPDATE SKIP LOCKED` queue drain.
-   - WhatsApp template triggers (`booking_payment_received`, `booking_confirmed`, etc.) and FCM push notifications.
+   - Revocation of direct client DML on sensitive tables (`event_bookings`, `payments`, `payment_audit_logs`).
 
 ---
 
-## What Is Left to Build (Next Milestone: Spec 008)
-
-### Spec 008: Event Booking with Extra Services
-- **Data Models**:
-  - `event_types`: Marriage, Engagement, Baptism, Funerals with base prices.
-  - `extra_services`: Photography, sound systems, chairs, decoration.
-  - `event_type_extra_services`: Relationship mapping.
-  - `booking_extra_services`: Price snapshot entries per reservation.
-  - `venues_resources`: Hall/altar entities with `(resource_id, tstzrange)` exclusion constraints.
-  - `payment_audit_logs`: Immutable ledger for cash receipts and adjustments.
-- **Administrative RPCs**:
-  - `admin_create_manual_booking`
-  - `admin_confirm_booking` (allocates venue and locks schedule)
-  - `admin_reject_booking` (captures mandatory rejection reason)
-  - `admin_record_cash_payment` (audited cash recording)
+## What Is Left to Build
+- Production deployment and staging smoke tests.

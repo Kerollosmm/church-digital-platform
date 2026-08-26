@@ -28,10 +28,9 @@ class SupabaseBookingsGateway implements BookingsGateway {
     if (status != null) {
       q = q.eq('status', status);
     }
-    final rows = (await (q as dynamic).order('created_at', ascending: false)) as List;
-    return rows
-        .map((r) => Map<String, dynamic>.from(r as Map))
-        .toList();
+    final rows =
+        (await (q as dynamic).order('created_at', ascending: false)) as List;
+    return rows.map((r) => Map<String, dynamic>.from(r as Map)).toList();
   }
 
   @override
@@ -122,9 +121,10 @@ class BookingsFilterNotifier extends Notifier<String?> {
   }
 }
 
-final bookingsFilterProvider = NotifierProvider<BookingsFilterNotifier, String?>(
-  BookingsFilterNotifier.new,
-);
+final bookingsFilterProvider =
+    NotifierProvider<BookingsFilterNotifier, String?>(
+      BookingsFilterNotifier.new,
+    );
 
 class BookingsNotifier extends Notifier<BookingsState> {
   BookingsNotifier(this._gateway);
@@ -136,9 +136,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
   BookingsState build() {
     final filter = ref.watch(bookingsFilterProvider);
 
-    _unsubscribe = _gateway.subscribeChanges(
-      () => _loadBookings(state.filter),
-    );
+    _unsubscribe = _gateway.subscribeChanges(() => _loadBookings(state.filter));
     ref.onDispose(() {
       _unsubscribe?.call();
     });
@@ -150,9 +148,18 @@ class BookingsNotifier extends Notifier<BookingsState> {
   Future<void> _loadBookings(String? filter) async {
     try {
       final rows = await _gateway.loadBookings(status: filter);
-      state = state.copyWith(bookings: rows, isLoading: false, filter: filter, error: null);
+      state = state.copyWith(
+        bookings: rows,
+        isLoading: false,
+        filter: filter,
+        error: null,
+      );
     } catch (e) {
-      state = state.copyWith(isLoading: false, filter: filter, error: e.toString());
+      state = state.copyWith(
+        isLoading: false,
+        filter: filter,
+        error: e.toString(),
+      );
     }
   }
 
@@ -176,6 +183,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
   }
 }
 
-final bookingsProvider = NotifierProvider.family<BookingsNotifier, BookingsState, BookingsGateway>(
-  (gateway) => BookingsNotifier(gateway),
-);
+final bookingsProvider =
+    NotifierProvider.family<BookingsNotifier, BookingsState, BookingsGateway>(
+      (gateway) => BookingsNotifier(gateway),
+    );
