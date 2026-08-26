@@ -22,8 +22,11 @@
 - **Edge Runtime**: Deno / TypeScript (`supabase/functions/`)
   - Deno standard library + Supabase JS SDK (`@supabase/supabase-js`)
   - JWT verification & role authorization
-- **Third-Party Gateways**:
-  - **Paymob**: Intention & checkout iframe/mobile wallet API; webhook HMAC SHA-512 verification
+- **Payment Channels (ADR 0003 / Spec 011)**:
+  - **Vodafone Cash & InstaPay**: Admin-configured church payout channels (`payout_channels`), client screenshot/reference proof submission (`payment_proofs`), staff review queue (`v_payment_review_queue`), and atomic approval (`approve_payment_proof`).
+  - **In-Person Cash**: Direct on-the-spot cash receipt recording via `mark_cash_received` RPC.
+  - **Paymob Decommissioned**: Online Paymob gateway stack completely dropped in Spec 011 (migration 0070).
+- **Communication & Push Gateways**:
   - **Meta Cloud API**: WhatsApp Business Graph API for transactional message templates
   - **Google Firebase**: FCM v1 HTTP API with OAuth2 bearer token exchange for push notifications
 

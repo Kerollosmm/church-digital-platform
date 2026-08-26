@@ -10,44 +10,59 @@ class SlotsAdminScreen extends StatefulWidget {
 }
 
 class _SlotsAdminScreenState extends State<SlotsAdminScreen> {
-  late Future<List<Map<String, dynamic>>> _rows;
+  List<Map<String, dynamic>>? _rows;
+  bool _loading = true;
+
   @override
-  void initState() { super.initState(); _rows = _load(); }
-  Future<List<Map<String, dynamic>>> _load() async =>
-      unwrapOrThrow(await widget.repo.list());
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final res = await widget.repo.list();
+    if (mounted) {
+      setState(() {
+        _rows = res.fold(
+          (f) => throw f,
+          (rows) => List<Map<String, dynamic>>.from(
+            rows.map((r) => Map<String, dynamic>.from(r)),
+          ),
+        );
+        _loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('المواعيد')),
-      body: FutureBuilder(
-        future: _rows,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final rows = snapshot.data!;
-          return ListView.builder(
-            itemCount: rows.length,
-            itemBuilder: (_, i) {
-              final r = rows[i];
-              return ListTile(
-                title: Text('${r['starts_at']} — ${r['price']} جنيه'),
-                subtitle: Text('سعة ${r['capacity']} — ${r['status']}'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.lock_outline),
-                  tooltip: 'إغلاق',
-                  onPressed: () async {
-                    await widget.repo.closeSlot(r['id'] as int);
-                    final next = _load();
-                    setState(() {
-                      _rows = next;
-                    });
-                  },
-                ),
-              );
-            },
-          );
-        },
-      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              itemCount: _rows?.length ?? 0,
+              itemBuilder: (_, i) {
+                final r = _rows![i];
+                return ListTile(
+                  title: Text('${r['starts_at']} — ${r['price']} جنيه'),
+                  subtitle: Text('سعة ${r['capacity']} — ${r['status']}'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.lock_outline),
+                    tooltip: 'إغلاق',
+                    onPressed: () async {
+                      final id = r['id'] as int;
+                      unwrapOrThrow(await widget.repo.closeSlot(id));
+                      if (mounted) {
+                        setState(() {
+                          r['status'] = 'CLOSED';
+                        });
+                      }
+                    },
+                  ),
+                );
+              },
+            ),
     );
   }
 }

@@ -26,7 +26,8 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         _data = res.fold((f) => throw f, (rows) => rows);
         _loading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('paymentRows failed: $e\n$st');
       setState(() {
         _loading = false;
       });
@@ -43,24 +44,26 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             onPressed: () {},
             icon: const Icon(Icons.download),
             label: const Text('Export CSV'),
-          )
+          ),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _data.isEmpty
-              ? const Center(child: Text('No data yet'))
-              : ListView.builder(
-                  itemCount: _data.length,
-                  itemBuilder: (context, index) {
-                    final item = _data[index];
-                    return ListTile(
-                      title: Text('Month: ${item['month']}'),
-                      subtitle: Text('Paid: ${item['total_paid']} | Refunded: ${item['total_refunded']}'),
-                      trailing: Text('Count: ${item['count_paid']}'),
-                    );
-                  },
-                ),
+          ? const Center(child: Text('No data yet'))
+          : ListView.builder(
+              itemCount: _data.length,
+              itemBuilder: (context, index) {
+                final item = _data[index];
+                return ListTile(
+                  title: Text('Month: ${item['month']}'),
+                  subtitle: Text(
+                    'Paid: ${item['total_paid']} | Refunded: ${item['total_refunded']}',
+                  ),
+                  trailing: Text('Count: ${item['count_paid']}'),
+                );
+              },
+            ),
     );
   }
 }

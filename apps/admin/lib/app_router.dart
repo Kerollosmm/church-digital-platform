@@ -143,7 +143,8 @@ GoRouter createAdminRouter({
     if (db != null) return db as SupabaseClient;
     try {
       return Supabase.instance.client;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('resolveDb fallback: $e\n$st');
       return null;
     }
   }
@@ -155,8 +156,8 @@ GoRouter createAdminRouter({
       final isAuthed = isAuthenticated != null
           ? isAuthenticated()
           : (resolveDb() is SupabaseClient
-              ? (resolveDb() as SupabaseClient).auth.currentUser != null
-              : false);
+                ? (resolveDb() as SupabaseClient).auth.currentUser != null
+                : false);
       final role = getUserRole != null ? getUserRole() : null;
       final hasAllowedRole = role != null && allowedAdminRoles.contains(role);
       final isAllowed = isAuthed && hasAllowedRole;
@@ -175,62 +176,76 @@ GoRouter createAdminRouter({
         name: 'login',
         builder: (context, state) => const AdminLoginScreen(),
       ),
-      GoRoute(
-        path: '/',
-        redirect: (_, _) => '/bookings',
-      ),
+      GoRoute(path: '/', redirect: (_, _) => '/bookings'),
       ShellRoute(
         builder: (context, state, child) => AdminShell(child: child),
         routes: [
           GoRoute(
             path: '/bookings',
             name: 'bookings',
-            builder: (context, state) => BookingsAdminScreen(gateway: SupabaseBookingsGateway(resolveDb()!)),
+            builder: (context, state) => BookingsAdminScreen(
+              gateway: SupabaseBookingsGateway(resolveDb()!),
+            ),
           ),
           GoRoute(
             path: '/slots',
             name: 'slots',
-            builder: (context, state) => SlotsAdminScreen(repo: SlotsAdminRepository(resolveDb()!)),
+            builder: (context, state) =>
+                SlotsAdminScreen(repo: SlotsAdminRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/manual-book',
             name: 'manual-book',
-            builder: (context, state) => ManualBookScreen(repo: ManualBookRepository(resolveDb()!)),
+            builder: (context, state) =>
+                ManualBookScreen(repo: ManualBookRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/emergency-override',
             name: 'emergency-override',
-            builder: (context, state) => EmergencyOverrideScreen(repo: EmergencyOverrideRepository(resolveDb()!)),
+            builder: (context, state) => EmergencyOverrideScreen(
+              repo: EmergencyOverrideRepository(resolveDb()!),
+            ),
           ),
           GoRoute(
             path: '/complaints',
             name: 'complaints',
-            builder: (context, state) => ComplaintsAdminScreen(repo: ComplaintsAdminRepository(resolveDb()!)),
+            builder: (context, state) => ComplaintsAdminScreen(
+              repo: ComplaintsAdminRepository(resolveDb()!),
+            ),
           ),
           GoRoute(
             path: '/announcements',
             name: 'announcements',
-            builder: (context, state) => AnnouncementsAdminScreen(repo: AnnouncementsRepository(resolveDb()!)),
+            builder: (context, state) => AnnouncementsAdminScreen(
+              repo: AnnouncementsRepository(resolveDb()!),
+            ),
           ),
           GoRoute(
             path: '/faq',
             name: 'faq',
-            builder: (context, state) => FaqAdminScreen(repository: ContentRepository(resolveDb()!)),
+            builder: (context, state) =>
+                FaqAdminScreen(repository: ContentRepository(resolveDb()!)),
           ),
           GoRoute(
             path: '/payment-review',
             name: 'payment-review',
-            builder: (context, state) => PaymentReviewQueueScreen(repo: PaymentsAdminRepository(resolveDb()!)),
+            builder: (context, state) => PaymentReviewQueueScreen(
+              repo: PaymentsAdminRepository(resolveDb()!),
+            ),
           ),
           GoRoute(
             path: '/payments',
             name: 'payments',
-            builder: (context, state) => PaymentsAdminScreen(repo: PaymentsAdminRepository(resolveDb()!)),
+            builder: (context, state) => PaymentsAdminScreen(
+              repo: PaymentsAdminRepository(resolveDb()!),
+            ),
           ),
           GoRoute(
             path: '/payouts-config',
             name: 'payouts-config',
-            builder: (context, state) => PayoutsConfigScreen(repo: PaymentsAdminRepository(resolveDb()!)),
+            builder: (context, state) => PayoutsConfigScreen(
+              repo: PaymentsAdminRepository(resolveDb()!),
+            ),
           ),
           GoRoute(
             path: '/analytics',

@@ -17,18 +17,19 @@ class AnnouncementsRepository {
     }
   }
 
-  Future<Either<Failure, void>> create({
+  Future<Either<Failure, Map<String, dynamic>>> create({
     required String titleAr,
     required String bodyAr,
   }) async {
     try {
-      await _db.from('announcements').insert({
+      final res = await _db.from('announcements').insert({
         'title_ar': titleAr,
         'body_ar': bodyAr,
         'tenant_id': 1,
         'published_at': DateTime.now().toUtc().toIso8601String(),
-      });
-      return const Right(null);
+      }).select();
+      final row = Map<String, dynamic>.from((res as List).first as Map);
+      return Right(row);
     } catch (e) {
       return Left(Failure.from(e));
     }

@@ -6,30 +6,60 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app_router.dart';
 import 'theme/app_theme.dart';
 
-String get defaultSupabaseUrl {
-  if (kIsWeb) return 'http://localhost:54321';
-  if (defaultTargetPlatform == TargetPlatform.android) {
+void validateSupabaseAnonKey(String key) {
+  if (key.isEmpty) {
+    throw StateError(
+      'Missing SUPABASE_ANON_KEY. Pass via --dart-define=SUPABASE_ANON_KEY=<key>',
+    );
+  }
+}
+
+String resolveDefaultSupabaseUrl({
+  bool isWeb = kIsWeb,
+  TargetPlatform? platform,
+}) {
+  final targetPlatform = platform ?? defaultTargetPlatform;
+  if (isWeb) return 'http://localhost:54321';
+  if (targetPlatform == TargetPlatform.android) {
     return 'http://10.0.2.2:54321';
   }
   return 'http://127.0.0.1:54321';
 }
 
-String get resolvedSupabaseUrl {
-  const envUrl = String.fromEnvironment('SUPABASE_URL');
-  return envUrl.isNotEmpty ? envUrl : defaultSupabaseUrl;
+String resolveSupabaseUrl({
+  String envUrl = const String.fromEnvironment('SUPABASE_URL'),
+  bool isRelease = kReleaseMode,
+  bool isWeb = kIsWeb,
+  TargetPlatform? platform,
+}) {
+  if (isRelease) {
+    if (envUrl.isEmpty) {
+      throw StateError(
+        'Missing SUPABASE_URL in release mode. Pass via --dart-define=SUPABASE_URL=<url>',
+      );
+    }
+    if (!envUrl.startsWith('https://')) {
+      throw StateError(
+        'Insecure SUPABASE_URL. Release builds require HTTPS (got: $envUrl)',
+      );
+    }
+    return envUrl;
+  }
+  return envUrl.isNotEmpty
+      ? envUrl
+      : resolveDefaultSupabaseUrl(isWeb: isWeb, platform: platform);
 }
+
+String get defaultSupabaseUrl => resolveDefaultSupabaseUrl();
+String get resolvedSupabaseUrl => resolveSupabaseUrl();
 
 const _supabasePublishableKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (_supabasePublishableKey.isEmpty) {
-    throw StateError(
-      'Missing SUPABASE_ANON_KEY. Pass via --dart-define=SUPABASE_ANON_KEY=<key>',
-    );
-  }
+  validateSupabaseAnonKey(_supabasePublishableKey);
   await Supabase.initialize(
-    url: resolvedSupabaseUrl,
+    url: resolveSupabaseUrl(),
     publishableKey: _supabasePublishableKey,
   );
   runApp(const ProviderScope(child: ChurchApp()));

@@ -23,22 +23,26 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> _verify() async {
     setState(() => _verifying = true);
     try {
-      final ok = await widget.gateway.verifyOtp(widget.phone, _code.text.trim());
+      final ok = await widget.gateway.verifyOtp(
+        widget.phone,
+        _code.text.trim(),
+      );
       if (!mounted) return;
       setState(() => _verifying = false);
       if (ok) {
         widget.onVerified();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('الرمز غير صحيح')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('الرمز غير صحيح')));
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('verifyOtp failed for ${widget.phone}: $e\n$st');
       if (mounted) {
         setState(() => _verifying = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('حدث خطأ أثناء التحقق')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('حدث خطأ أثناء التحقق')));
       }
     }
   }

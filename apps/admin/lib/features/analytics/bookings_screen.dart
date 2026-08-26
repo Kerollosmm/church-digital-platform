@@ -26,7 +26,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
         _data = res.fold((f) => throw f, (rows) => rows);
         _loading = false;
       });
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('bookingRows failed: $e\n$st');
       setState(() {
         _loading = false;
       });
@@ -43,24 +44,24 @@ class _BookingsScreenState extends State<BookingsScreen> {
             onPressed: () {},
             icon: const Icon(Icons.download),
             label: const Text('Export CSV'),
-          )
+          ),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _data.isEmpty
-              ? const Center(child: Text('No data yet'))
-              : ListView.builder(
-                  itemCount: _data.length,
-                  itemBuilder: (context, index) {
-                    final item = _data[index];
-                    return ListTile(
-                      title: Text(item['title_ar'] ?? ''),
-                      subtitle: Text('Month: ${item['month']}'),
-                      trailing: Text('Total: ${item['bookings_total']}'),
-                    );
-                  },
-                ),
+          ? const Center(child: Text('No data yet'))
+          : ListView.builder(
+              itemCount: _data.length,
+              itemBuilder: (context, index) {
+                final item = _data[index];
+                return ListTile(
+                  title: Text(item['title_ar'] ?? ''),
+                  subtitle: Text('Month: ${item['month']}'),
+                  trailing: Text('Total: ${item['bookings_total']}'),
+                );
+              },
+            ),
     );
   }
 }

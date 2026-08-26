@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:admin/features/content/content_repository.dart';
-import 'package:admin/core/result.dart';
 
 class FaqAdminScreen extends StatefulWidget {
   const FaqAdminScreen({super.key, required this.repository});
@@ -10,11 +9,28 @@ class FaqAdminScreen extends StatefulWidget {
 }
 
 class _FaqAdminScreenState extends State<FaqAdminScreen> {
-  late Future<List<Map<String, dynamic>>> _rows;
+  List<Map<String, dynamic>>? _rows;
+  bool _loading = true;
+
   @override
   void initState() {
     super.initState();
-    _rows = widget.repository.faq().then(unwrapOrThrow);
+    _load();
+  }
+
+  Future<void> _load() async {
+    final res = await widget.repository.faq();
+    if (mounted) {
+      setState(() {
+        _rows = res.fold(
+          (f) => throw f,
+          (rows) => List<Map<String, dynamic>>.from(
+            rows.map((r) => Map<String, dynamic>.from(r)),
+          ),
+        );
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _add() async {
@@ -24,12 +40,24 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('إضافة سؤال'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: q, decoration: const InputDecoration(labelText: 'السؤال')),
-          TextField(controller: a, decoration: const InputDecoration(labelText: 'الإجابة')),
-        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: q,
+              decoration: const InputDecoration(labelText: 'السؤال'),
+            ),
+            TextField(
+              controller: a,
+              decoration: const InputDecoration(labelText: 'الإجابة'),
+            ),
+          ],
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إلغاء'),
+          ),
           TextButton(
             onPressed: () async {
               (await widget.repository.createFaq({
@@ -40,9 +68,7 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
                 'tenant_id': 1,
               })).fold((f) => throw f, (_) => {});
               if (ctx.mounted) Navigator.pop(ctx);
-              setState(() {
-                _rows = widget.repository.faq().then(unwrapOrThrow);
-              });
+              _load();
             },
             child: const Text('حفظ'),
           ),
@@ -59,33 +85,32 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
         onPressed: _add,
         child: const Text('إضافة سؤال'),
       ),
-      body: FutureBuilder(
-        future: _rows,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          return ListView.builder(
-            itemCount: snapshot.data!.length,
-            itemBuilder: (_, i) {
-              final r = snapshot.data![i];
-              return ListTile(
-                title: Text(r['question_ar'] as String),
-                subtitle: Text(r['answer_ar'] as String),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () async {
-                    (await widget.repository.deleteFaq(r['id'] as int)).fold((f) => throw f, (_) => {});
-                    if (mounted) {
-                      setState(() {
-                        _rows = widget.repository.faq().then(unwrapOrThrow);
-                      });
-                    }
-                  },
-                ),
-              );
-            },
-          );
-        },
-      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              itemCount: _rows?.length ?? 0,
+              itemBuilder: (_, i) {
+                final r = _rows![i];
+                return ListTile(
+                  title: Text(r['question_ar'] as String),
+                  subtitle: Text(r['answer_ar'] as String),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () async {
+                      final id = r['id'] as int;
+                      (await widget.repository.deleteFaq(
+                        id,
+                      )).fold((f) => throw f, (_) => {});
+                      if (mounted) {
+                        setState(() {
+                          _rows?.removeWhere((row) => row['id'] == id);
+                        });
+                      }
+                    },
+                  ),
+                );
+              },
+            ),
     );
   }
 }

@@ -13,7 +13,8 @@ AuthGateway resolveAuthGateway([AuthGateway? provided]) {
   if (provided != null) return provided;
   try {
     return SupabaseAuthGateway(Supabase.instance.client);
-  } catch (_) {
+  } catch (e, st) {
+    debugPrint('Supabase client unavailable, using fallback gateway: $e\n$st');
     return UnimplementedAuthGateway();
   }
 }
@@ -39,7 +40,8 @@ class PhoneVerifyGate extends StatefulWidget {
     if (isLoggedIn != null) return isLoggedIn();
     try {
       return Supabase.instance.client.auth.currentSession != null;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('Supabase session check fallback: $e\n$st');
       return true; // Safe fallback when Supabase isn't initialized in unit tests
     }
   }
@@ -158,7 +160,8 @@ class _PhoneVerifyFormState extends State<PhoneVerifyForm> {
         _phone = phone;
         _step = PhoneVerifyStep.otp;
       });
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('sendOtp failed for $phone: $e\n$st');
       if (mounted) {
         setState(() => _sending = false);
         ScaffoldMessenger.of(
@@ -186,7 +189,8 @@ class _PhoneVerifyFormState extends State<PhoneVerifyForm> {
           context,
         ).showSnackBar(const SnackBar(content: Text(AppStrings.otpInvalid)));
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('verifyOtp failed for $_phone: $e\n$st');
       if (mounted) {
         setState(() => _verifying = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -199,7 +203,8 @@ class _PhoneVerifyFormState extends State<PhoneVerifyForm> {
   Future<void> _resendOtp() async {
     try {
       await widget.gateway.sendOtp(_phone);
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('resendOtp failed for $_phone: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(
           context,

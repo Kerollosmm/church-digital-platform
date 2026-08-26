@@ -6,9 +6,10 @@
 | :--- | :--- | :--- | :--- |
 | **PostgreSQL Schema (0001-0070)** | **100% Passing** | 60/60 SQL suites registered | Migrations 0066–0070: Manual payments, proof review, Paymob drop |
 | **Deno Edge Functions** | **100% Passing** | 63/63 tests PASS (100%) | 5 edge functions, payments gateway RPC wrapper, zero-leak contract |
-| **Flutter Mobile App** | **100% Passing** | 73/73 tests PASS, 0 lints | PaymentProofScreen, direct booking reservation, Arabic UI |
-| **Flutter Web Admin App** | **100% Passing** | 64/64 tests PASS, 0 lints | PaymentReviewQueue, CashReceivedSheet, PayoutsConfigScreen |
+| **Flutter Mobile App** | **100% Passing** | 80/80 tests PASS, 0 lints | PaymentProofScreen, direct booking reservation, Arabic UI, hardened catch blocks |
+| **Flutter Web Admin App** | **100% Passing** | 64/64 tests PASS, 0 lints | PaymentReviewQueue, CashReceivedSheet, PayoutsConfigScreen, error logging |
 | **Feature 011 (Manual Payments)** | **Completed** | All 9 phases & 6 stories done | Commits: `09b5cd3`, `c357eb2`, `8880d5d`, `14c92f4`, `5916ba7`, `1114cc6`, `f2951b0`, `becb266`, `710daa1` |
+| **Code Health Hardening** | **Completed** | Error logging + dead code audit | Resolved empty catch blocks across mobile/admin, validated test fixtures |
 
 ---
 
