@@ -3,7 +3,7 @@
 ## Current Focus & Status
 - **Current Milestone**: Feature 011 (Manual Payment Verification — ADR 0003) & Code Health Hardening — **100% Completed & Verified**.
 - **All Verification Gates Passing**:
-  - PostgreSQL Schema: Migrations 0001 through 0070 applied; 60 / 60 SQL suites PASS (`node scripts/test-sql.js`).
+  - PostgreSQL Schema: Migrations 0001 through 0072 applied; 62 / 62 SQL suites PASS (`node scripts/test-sql.js`).
   - Deno Edge Functions: 63 / 63 test suites PASS (`deno test --allow-env --allow-net supabase/functions/`).
   - Flutter Mobile: 80 / 80 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/mobile/`).
   - Flutter Admin: 64 / 64 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/admin/`).

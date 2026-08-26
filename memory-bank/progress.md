@@ -4,7 +4,7 @@
 
 | Component | Status | Test / Gate Outcome | Notes |
 | :--- | :--- | :--- | :--- |
-| **PostgreSQL Schema (0001-0070)** | **100% Passing** | 60/60 SQL suites registered | Migrations 0066–0070: Manual payments, proof review, Paymob drop |
+| **PostgreSQL Schema (0001-0072)** | **100% Passing** | 62/62 SQL suites registered | Migrations 0066–0072: Manual payments, proof review, Paymob drop, security hardening |
 | **Deno Edge Functions** | **100% Passing** | 63/63 tests PASS (100%) | 5 edge functions, payments gateway RPC wrapper, zero-leak contract |
 | **Flutter Mobile App** | **100% Passing** | 80/80 tests PASS, 0 lints | PaymentProofScreen, direct booking reservation, Arabic UI, hardened catch blocks |
 | **Flutter Web Admin App** | **100% Passing** | 64/64 tests PASS, 0 lints | PaymentReviewQueue, CashReceivedSheet, PayoutsConfigScreen, error logging |

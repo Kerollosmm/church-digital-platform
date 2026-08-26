@@ -6,7 +6,12 @@
 -- ---------------------------------------------------------------------------
 -- 1. Enum
 -- ---------------------------------------------------------------------------
-create type public.payment_channel as enum ('VODAFONE_CASH', 'INSTAPAY', 'CASH');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'payment_channel') then
+    create type public.payment_channel as enum ('VODAFONE_CASH', 'INSTAPAY', 'CASH');
+  end if;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- 2. Tables
