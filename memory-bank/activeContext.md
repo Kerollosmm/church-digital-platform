@@ -1,15 +1,14 @@
 # Active Context: Church Digital Platform
 
 ## Current Focus & Status
-- **Current Milestone**: Feature 008 (Event Booking with Extra Services — ADR 0002) — **100% Completed & Verified**.
+- **Current Milestone**: Church Platform Extensions (Specs 009, 010, 011) — **100% Completed & Verified**.
 - **All Verification Gates Passing**:
-  - PostgreSQL Schema: Migrations 0001 through 0074 applied; 64 / 64 SQL suites PASS (`node scripts/test-sql.js`).
+  - PostgreSQL Schema: Migrations 0001 through 0077 applied; 67 SQL suites registered (`supabase/tests/`).
   - Deno Edge Functions: 58 / 58 test suites PASS (`deno test --allow-env --allow-net supabase/functions/`).
-  - Flutter Mobile: 81 / 81 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/mobile/`).
-  - Flutter Admin: 65 / 65 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/admin/`).
-- **Research Tooling Integration**: Configured `notebooklm-mcp` in `~/.gemini/antigravity/mcp_config.json` and `~/.gemini/config/mcp_config.json` with authenticated access to project research notebook `Flutter with Supabase Research` (`63ddabc2-5d6c-493c-8e2d-d61271d0c4db`, 30 sources). Integrated into `/memory-bank` protocol and `techContext.md`.
-- **Repository State**: Working branch `008-event-booking-extra-services` with verified end-to-end integration.
-- **Next Immediate Step**: Review and integrate branch changes into main.
+  - Flutter Mobile: 92 / 92 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/mobile/`).
+  - Flutter Admin: 79 / 79 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/admin/`).
+- **Repository State**: Working branch `feature/church-platform-extensions` with verified end-to-end integration.
+- **Next Immediate Step**: Review and integrate `feature/church-platform-extensions` into main.
 
 ---
 
