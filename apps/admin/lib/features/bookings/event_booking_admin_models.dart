@@ -8,6 +8,8 @@ class EventBookingAdminItem {
     required this.eventTypeName,
     this.assignedVenueId,
     this.venueName,
+    this.assignedPriestId,
+    this.priestName,
     required this.startTime,
     required this.endTime,
     required this.status,
@@ -28,6 +30,8 @@ class EventBookingAdminItem {
   final String eventTypeName;
   final String? assignedVenueId;
   final String? venueName;
+  final int? assignedPriestId;
+  final String? priestName;
   final DateTime startTime;
   final DateTime endTime;
   final String status;
@@ -58,6 +62,8 @@ class EventBookingAdminItem {
     assignedVenueId: json['assigned_venue_id'] as String?,
     venueName:
         (json['venues_resources']?['name_ar'] ?? json['venue_name']) as String?,
+    assignedPriestId: (json['assigned_priest_id'] as num?)?.toInt(),
+    priestName: (json['priests']?['name'] ?? json['priest_name']) as String?,
     startTime:
         DateTime.tryParse(json['start_time'] as String? ?? '') ??
         DateTime.now(),
@@ -95,4 +101,74 @@ class VenueResourceItem {
         locationDetailsAr: json['location_details_ar'] as String?,
         isActive: json['is_active'] as bool? ?? true,
       );
+}
+
+class PriestAdminItem {
+  const PriestAdminItem({
+    required this.id,
+    required this.name,
+    this.photoUrl,
+    this.phone,
+    this.rank = 'PRIEST',
+    this.activeBookingsCount = 0,
+  });
+
+  final int id;
+  final String name;
+  final String? photoUrl;
+  final String? phone;
+  final String rank;
+  final int activeBookingsCount;
+
+  factory PriestAdminItem.fromJson(Map<String, dynamic> json) =>
+      PriestAdminItem(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        name: json['name'] as String? ?? '',
+        photoUrl: json['photo_url'] as String?,
+        phone: json['phone'] as String?,
+        rank: json['rank'] as String? ?? 'PRIEST',
+        activeBookingsCount:
+            (json['active_bookings_count'] as num?)?.toInt() ?? 0,
+      );
+}
+
+class PriestScheduleItem {
+  const PriestScheduleItem({
+    required this.id,
+    required this.priestId,
+    this.priestName,
+    required this.scheduleRange,
+    this.startsAt,
+    this.endsAt,
+    this.scheduleType = 'EVENT_BOOKING',
+    this.bookingId,
+    this.notes,
+    this.createdAt,
+  });
+
+  final String id;
+  final int priestId;
+  final String? priestName;
+  final String scheduleRange;
+  final DateTime? startsAt;
+  final DateTime? endsAt;
+  final String scheduleType;
+  final String? bookingId;
+  final String? notes;
+  final DateTime? createdAt;
+
+  factory PriestScheduleItem.fromJson(Map<String, dynamic> json) {
+    return PriestScheduleItem(
+      id: json['id'] as String? ?? '',
+      priestId: (json['priest_id'] as num?)?.toInt() ?? 0,
+      priestName: (json['priests']?['name'] ?? json['priest_name']) as String?,
+      scheduleRange: json['schedule_range'] as String? ?? '',
+      startsAt: DateTime.tryParse(json['starts_at'] as String? ?? ''),
+      endsAt: DateTime.tryParse(json['ends_at'] as String? ?? ''),
+      scheduleType: json['schedule_type'] as String? ?? 'EVENT_BOOKING',
+      bookingId: json['booking_id'] as String?,
+      notes: json['notes'] as String?,
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
+    );
+  }
 }

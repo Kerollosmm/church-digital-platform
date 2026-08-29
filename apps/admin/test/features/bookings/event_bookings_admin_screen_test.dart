@@ -64,6 +64,37 @@ class FakeEventBookingsAdminRepository implements EventBookingsAdminRepository {
   }
 
   @override
+  Future<Either<Failure, List<PriestAdminItem>>> fetchPriests() async {
+    return const Right([]);
+  }
+
+  @override
+  Future<Either<Failure, List<PriestAdminItem>>> getAvailablePriests({
+    required DateTime startTime,
+    required DateTime endTime,
+  }) async {
+    return const Right([]);
+  }
+
+  @override
+  Future<Either<Failure, void>> assignPriestAndVenue({
+    required String bookingId,
+    required String venueId,
+    required int priestId,
+    String? overrideNotes,
+  }) async {
+    return const Right(null);
+  }
+
+  @override
+  Future<Either<Failure, List<PriestScheduleItem>>> fetchPriestSchedules({
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    return const Right([]);
+  }
+
+  @override
   Future<Either<Failure, void>> recordCashPayment({
     required String bookingId,
     required int amountPiastres,

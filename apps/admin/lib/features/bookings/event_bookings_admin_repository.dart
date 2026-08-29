@@ -7,6 +7,21 @@ abstract interface class EventBookingsAdminRepository {
     String? statusFilter,
   });
   Future<Either<Failure, List<VenueResourceItem>>> fetchVenues();
+  Future<Either<Failure, List<PriestAdminItem>>> fetchPriests();
+  Future<Either<Failure, List<PriestAdminItem>>> getAvailablePriests({
+    required DateTime startTime,
+    required DateTime endTime,
+  });
+  Future<Either<Failure, void>> assignPriestAndVenue({
+    required String bookingId,
+    required String venueId,
+    required int priestId,
+    String? overrideNotes,
+  });
+  Future<Either<Failure, List<PriestScheduleItem>>> fetchPriestSchedules({
+    DateTime? from,
+    DateTime? to,
+  });
   Future<Either<Failure, void>> confirmBooking({
     required String bookingId,
     required String venueId,
@@ -40,7 +55,7 @@ class SupabaseEventBookingsAdminRepository
       var query = _client
           .from('event_bookings')
           .select(
-            '*, event_types(name_ar), venues_resources(name_ar), users(name, phone)',
+            '*, event_types(name_ar), venues_resources(name_ar), users(name, phone), priests(name)',
           );
 
       if (statusFilter != null && statusFilter.isNotEmpty) {
@@ -67,6 +82,87 @@ class SupabaseEventBookingsAdminRepository
           .order('name_ar');
       final list = (res as List<dynamic>)
           .map((e) => VenueResourceItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return Right(list);
+    } catch (e) {
+      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<PriestAdminItem>>> fetchPriests() async {
+    try {
+      final res = await _client
+          .from('priests')
+          .select()
+          .isFilter('deleted_at', null)
+          .order('name');
+      final list = (res as List<dynamic>)
+          .map((e) => PriestAdminItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return Right(list);
+    } catch (e) {
+      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<PriestAdminItem>>> getAvailablePriests({
+    required DateTime startTime,
+    required DateTime endTime,
+  }) async {
+    try {
+      final res = await _client.rpc(
+        'get_available_priests',
+        params: {
+          'p_start_time': startTime.toIso8601String(),
+          'p_end_time': endTime.toIso8601String(),
+        },
+      );
+      final list = (res as List<dynamic>)
+          .map((e) => PriestAdminItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return Right(list);
+    } catch (e) {
+      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> assignPriestAndVenue({
+    required String bookingId,
+    required String venueId,
+    required int priestId,
+    String? overrideNotes,
+  }) async {
+    try {
+      await _client.rpc(
+        'admin_assign_priest_and_venue',
+        params: {
+          'p_booking_id': bookingId,
+          'p_venue_id': venueId,
+          'p_priest_id': priestId,
+          'p_override_notes': overrideNotes,
+        },
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<PriestScheduleItem>>> fetchPriestSchedules({
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    try {
+      final res = await _client
+          .from('priest_schedules')
+          .select('*, priests(name)')
+          .order('created_at', ascending: false);
+      final list = (res as List<dynamic>)
+          .map((e) => PriestScheduleItem.fromJson(e as Map<String, dynamic>))
           .toList();
       return Right(list);
     } catch (e) {

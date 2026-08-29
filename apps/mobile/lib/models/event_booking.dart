@@ -87,6 +87,8 @@ class EventBooking {
     this.eventTypeName = '',
     this.assignedVenueId,
     this.venueName,
+    this.assignedPriestId,
+    this.priestName,
     required this.startTime,
     required this.endTime,
     required this.status,
@@ -105,6 +107,8 @@ class EventBooking {
   final String eventTypeName;
   final String? assignedVenueId;
   final String? venueName;
+  final int? assignedPriestId;
+  final String? priestName;
   final DateTime startTime;
   final DateTime endTime;
   final String status;
@@ -131,6 +135,8 @@ class EventBooking {
     assignedVenueId: json['assigned_venue_id'] as String?,
     venueName:
         (json['venues_resources']?['name_ar'] ?? json['venue_name']) as String?,
+    assignedPriestId: (json['assigned_priest_id'] as num?)?.toInt(),
+    priestName: (json['priests']?['name'] ?? json['priest_name']) as String?,
     startTime:
         DateTime.tryParse(json['start_time'] as String? ?? '') ??
         DateTime.now(),

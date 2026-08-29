@@ -78,7 +78,9 @@ class SupabaseEventBookingRepository implements EventBookingRepository {
     try {
       final res = await _client
           .from('event_bookings')
-          .select('*, event_types(name_ar), venues_resources(name_ar)')
+          .select(
+            '*, event_types(name_ar), venues_resources(name_ar), priests(name)',
+          )
           .order('created_at', ascending: false);
       final list = (res as List<dynamic>)
           .map((e) => EventBooking.fromJson(e as Map<String, dynamic>))

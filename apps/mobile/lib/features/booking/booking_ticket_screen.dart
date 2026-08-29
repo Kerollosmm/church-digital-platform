@@ -62,6 +62,19 @@ class _BookingTicketScreenState extends State<BookingTicketScreen> {
         ? rawServiceName.toString().trim()
         : '';
 
+    final rawPriestName =
+        widget.booking['priest_name'] ?? widget.booking['priests']?['name'];
+    final priestName = rawPriestName != null
+        ? rawPriestName.toString().trim()
+        : '';
+
+    final rawVenueName =
+        widget.booking['venue_name'] ??
+        widget.booking['venues_resources']?['name_ar'];
+    final venueName = rawVenueName != null
+        ? rawVenueName.toString().trim()
+        : '';
+
     final paidAmount = widget.booking['paid_amount'];
     final rawCreatedAt = widget.booking['created_at'];
     final createdAt = rawCreatedAt != null
@@ -203,6 +216,14 @@ class _BookingTicketScreenState extends State<BookingTicketScreen> {
                                 AppStrings.serviceDetails,
                                 serviceName,
                               ),
+                            ],
+                            if (venueName.isNotEmpty) ...[
+                              const Divider(height: AppSpacing.md),
+                              _buildDataRow('المكان / القاعة', venueName),
+                            ],
+                            if (priestName.isNotEmpty) ...[
+                              const Divider(height: AppSpacing.md),
+                              _buildDataRow('الأب الكاهن المسؤول', priestName),
                             ],
                             if (paidAmount != null) ...[
                               const Divider(height: AppSpacing.md),
