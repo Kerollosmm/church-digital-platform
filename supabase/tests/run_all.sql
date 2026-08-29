@@ -64,3 +64,6 @@
 \ir 0072_security_hardening_test.sql
 \ir 0073_event_booking_schema_test.sql
 \ir 0074_event_booking_rpcs_test.sql
+\ir 0075_priest_hall_allocation_test.sql
+\ir 0076_sacramental_records_test.sql
+\ir 0077_sunday_school_management_test.sql

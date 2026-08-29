@@ -12,6 +12,7 @@ import '../services/app_strings.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_typography.dart';
+import '../features/family_archive/sacramental_repository.dart';
 import 'top_bar.dart';
 
 class BottomNavScaffold extends StatefulWidget {
@@ -21,6 +22,7 @@ class BottomNavScaffold extends StatefulWidget {
     required this.bookingRepository,
     this.complaintsRepository,
     this.portalRepository,
+    this.sacramentalRepository,
     this.complaintsTab,
     this.myBookingsTab,
     this.initialIndex = 0,
@@ -30,6 +32,7 @@ class BottomNavScaffold extends StatefulWidget {
   final BookingRepository bookingRepository;
   final ComplaintsRepository? complaintsRepository;
   final PortalRepository? portalRepository;
+  final SacramentalRecordsRepository? sacramentalRepository;
   final Widget? complaintsTab;
   final Widget? myBookingsTab;
   final int initialIndex;

@@ -27,8 +27,9 @@ class _PaymentsAdminScreenState extends State<PaymentsAdminScreen> {
       body: FutureBuilder(
         future: _rows,
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final rows = snapshot.data!;
           return ListView.builder(
             itemCount: rows.length,

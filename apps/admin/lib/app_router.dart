@@ -7,6 +7,8 @@ import 'core/auth/admin_auth_provider.dart';
 import 'features/analytics/analytics_admin_screen.dart';
 import 'features/auth/admin_login_screen.dart';
 
+import 'features/allocation/allocation_matrix_screen.dart';
+import 'features/bookings/event_bookings_admin_repository.dart';
 import 'features/bookings/bookings_admin_screen.dart';
 import 'features/bookings/emergency_override_screen.dart';
 import 'features/bookings/manual_book_screen.dart';
@@ -25,6 +27,10 @@ import 'features/payments/payment_review_queue_screen.dart';
 import 'features/payments/payments_admin_screen.dart';
 import 'features/payments/payouts_config_screen.dart';
 import 'features/slots/slots_admin_screen.dart';
+import 'features/sunday_school/sunday_school_admin_dashboard.dart';
+import 'features/sunday_school/sunday_school_admin_repository.dart';
+import 'features/sacraments/sacramental_registrar_screen.dart';
+import 'features/sacraments/sacraments_admin_repository.dart';
 
 class AdminShell extends StatelessWidget {
   const AdminShell({super.key, required this.child});
@@ -57,6 +63,12 @@ class AdminShell extends StatelessWidget {
                     title: const Text('الحجوزات'),
                     selected: location == '/bookings',
                     onTap: () => context.go('/bookings'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.view_timeline_outlined),
+                    title: const Text('تخصيص القاعات والكهنة'),
+                    selected: location == '/allocation-matrix',
+                    onTap: () => context.go('/allocation-matrix'),
                   ),
                   ListTile(
                     leading: const Icon(Icons.schedule),
@@ -117,6 +129,18 @@ class AdminShell extends StatelessWidget {
                     title: const Text('التحليلات'),
                     selected: location == '/analytics',
                     onTap: () => context.go('/analytics'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.workspace_premium),
+                    title: const Text('السجلات والشهادات الكنسية'),
+                    selected: location == '/sacramental-records',
+                    onTap: () => context.go('/sacramental-records'),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.school),
+                    title: const Text('مدارس الأحد'),
+                    selected: location == '/sunday-school',
+                    onTap: () => context.go('/sunday-school'),
                   ),
                 ],
               ),
@@ -188,6 +212,15 @@ GoRouter createAdminRouter({
             ),
           ),
           GoRoute(
+            path: '/allocation-matrix',
+            name: 'allocation-matrix',
+            builder: (context, state) => AllocationMatrixCalendarScreen(
+              repository: SupabaseEventBookingsAdminRepository(
+                client: resolveDb(),
+              ),
+            ),
+          ),
+          GoRoute(
             path: '/slots',
             name: 'slots',
             builder: (context, state) =>
@@ -253,6 +286,32 @@ GoRouter createAdminRouter({
             builder: (context, state) {
               final database = resolveDb();
               return AnalyticsAdminScreen(client: database);
+            },
+          ),
+          GoRoute(
+            path: '/sacramental-records',
+            name: 'sacramental-records',
+            builder: (context, state) {
+              final database = resolveDb();
+              return SacramentalRegistrarScreen(
+                repository: SupabaseSacramentsAdminRepository(client: database),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/sacraments',
+            redirect: (_, _) => '/sacramental-records',
+          ),
+          GoRoute(
+            path: '/sunday-school',
+            name: 'sunday-school',
+            builder: (context, state) {
+              final database = resolveDb();
+              return SundaySchoolAdminDashboard(
+                repository: SupabaseSundaySchoolAdminRepository(
+                  client: database,
+                ),
+              );
             },
           ),
         ],

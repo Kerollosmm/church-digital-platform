@@ -93,10 +93,12 @@ class _ComplaintsAdminScreenState extends State<ComplaintsAdminScreen> {
         .toList();
 
     final filteredComplaints = _allComplaints.where((c) {
-      if (_selectedStatus != null && c['status'] != _selectedStatus)
+      if (_selectedStatus != null && c['status'] != _selectedStatus) {
         return false;
-      if (_selectedCategory != null && c['category'] != _selectedCategory)
+      }
+      if (_selectedCategory != null && c['category'] != _selectedCategory) {
         return false;
+      }
       return true;
     }).toList();
 

@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/auth/auth_gateway.dart';
 import 'features/booking/payment_proof_screen.dart';
 import 'features/complaints/complaints_repository.dart';
+import 'features/family_archive/family_certificates_screen.dart';
+import 'features/family_archive/sacramental_repository.dart';
 import 'features/portal/portal_repository.dart';
 import 'repositories/supabase_booking_repository.dart';
 import 'services/app_routes.dart';
@@ -33,6 +35,18 @@ GoRoute paymentProofRoute(AppSupabase db) {
   );
 }
 
+GoRoute familyArchiveRoute(AppSupabase db) {
+  return GoRoute(
+    path: '/family-archive',
+    name: AppRoutes.familyArchive,
+    builder: (context, state) {
+      return FamilyCertificatesScreen(
+        repository: SupabaseSacramentalRecordsRepository(),
+      );
+    },
+  );
+}
+
 GoRouter buildRouter({
   required AppSupabase db,
   AuthGateway? authGateway,
@@ -46,9 +60,11 @@ GoRouter buildRouter({
         portalRepository: PortalRepository(db),
         bookingRepository: SupabaseBookingRepository(db),
         complaintsRepository: SupabaseComplaintsRepository(db),
+        sacramentalRepository: SupabaseSacramentalRecordsRepository(),
       ),
     ),
     paymentProofRoute(db),
+    familyArchiveRoute(db),
   ],
 );
 
