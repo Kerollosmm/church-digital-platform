@@ -28,11 +28,17 @@ GRANT INSERT, UPDATE, DELETE ON public.services TO authenticated;
 GRANT SELECT ON public.social_links TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.social_links TO authenticated;
 
-GRANT SELECT ON public.videos TO anon, authenticated;
-GRANT INSERT, UPDATE, DELETE ON public.videos TO authenticated;
-
-GRANT SELECT ON public.video_purchases TO anon, authenticated;
-GRANT INSERT, UPDATE, DELETE ON public.video_purchases TO authenticated;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'videos') THEN
+    GRANT SELECT ON public.videos TO anon, authenticated;
+    GRANT INSERT, UPDATE, DELETE ON public.videos TO authenticated;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'video_purchases') THEN
+    GRANT SELECT ON public.video_purchases TO anon, authenticated;
+    GRANT INSERT, UPDATE, DELETE ON public.video_purchases TO authenticated;
+  END IF;
+END $$;
 
 GRANT SELECT ON public.bookings TO anon, authenticated;
 GRANT INSERT, UPDATE, DELETE ON public.bookings TO authenticated;
@@ -62,7 +68,12 @@ GRANT SELECT ON public.v_priests TO anon, authenticated;
 GRANT SELECT ON public.v_faq TO anon, authenticated;
 GRANT SELECT ON public.v_schedule_today TO anon, authenticated;
 GRANT SELECT ON public.v_available_slots TO anon, authenticated;
-GRANT SELECT ON public.v_my_videos TO anon, authenticated;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.views WHERE table_schema = 'public' AND table_name = 'v_my_videos') THEN
+    GRANT SELECT ON public.v_my_videos TO anon, authenticated;
+  END IF;
+END $$;
 GRANT SELECT ON public.v_my_bookings TO anon, authenticated;
 GRANT SELECT ON public.v_analytics_utilization TO anon, authenticated;
 GRANT SELECT ON public.v_analytics_payments TO anon, authenticated;
@@ -82,6 +93,13 @@ GRANT USAGE, SELECT ON SEQUENCE public.roles_permissions_id_seq TO authenticated
 GRANT USAGE, SELECT ON SEQUENCE public.service_slots_id_seq TO authenticated;
 GRANT USAGE, SELECT ON SEQUENCE public.services_id_seq TO authenticated;
 GRANT USAGE, SELECT ON SEQUENCE public.social_links_id_seq TO authenticated;
-GRANT USAGE, SELECT ON SEQUENCE public.video_purchases_id_seq TO authenticated;
-GRANT USAGE, SELECT ON SEQUENCE public.videos_id_seq TO authenticated;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_class WHERE relkind = 'S' AND relname = 'video_purchases_id_seq') THEN
+    GRANT USAGE, SELECT ON SEQUENCE public.video_purchases_id_seq TO authenticated;
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_class WHERE relkind = 'S' AND relname = 'videos_id_seq') THEN
+    GRANT USAGE, SELECT ON SEQUENCE public.videos_id_seq TO authenticated;
+  END IF;
+END $$;
 GRANT USAGE, SELECT ON SEQUENCE public.waiting_list_id_seq TO authenticated;

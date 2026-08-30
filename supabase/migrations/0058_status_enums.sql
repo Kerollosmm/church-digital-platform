@@ -22,7 +22,15 @@ ALTER TABLE public.service_slots
 
 -- 3. Convert service_slots.status
 ALTER TABLE public.service_slots ALTER COLUMN status DROP DEFAULT;
-ALTER TABLE public.service_slots ALTER COLUMN status TYPE public.slot_status USING status::public.slot_status;
+ALTER TABLE public.service_slots ALTER COLUMN status TYPE public.slot_status
+  USING (
+    CASE status
+      WHEN 'AVAILABLE' THEN 'OPEN'
+      WHEN 'OPEN' THEN 'OPEN'
+      WHEN 'CLOSED' THEN 'CLOSED'
+      ELSE 'OPEN'
+    END::public.slot_status
+  );
 ALTER TABLE public.service_slots ALTER COLUMN status SET DEFAULT 'OPEN'::public.slot_status;
 
 -- Re-add exclusion constraint with typed enum comparison
@@ -35,7 +43,14 @@ ALTER TABLE public.service_slots
 
 -- 4. Convert waiting_list.status
 ALTER TABLE public.waiting_list ALTER COLUMN status DROP DEFAULT;
-ALTER TABLE public.waiting_list ALTER COLUMN status TYPE public.waitlist_status USING status::public.waitlist_status;
+ALTER TABLE public.waiting_list ALTER COLUMN status TYPE public.waitlist_status
+  USING (
+    CASE status
+      WHEN 'WAITING' THEN 'WAITING'
+      WHEN 'OFFERED' THEN 'OFFERED'
+      ELSE 'WAITING'
+    END::public.waitlist_status
+  );
 ALTER TABLE public.waiting_list ALTER COLUMN status SET DEFAULT 'WAITING'::public.waitlist_status;
 
 -- 5. Recreate views verbatim with security_invoker = true

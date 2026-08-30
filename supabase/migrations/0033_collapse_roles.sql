@@ -7,6 +7,31 @@ begin
   end if;
 end $$;
 
+create table if not exists public.videos (
+  id bigint generated always as identity primary key,
+  title text not null default '',
+  youtube_id text not null default '',
+  price int not null default 0,
+  tenant_id bigint not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
+create table if not exists public.video_purchases (
+  id bigint generated always as identity primary key,
+  video_id bigint,
+  user_id uuid,
+  payment_id bigint,
+  paid_amount int not null default 0,
+  access_granted_at timestamptz,
+  link_sent_at timestamptz,
+  tenant_id bigint not null default 1,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  deleted_at timestamptz
+);
+
 -- 0. Drop policy depending on users.role column
 drop policy if exists p0_admin_update_users on public.users;
 
@@ -27,6 +52,14 @@ alter table public.users alter column role type public.app_role_new
 alter table public.users alter column role set default 'USER'::public.app_role_new;
 
 -- 2. Alter public.roles_permissions role column
+delete from public.roles_permissions a
+using public.roles_permissions b
+where a.id > b.id
+  and (case a.role::text when 'PARISHIONER' then 'USER' when 'ADMIN' then 'ADMIN' when 'SUPER_ADMIN' then 'ADMIN' when 'PRIEST' then 'ADMIN' else 'USER' end)
+    = (case b.role::text when 'PARISHIONER' then 'USER' when 'ADMIN' then 'ADMIN' when 'SUPER_ADMIN' then 'ADMIN' when 'PRIEST' then 'ADMIN' else 'USER' end)
+  and a.resource = b.resource
+  and a.action = b.action;
+
 alter table public.roles_permissions alter column role type public.app_role_new
   using (
     case role::text

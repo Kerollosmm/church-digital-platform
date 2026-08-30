@@ -8,6 +8,12 @@
 -- 1. Extension
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 
+-- Ensure event_booking_status enum values exist
+ALTER TYPE public.event_booking_status ADD VALUE IF NOT EXISTS 'AWAITING_CALL';
+ALTER TYPE public.event_booking_status ADD VALUE IF NOT EXISTS 'PENDING_PAYMENT';
+ALTER TYPE public.event_booking_status ADD VALUE IF NOT EXISTS 'PAID';
+ALTER TYPE public.event_booking_status ADD VALUE IF NOT EXISTS 'COMPLETED';
+
 -- 2. Alter priests table to ensure phone and rank columns exist
 ALTER TABLE public.priests ADD COLUMN IF NOT EXISTS phone TEXT;
 ALTER TABLE public.priests ADD COLUMN IF NOT EXISTS rank TEXT DEFAULT 'PRIEST';
@@ -43,7 +49,7 @@ BEGIN
       assigned_priest_id WITH =,
       booking_range WITH &&
     )
-    WHERE (assigned_priest_id IS NOT NULL AND status IN ('SUBMITTED', 'CONFIRMED', 'PENDING_PAYMENT', 'PAID'));
+    WHERE (assigned_priest_id IS NOT NULL AND status NOT IN ('CANCELLED', 'REJECTED'));
   END IF;
 END $$;
 

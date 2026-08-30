@@ -34,6 +34,20 @@ BEGIN
 END $$;
 
 -- 3. Catalog Tables
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'payment_audit_logs') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'payment_audit_logs' AND column_name = 'booking_id') THEN
+      DROP TABLE public.payment_audit_logs CASCADE;
+    END IF;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'event_bookings') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'event_bookings' AND column_name = 'total_price_piastres') THEN
+      DROP TABLE public.event_bookings CASCADE;
+    END IF;
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.event_types (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name_ar TEXT NOT NULL,
