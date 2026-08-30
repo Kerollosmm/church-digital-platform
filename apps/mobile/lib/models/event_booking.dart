@@ -5,6 +5,8 @@ class EventType {
     this.descriptionAr,
     required this.basePricePiastres,
     required this.defaultDurationMinutes,
+    this.category = 'SACRAMENT',
+    this.requiredDocumentsAr = const [],
     this.isActive = true,
   });
 
@@ -13,7 +15,12 @@ class EventType {
   final String? descriptionAr;
   final int basePricePiastres;
   final int defaultDurationMinutes;
+  final String category; // 'SACRAMENT' | 'ACTIVITY'
+  final List<String> requiredDocumentsAr;
   final bool isActive;
+
+  bool get isSacrament => category == 'SACRAMENT';
+  bool get isActivity => category == 'ACTIVITY';
 
   double get basePriceEgp => basePricePiastres / 100.0;
 
@@ -24,6 +31,11 @@ class EventType {
     basePricePiastres: (json['base_price_piastres'] as num?)?.toInt() ?? 0,
     defaultDurationMinutes:
         (json['default_duration_minutes'] as num?)?.toInt() ?? 60,
+    category: json['category'] as String? ?? 'SACRAMENT',
+    requiredDocumentsAr: (json['required_documents_ar'] as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const [],
     isActive: json['is_active'] as bool? ?? true,
   );
 
@@ -33,6 +45,8 @@ class EventType {
     'description_ar': descriptionAr,
     'base_price_piastres': basePricePiastres,
     'default_duration_minutes': defaultDurationMinutes,
+    'category': category,
+    'required_documents_ar': requiredDocumentsAr,
     'is_active': isActive,
   };
 }

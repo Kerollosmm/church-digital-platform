@@ -145,7 +145,17 @@ class MockAllocationAdminRepository implements EventBookingsAdminRepository {
   }) async {
     return const Right(null);
   }
+
+  @override
+  Future<Either<Failure, void>> quickCashCollect({
+    required String bookingId,
+    required int amountPiastres,
+    String? collectorNote,
+  }) async {
+    return const Right(null);
+  }
 }
+
 
 void main() {
   group('AllocationMatrixCalendarScreen & AssignPriestVenueDialog', () {

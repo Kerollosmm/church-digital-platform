@@ -73,6 +73,26 @@ class FakeSundaySchoolRepository implements SundaySchoolRepository {
   }
 
   @override
+  Future<Either<Failure, List<VisitationStudentItem>>> fetchVisitationList(
+    String classId, {
+    DateTime? sessionDate,
+  }) async {
+    return Right([
+      VisitationStudentItem(
+        studentId: 'st-2',
+        studentNameAr: 'يوسف سامح',
+        phone: '+201033334444',
+        parentPhone: '+201033334444',
+        notes: 'غياب بدون إذن',
+        sessionDate: sessionDate ?? DateTime.now(),
+        attendanceStatus: 'ABSENT',
+        consecutiveAbsences: 2,
+        lastAttendedDate: DateTime.now().subtract(const Duration(days: 7)),
+      ),
+    ]);
+  }
+
+  @override
   Future<Either<Failure, List<OfflineAttendanceMutation>>>
   getOfflineQueue() async => Right(offlineQueue);
 
@@ -189,6 +209,26 @@ void main() {
 
       expect(find.text('تم تسجيل حضور 2 مخدوم بنجاح!'), findsOneWidget);
     });
+
+    testWidgets('opens visitation list modal on tap', (tester) async {
+      final repo = FakeSundaySchoolRepository();
+
+      await tester.pumpWidget(
+        MaterialApp(home: ServantAttendanceSheetScreen(repository: repo)),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Tap Visitation list button
+      await tester.tap(find.text('📋 كشف الافتقاد'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('كشف الافتقاد والمتابعة'), findsOneWidget);
+      expect(find.text('غياب متكرر: 2'), findsOneWidget);
+      expect(find.text('واتساب'), findsOneWidget);
+      expect(find.text('اتصال'), findsOneWidget);
+    });
+
 
     testWidgets('queues offline mutation when network fails', (tester) async {
       final repo = FakeSundaySchoolRepository();

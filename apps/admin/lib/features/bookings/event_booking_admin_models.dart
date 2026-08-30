@@ -6,6 +6,8 @@ class EventBookingAdminItem {
     this.customerPhone,
     required this.eventTypeId,
     required this.eventTypeName,
+    this.category = 'SACRAMENT',
+    this.requiredDocumentsAr = const [],
     this.assignedVenueId,
     this.venueName,
     this.assignedPriestId,
@@ -28,6 +30,8 @@ class EventBookingAdminItem {
   final String? customerPhone;
   final String eventTypeId;
   final String eventTypeName;
+  final String category;
+  final List<String> requiredDocumentsAr;
   final String? assignedVenueId;
   final String? venueName;
   final int? assignedPriestId;
@@ -42,6 +46,9 @@ class EventBookingAdminItem {
   final int totalPricePiastres;
   final int paidAmountPiastres;
   final DateTime? createdAt;
+
+  bool get isSacrament => category == 'SACRAMENT';
+  bool get isActivity => category == 'ACTIVITY';
 
   double get totalPriceEgp => totalPricePiastres / 100.0;
   double get paidAmountEgp => paidAmountPiastres / 100.0;
@@ -59,6 +66,13 @@ class EventBookingAdminItem {
     eventTypeName:
         (json['event_types']?['name_ar'] ?? json['event_type_name'] ?? '')
             as String,
+    category: (json['event_types']?['category'] ?? json['category'] ?? 'SACRAMENT')
+        as String,
+    requiredDocumentsAr: (json['event_types']?['required_documents_ar']
+                as List<dynamic>?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        const [],
     assignedVenueId: json['assigned_venue_id'] as String?,
     venueName:
         (json['venues_resources']?['name_ar'] ?? json['venue_name']) as String?,
@@ -80,6 +94,7 @@ class EventBookingAdminItem {
     createdAt: DateTime.tryParse(json['created_at'] as String? ?? ''),
   );
 }
+
 
 class VenueResourceItem {
   const VenueResourceItem({

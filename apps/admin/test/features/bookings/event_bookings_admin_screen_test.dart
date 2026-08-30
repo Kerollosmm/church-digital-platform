@@ -103,13 +103,34 @@ class FakeEventBookingsAdminRepository implements EventBookingsAdminRepository {
     cashPaymentCalled = true;
     return const Right(null);
   }
+
+  bool quickCashCalled = false;
+
+  @override
+  Future<Either<Failure, void>> quickCashCollect({
+    required String bookingId,
+    required int amountPiastres,
+    String? collectorNote,
+  }) async {
+    quickCashCalled = true;
+    return const Right(null);
+  }
 }
+
 
 void main() {
   testWidgets(
     'EventBookingsAdminScreen renders bookings and opens confirmation modal',
     (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
       final fakeRepo = FakeEventBookingsAdminRepository();
+
 
       await tester.pumpWidget(
         MaterialApp(home: EventBookingsAdminScreen(repository: fakeRepo)),
@@ -135,6 +156,76 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(fakeRepo.confirmCalled, isTrue);
+    },
+  );
+
+  testWidgets(
+    'EventBookingsAdminScreen filters by track queues (SACRAMENT vs ACTIVITY)',
+    (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final fakeRepo = FakeEventBookingsAdminRepository();
+      fakeRepo.bookings = [
+        EventBookingAdminItem(
+          id: 'b-1',
+          customerId: 'user-1',
+          customerName: 'بيتر حنا',
+          customerPhone: '+201000000001',
+          eventTypeId: 'event-1',
+          eventTypeName: 'إكليل زواج',
+          category: 'SACRAMENT',
+          requiredDocumentsAr: ['شهادة خلو موانع'],
+          startTime: DateTime(2026, 9, 1, 18, 0),
+          endTime: DateTime(2026, 9, 1, 20, 0),
+          status: 'SUBMITTED',
+          totalPricePiastres: 50000,
+          paidAmountPiastres: 0,
+        ),
+        EventBookingAdminItem(
+          id: 'b-2',
+          customerId: 'user-2',
+          customerName: 'مريم جورج',
+          customerPhone: '+201000000002',
+          eventTypeId: 'event-2',
+          eventTypeName: 'رحلة وادي النطرون',
+          category: 'ACTIVITY',
+          startTime: DateTime(2026, 9, 5, 8, 0),
+          endTime: DateTime(2026, 9, 5, 20, 0),
+          status: 'CONFIRMED',
+          totalPricePiastres: 15000,
+          paidAmountPiastres: 0,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(home: EventBookingsAdminScreen(repository: fakeRepo)),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Both shown in all
+      expect(find.text('إكليل زواج'), findsOneWidget);
+      expect(find.text('رحلة وادي النطرون'), findsOneWidget);
+      expect(find.text('شهادة خلو موانع'), findsOneWidget);
+
+      // Filter by Sacraments
+      await tester.tap(find.text('✝️ طابور الأسرار والمناسبات الكنسية'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('إكليل زواج'), findsOneWidget);
+      expect(find.text('رحلة وادي النطرون'), findsNothing);
+
+      // Filter by Activities
+      await tester.tap(find.text('🚌 طابور الرحلات والمؤتمرات'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('إكليل زواج'), findsNothing);
+      expect(find.text('رحلة وادي النطرون'), findsOneWidget);
     },
   );
 }

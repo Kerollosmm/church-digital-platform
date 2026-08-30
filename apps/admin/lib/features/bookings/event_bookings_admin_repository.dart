@@ -38,7 +38,13 @@ abstract interface class EventBookingsAdminRepository {
     required int amountPiastres,
     String? collectorNote,
   });
+  Future<Either<Failure, void>> quickCashCollect({
+    required String bookingId,
+    required int amountPiastres,
+    String? collectorNote,
+  });
 }
+
 
 class SupabaseEventBookingsAdminRepository
     implements EventBookingsAdminRepository {
@@ -55,7 +61,7 @@ class SupabaseEventBookingsAdminRepository
       var query = _client
           .from('event_bookings')
           .select(
-            '*, event_types(name_ar), venues_resources(name_ar), users(name, phone), priests(name)',
+            '*, event_types(name_ar, category, required_documents_ar), venues_resources(name_ar), users(name, phone), priests(name)',
           );
 
       if (statusFilter != null && statusFilter.isNotEmpty) {
@@ -223,6 +229,27 @@ class SupabaseEventBookingsAdminRepository
     try {
       await _client.rpc(
         'admin_record_cash_payment',
+        params: {
+          'p_booking_id': bookingId,
+          'p_amount_piastres': amountPiastres,
+          'p_collector_note': collectorNote,
+        },
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> quickCashCollect({
+    required String bookingId,
+    required int amountPiastres,
+    String? collectorNote,
+  }) async {
+    try {
+      await _client.rpc(
+        'admin_quick_cash_collect',
         params: {
           'p_booking_id': bookingId,
           'p_amount_piastres': amountPiastres,

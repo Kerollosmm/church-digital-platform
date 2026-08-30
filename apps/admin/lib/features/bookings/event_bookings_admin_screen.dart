@@ -249,12 +249,63 @@ class _EventBookingsAdminScreenState extends State<EventBookingsAdminScreen> {
     );
   }
 
+  String? _selectedCategory; // null = All, 'SACRAMENT', 'ACTIVITY'
+
+  List<EventBookingAdminItem> get _filteredBookings {
+    if (_selectedCategory == null) return _bookings;
+    return _bookings.where((b) => b.category == _selectedCategory).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final list = _filteredBookings;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('إدارة حجوزات المناسبات الخاصة')),
+      appBar: AppBar(
+        title: const Text('إدارة حجوزات المناسبات والأنشطة'),
+        actions: [
+          IconButton(
+            tooltip: 'تحديث',
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadData,
+          ),
+        ],
+      ),
       body: Column(
         children: [
+          // Category Queue Tabs
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            color: Colors.grey.shade100,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('جميع الطلبات'),
+                    selected: _selectedCategory == null,
+                    onSelected: (_) => setState(() => _selectedCategory = null),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('✝️ طابور الأسرار والمناسبات الكنسية'),
+                    selected: _selectedCategory == 'SACRAMENT',
+                    onSelected: (_) =>
+                        setState(() => _selectedCategory = 'SACRAMENT'),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('🚌 طابور الرحلات والمؤتمرات'),
+                    selected: _selectedCategory == 'ACTIVITY',
+                    onSelected: (_) =>
+                        setState(() => _selectedCategory = 'ACTIVITY'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Status Chips
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: SingleChildScrollView(
@@ -262,7 +313,7 @@ class _EventBookingsAdminScreenState extends State<EventBookingsAdminScreen> {
               child: Row(
                 children: [
                   ChoiceChip(
-                    label: const Text('الكل'),
+                    label: const Text('جميع الحالات'),
                     selected: _selectedStatus == null,
                     onSelected: (_) {
                       setState(() => _selectedStatus = null);
@@ -292,12 +343,12 @@ class _EventBookingsAdminScreenState extends State<EventBookingsAdminScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
                 ? Center(child: Text(_error!))
-                : _bookings.isEmpty
+                : list.isEmpty
                 ? const Center(child: Text('لا توجد طلبات حجز مطابقة'))
                 : ListView.builder(
-                    itemCount: _bookings.length,
+                    itemCount: list.length,
                     itemBuilder: (ctx, i) {
-                      final b = _bookings[i];
+                      final b = list[i];
                       return Card(
                         margin: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -312,12 +363,40 @@ class _EventBookingsAdminScreenState extends State<EventBookingsAdminScreen> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    b.eventTypeName,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        b.eventTypeName,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: b.isSacrament
+                                              ? Colors.blue.shade50
+                                              : Colors.amber.shade50,
+                                          borderRadius:
+                                              BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          b.category,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: b.isSacrament
+                                                ? Colors.blue.shade900
+                                                : Colors.amber.shade900,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   Chip(
                                     label: Text(b.status),
@@ -341,8 +420,33 @@ class _EventBookingsAdminScreenState extends State<EventBookingsAdminScreen> {
                               if (b.venueName != null)
                                 Text('المكان: ${b.venueName}'),
                               Text(
-                                'الإجمالي: ${b.totalPriceEgp} ج.م | المدفوع: ${b.paidAmountEgp} ج.م',
+                                'الإجمالي: ${b.totalPriceEgp} ج.م | المدفوع: ${b.paidAmountEgp} ج.م | المتبقي: ${b.remainingAmountEgp} ج.م',
                               ),
+                              if (b.isSacrament && b.requiredDocumentsAr.isNotEmpty) ...[
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  children: [
+                                    const Text(
+                                      'المستندات المطلوبة:',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    ...b.requiredDocumentsAr.map(
+                                      (doc) => Chip(
+                                        padding: EdgeInsets.zero,
+                                        labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+                                        visualDensity: VisualDensity.compact,
+                                        label: Text(doc, style: const TextStyle(fontSize: 11)),
+                                        backgroundColor: Colors.amber.shade50,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                               if (b.notes != null) Text('ملاحظات: ${b.notes}'),
                               if (b.rejectionReason != null)
                                 Text(
@@ -367,7 +471,7 @@ class _EventBookingsAdminScreenState extends State<EventBookingsAdminScreen> {
                                       child: const Text('تأكيد وتعيين مكان'),
                                     ),
                                   ],
-                                  if (b.status == 'CONFIRMED') ...[
+                                  if (b.status == 'CONFIRMED' || (b.status == 'SUBMITTED' && b.remainingAmountEgp > 0)) ...[
                                     ElevatedButton.icon(
                                       icon: const Icon(Icons.payments),
                                       label: const Text('تحصيل نقدية'),
@@ -386,5 +490,6 @@ class _EventBookingsAdminScreenState extends State<EventBookingsAdminScreen> {
         ],
       ),
     );
+
   }
 }

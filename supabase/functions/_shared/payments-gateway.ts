@@ -116,4 +116,38 @@ export async function markCashReceived(
   };
 }
 
+export async function adminQuickCashCollect(
+  client: SupabaseClient,
+  opts: {
+    bookingId: string;
+    amountPiastres: number;
+    collectorNote?: string | null;
+  },
+): Promise<GatewayResult<{
+  success: boolean;
+  audit_id: number;
+  booking_id: string;
+  amount_piastres: number;
+  total_paid_piastres: number;
+  status: string;
+}>> {
+  const { data, error } = await client.rpc("admin_quick_cash_collect", {
+    p_booking_id: opts.bookingId,
+    p_amount_piastres: opts.amountPiastres,
+    p_collector_note: opts.collectorNote ?? null,
+  });
+  if (error) return fail(error);
+  return {
+    ok: true,
+    data: data as {
+      success: boolean;
+      audit_id: number;
+      booking_id: string;
+      amount_piastres: number;
+      total_paid_piastres: number;
+      status: string;
+    },
+  };
+}
+
 

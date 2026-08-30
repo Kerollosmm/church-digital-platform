@@ -62,6 +62,9 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
       _availableExtras = [];
       _selectedQuantities.clear();
     });
+    if (type.isSacrament) {
+      return;
+    }
     final res = await widget.repository.fetchExtraServicesForEvent(type.id);
     if (!mounted) return;
     // Guard against out-of-order responses overwriting newer selections
@@ -72,9 +75,11 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
   int get _calculatedTotalPiastres {
     if (_selectedEventType == null) return 0;
     int total = _selectedEventType!.basePricePiastres;
-    for (final extra in _availableExtras) {
-      final qty = _selectedQuantities[extra.id] ?? 0;
-      total += extra.pricePiastres * qty;
+    if (_selectedEventType!.isActivity) {
+      for (final extra in _availableExtras) {
+        final qty = _selectedQuantities[extra.id] ?? 0;
+        total += extra.pricePiastres * qty;
+      }
     }
     return total;
   }
@@ -94,11 +99,13 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
     );
 
     final extraList = <Map<String, dynamic>>[];
-    _selectedQuantities.forEach((id, qty) {
-      if (qty > 0) {
-        extraList.add({'extra_service_id': id, 'quantity': qty});
-      }
-    });
+    if (_selectedEventType!.isActivity) {
+      _selectedQuantities.forEach((id, qty) {
+        if (qty > 0) {
+          extraList.add({'extra_service_id': id, 'quantity': qty});
+        }
+      });
+    }
 
     final res = await widget.repository.submitEventBooking(
       eventTypeId: _selectedEventType!.id,
@@ -129,6 +136,9 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isSacrament = _selectedEventType?.isSacrament ?? false;
+    final docs = _selectedEventType?.requiredDocumentsAr ?? [];
+
     return Scaffold(
       appBar: AppBar(title: const Text('حجز مناسبة خاصة')),
       body: _isLoading
@@ -165,7 +175,52 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (_availableExtras.isNotEmpty) ...[
+                  if (isSacrament && docs.isNotEmpty) ...[
+                    Card(
+                      color: Colors.amber.shade50,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: BorderSide(color: Colors.amber.shade300),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.assignment, color: Colors.amber.shade900),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'الأوراق والمستندات المطلوبة:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: Colors.amber.shade900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ...docs.map(
+                              (doc) => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2.0),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.check_circle_outline, size: 16, color: Colors.green),
+                                    const SizedBox(width: 6),
+                                    Expanded(child: Text(doc, style: const TextStyle(fontSize: 14))),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (!isSacrament && _availableExtras.isNotEmpty) ...[
                     const Text(
                       'الخدمات الإضافية',
                       style: TextStyle(
@@ -287,14 +342,17 @@ class _EventBookingScreenState extends State<EventBookingScreen> {
                     ),
                     child: _isSubmitting
                         ? const CircularProgressIndicator()
-                        : const Text(
-                            'تأكيد طلب الحجز',
-                            style: TextStyle(fontSize: 16),
+                        : Text(
+                            isSacrament
+                                ? 'إرسال طلب الحجز للمراجعة الكنسية'
+                                : 'تأكيد طلب الحجز',
+                            style: const TextStyle(fontSize: 16),
                           ),
                   ),
                 ],
               ),
             ),
     );
+
   }
 }

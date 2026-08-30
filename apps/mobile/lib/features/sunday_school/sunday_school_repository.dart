@@ -14,12 +14,17 @@ abstract interface class SundaySchoolRepository {
     required List<StudentAttendanceEntry> entries,
     String? sessionTitle,
   });
+  Future<Either<Failure, List<VisitationStudentItem>>> fetchVisitationList(
+    String classId, {
+    DateTime? sessionDate,
+  });
   Future<Either<Failure, List<OfflineAttendanceMutation>>> getOfflineQueue();
   Future<Either<Failure, void>> enqueueOfflineAttendance(
     OfflineAttendanceMutation mutation,
   );
   Future<Either<Failure, int>> syncOfflineQueue();
 }
+
 
 class SupabaseSundaySchoolRepository implements SundaySchoolRepository {
   SupabaseSundaySchoolRepository({SupabaseClient? client})
@@ -131,6 +136,31 @@ class SupabaseSundaySchoolRepository implements SundaySchoolRepository {
         createdAt: DateTime.now(),
       );
       _offlineQueue.add(mutation);
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<VisitationStudentItem>>> fetchVisitationList(
+    String classId, {
+    DateTime? sessionDate,
+  }) async {
+    try {
+      final res = await _client.rpc(
+        'get_class_visitation_list',
+        params: {
+          'p_class_id': classId,
+          if (sessionDate != null)
+            'p_session_date': sessionDate.toIso8601String().split('T').first,
+        },
+      );
+
+      final list = (res as List<dynamic>)
+          .map((e) => VisitationStudentItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      return Right(list);
+    } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }

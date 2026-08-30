@@ -13,14 +13,24 @@ class FakeEventBookingRepository implements EventBookingRepository {
       nameAr: 'إكليل زواج',
       basePricePiastres: 50000,
       defaultDurationMinutes: 120,
+      category: 'SACRAMENT',
+      requiredDocumentsAr: ['شهادة خلو موانع', 'شهادة دورة المشورة الأسرية'],
+    ),
+    const EventType(
+      id: 'type-2',
+      nameAr: 'رحلة دير الأنبا بيشوي',
+      basePricePiastres: 15000,
+      defaultDurationMinutes: 360,
+      category: 'ACTIVITY',
+      requiredDocumentsAr: [],
     ),
   ];
 
   List<ExtraService> extraServices = [
     const ExtraService(
       id: 'extra-1',
-      nameAr: 'تصوير فيديو',
-      pricePiastres: 10000,
+      nameAr: 'وجبة غداء إضافية',
+      pricePiastres: 5000,
     ),
   ];
 
@@ -57,7 +67,7 @@ class FakeEventBookingRepository implements EventBookingRepository {
 
 void main() {
   testWidgets(
-    'EventBookingScreen loads event types, toggles extra service, and calculates total',
+    'EventBookingScreen handles SACRAMENT track (shows documents, hides commercial extras)',
     (tester) async {
       final fakeRepo = FakeEventBookingRepository();
 
@@ -67,22 +77,70 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify event type loaded
+      // Verify sacrament loaded
       expect(find.text('نوع المناسبة'), findsOneWidget);
       expect(find.text('إكليل زواج (500 ج.م)'), findsOneWidget);
-      expect(find.text('500 ج.م'), findsOneWidget);
 
-      // Verify extra service listed
-      expect(find.text('تصوير فيديو'), findsOneWidget);
+      // Documents card shown
+      expect(find.text('الأوراق والمستندات المطلوبة:'), findsOneWidget);
+      expect(find.text('شهادة خلو موانع'), findsOneWidget);
+      expect(find.text('شهادة دورة المشورة الأسرية'), findsOneWidget);
 
-      // Check extra service checkbox
-      await tester.tap(find.text('تصوير فيديو'));
+      // Commercial extra services hidden
+      expect(find.text('الخدمات الإضافية'), findsNothing);
+      expect(find.text('وجبة غداء إضافية'), findsNothing);
+
+      // Verify pastoral submit button
+      final submitButtonFinder = find.text('إرسال طلب الحجز للمراجعة الكنسية');
+      await tester.ensureVisible(submitButtonFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(submitButtonFinder);
       await tester.pumpAndSettle();
 
-      // Total should update: 500 base + 100 extra = 600 EGP
-      expect(find.text('600 ج.م'), findsOneWidget);
+      expect(fakeRepo.submitCalled, isTrue);
+    },
+  );
 
-      // Ensure button is visible before tap in SingleChildScrollView
+  testWidgets(
+    'EventBookingScreen handles ACTIVITY track (shows extra services and add-ons)',
+    (tester) async {
+      final fakeRepo = FakeEventBookingRepository();
+      // Start with activity selected as first
+      fakeRepo.eventTypes = [
+        const EventType(
+          id: 'type-2',
+          nameAr: 'رحلة دير الأنبا بيشوي',
+          basePricePiastres: 15000,
+          defaultDurationMinutes: 360,
+          category: 'ACTIVITY',
+          requiredDocumentsAr: [],
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(home: EventBookingScreen(repository: fakeRepo)),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Verify activity loaded
+      expect(find.text('رحلة دير الأنبا بيشوي (150 ج.م)'), findsOneWidget);
+
+      // Documents card hidden
+      expect(find.text('الأوراق والمستندات المطلوبة:'), findsNothing);
+
+      // Commercial extras shown
+      expect(find.text('الخدمات الإضافية'), findsOneWidget);
+      expect(find.text('وجبة غداء إضافية'), findsOneWidget);
+
+      // Select extra
+      await tester.tap(find.text('وجبة غداء إضافية'));
+      await tester.pumpAndSettle();
+
+      // Total updates: 150 + 50 = 200 EGP
+      expect(find.text('200 ج.م'), findsOneWidget);
+
+      // Submit button text
       final submitButtonFinder = find.text('تأكيد طلب الحجز');
       await tester.ensureVisible(submitButtonFinder);
       await tester.pumpAndSettle();

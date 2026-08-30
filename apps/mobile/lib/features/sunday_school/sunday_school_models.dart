@@ -156,3 +156,57 @@ class OfflineAttendanceMutation {
     );
   }
 }
+
+class VisitationStudentItem {
+  final String studentId;
+  final String studentNameAr;
+  final String phone;
+  final String parentPhone;
+  final String notes;
+  final DateTime sessionDate;
+  final String attendanceStatus;
+  final DateTime? lastAttendedDate;
+  final int consecutiveAbsences;
+
+  const VisitationStudentItem({
+    required this.studentId,
+    required this.studentNameAr,
+    required this.phone,
+    required this.parentPhone,
+    this.notes = '',
+    required this.sessionDate,
+    this.attendanceStatus = 'ABSENT',
+    this.lastAttendedDate,
+    this.consecutiveAbsences = 1,
+  });
+
+  factory VisitationStudentItem.fromJson(Map<String, dynamic> json) {
+    return VisitationStudentItem(
+      studentId: json['student_id'] as String? ?? '',
+      studentNameAr: json['student_name_ar'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      parentPhone: json['parent_phone'] as String? ?? '',
+      notes: json['notes'] as String? ?? '',
+      sessionDate: json['session_date'] != null
+          ? DateTime.parse(json['session_date'] as String)
+          : DateTime.now(),
+      attendanceStatus: json['attendance_status'] as String? ?? 'ABSENT',
+      lastAttendedDate: json['last_attended_date'] != null
+          ? DateTime.tryParse(json['last_attended_date'] as String)
+          : null,
+      consecutiveAbsences: (json['consecutive_absences'] as num?)?.toInt() ?? 1,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'student_id': studentId,
+    'student_name_ar': studentNameAr,
+    'phone': phone,
+    'parent_phone': parentPhone,
+    'notes': notes,
+    'session_date': sessionDate.toIso8601String().split('T').first,
+    'attendance_status': attendanceStatus,
+    'last_attended_date': lastAttendedDate?.toIso8601String().split('T').first,
+    'consecutive_absences': consecutiveAbsences,
+  };
+}

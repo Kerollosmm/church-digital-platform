@@ -1,16 +1,25 @@
 # Active Context: Church Digital Platform
 
 ## Current Focus & Status
-- **Current Milestone**: Church Platform Extensions (Specs 009, 010, 011) — **100% Completed & Verified**.
-- **All Verification Gates Passing**:
-  - PostgreSQL Schema: Migrations 0001 through 0077 applied; 67 SQL suites registered (`supabase/tests/`).
-  - Deno Edge Functions: 58 / 58 test suites PASS (`deno test --allow-env --allow-net supabase/functions/`).
-  - Flutter Mobile: 92 / 92 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/mobile/`).
-  - Flutter Admin: 79 / 79 tests PASS, 0 analyzer issues (`flutter test`, `flutter analyze` in `apps/admin/`).
-- **Repository State**: Working branch `feature/church-platform-extensions` with verified end-to-end integration.
-- **Next Immediate Step**: Review and integrate `feature/church-platform-extensions` into main.
+- **Current Milestone**: Church Platform Administrative & Product Pivot (`refactor/church-operational-pivot`) — **Mechanically Verified & Audited**.
+- **Forensic Review Status**:
+  - Complete 12-phase audit performed (2026-08-30).
+  - Test suites verification:
+    - PostgreSQL Schema: Migrations 0001–0078 replayed cleanly. 68/68 test suites pass individually (100%).
+    - FIND-001 resolved: Suite 0078 fixtures populated with unique `phone` numbers.
+    - Deno Edge Functions: 59/59 tests PASS (`deno test --allow-env --allow-net supabase/functions/`).
+    - Flutter Mobile: 94/94 tests PASS, 0 analyzer issues (`apps/mobile/`).
+    - Flutter Admin: 81/81 tests PASS, 0 analyzer issues (`apps/admin/`).
+- **Operational Tracks Verified**:
+  1. *Track 1 (Sacraments)*: Pastoral intake workflow for Weddings, Baptisms, Funerals with `required_documents_ar` checklist, zero commercial add-ons, on-the-spot cashier cash collection (`admin_quick_cash_collect`).
+  2. *Track 2 (Activities & Trips)*: Commercial add-on services enabled with price snapshotting, manual payment proof / wallet flow.
+  3. *Track 3 (Sunday School Visitation)*: Attendance checklist (`PRESENT`/`ABSENT`/`EXCUSED`) + 1-click `[📋 كشف الافتقاد]` visitation list (`get_class_visitation_list` RPC) with WhatsApp / Call actions.
+- **Next Immediate Step**:
+  1. Stage and commit verified release branch `refactor/church-operational-pivot`.
+  2. Update `README.md` to prune stale Paymob references.
 
 ---
+
 
 ## Architecture & Lifecycle: Manual Payment Verification (ADR 0003)
 

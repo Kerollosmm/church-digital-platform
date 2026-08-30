@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/either.dart';
+import '../../core/failure.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -235,6 +237,232 @@ class _ServantAttendanceSheetScreenState
     });
   }
 
+  Future<void> _showVisitationSheet() async {
+    if (_selectedClass == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.95,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (ctx, scrollController) {
+          return FutureBuilder<Either<Failure, List<VisitationStudentItem>>>(
+            future: widget.repository.fetchVisitationList(
+              _selectedClass!.id,
+              sessionDate: _selectedDate,
+            ),
+            builder: (ctx, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final data = snapshot.data;
+              List<VisitationStudentItem> list = [];
+              if (data != null) {
+                list = data.fold(
+                  (_) {
+                    // Fallback from current local entries
+                    final absents = _attendanceEntries
+                        .where((e) => e.status == 'ABSENT' || e.status == 'EXCUSED')
+                        .toList();
+                    return absents
+                        .map(
+                          (a) => VisitationStudentItem(
+                            studentId: a.studentId,
+                            studentNameAr: a.studentNameAr,
+                            phone: '',
+                            parentPhone: '',
+                            notes: a.notes ?? '',
+                            sessionDate: _selectedDate,
+                            attendanceStatus: a.status,
+                            consecutiveAbsences: 1,
+                          ),
+                        )
+                        .toList();
+                  },
+                  (r) => r,
+                );
+              }
+
+
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '📋 كشف الافتقاد والمتابعة (${list.length})',
+                            style: AppTypography.headlineMd.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ],
+                    ),
+
+                    const Divider(),
+                    if (list.isEmpty)
+                      const Expanded(
+                        child: Center(
+                          child: Text(
+                            'ممتاز! لا يوجد غائبين بحاجة لافتقاد في هذه الحصة 🎉',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          itemCount: list.length,
+                          itemBuilder: (ctx, i) {
+                            final item = list[i];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: Colors.red.shade200,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          item.studentNameAr,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade50,
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            border: Border.all(
+                                              color: Colors.red.shade300,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'غياب متكرر: ${item.consecutiveAbsences}',
+                                            style: TextStyle(
+                                              color: Colors.red.shade800,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    if (item.lastAttendedDate != null)
+                                      Text(
+                                        'آخر حضور: ${item.lastAttendedDate.toString().split(' ').first}',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade700,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    if (item.parentPhone.isNotEmpty)
+                                      Text(
+                                        'هاتف ولي الأمر: ${item.parentPhone}',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade800,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.end,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          icon: const Icon(
+                                            Icons.phone,
+                                            size: 16,
+                                            color: Colors.blue,
+                                          ),
+                                          label: const Text('اتصال'),
+                                          onPressed: () {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'جاري الاتصال بـ ${item.parentPhone.isNotEmpty ? item.parentPhone : item.studentNameAr}',
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        const SizedBox(width: 8),
+                                        ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                const Color(0xFF25D366),
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          icon: const Icon(
+                                            Icons.chat,
+                                            size: 16,
+                                          ),
+                                          label: const Text('واتساب'),
+                                          onPressed: () {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'فتح محادثة واتساب مع ولي أمر ${item.studentNameAr}',
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final query = _searchController.text.trim();
@@ -256,6 +484,12 @@ class _ServantAttendanceSheetScreenState
       appBar: AppBar(
         title: const Text('كشف حضور مدارس الأحد'),
         actions: [
+          TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
+            icon: const Icon(Icons.assignment_ind, size: 18),
+            label: const Text('📋 كشف الافتقاد'),
+            onPressed: _showVisitationSheet,
+          ),
           if (_offlinePendingCount > 0)
             IconButton(
               tooltip:
@@ -268,6 +502,7 @@ class _ServantAttendanceSheetScreenState
             ),
         ],
       ),
+
       body: _loading && _classes.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : Column(

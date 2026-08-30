@@ -1,0 +1,207 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:admin/core/result.dart';
+import 'package:admin/features/bookings/event_booking_admin_models.dart';
+import 'package:admin/features/bookings/event_bookings_admin_repository.dart';
+import 'package:admin/features/cashier/admin_cashier_screen.dart';
+
+class FakeCashierAdminRepository implements EventBookingsAdminRepository {
+  List<EventBookingAdminItem> bookings = [
+    EventBookingAdminItem(
+      id: 'b-101',
+      customerId: 'user-1',
+      customerName: 'كيرلس مينا',
+      customerPhone: '01223344556',
+      eventTypeId: 'event-1',
+      eventTypeName: 'سر المعمودية المقدس',
+      category: 'SACRAMENT',
+      startTime: DateTime(2026, 9, 10, 10, 0),
+      endTime: DateTime(2026, 9, 10, 11, 30),
+      status: 'CONFIRMED',
+      totalPricePiastres: 20000,
+      paidAmountPiastres: 5000,
+    ),
+    EventBookingAdminItem(
+      id: 'b-102',
+      customerId: 'user-2',
+      customerName: 'مريم بولس',
+      customerPhone: '01099887766',
+      eventTypeId: 'event-2',
+      eventTypeName: 'رحلة الفيوم',
+      category: 'ACTIVITY',
+      startTime: DateTime(2026, 9, 15, 7, 0),
+      endTime: DateTime(2026, 9, 15, 21, 0),
+      status: 'CONFIRMED',
+      totalPricePiastres: 30000,
+      paidAmountPiastres: 30000,
+    ),
+  ];
+
+  bool quickCashCalled = false;
+  String? lastCollectedBookingId;
+  int? lastCollectedAmountPiastres;
+
+  @override
+  Future<Either<Failure, List<EventBookingAdminItem>>> fetchEventBookings({
+    String? statusFilter,
+  }) async {
+    return Right(bookings);
+  }
+
+  @override
+  Future<Either<Failure, void>> quickCashCollect({
+    required String bookingId,
+    required int amountPiastres,
+    String? collectorNote,
+  }) async {
+    quickCashCalled = true;
+    lastCollectedBookingId = bookingId;
+    lastCollectedAmountPiastres = amountPiastres;
+    // Optimistic update for test
+    final idx = bookings.indexWhere((b) => b.id == bookingId);
+    if (idx != -1) {
+      final old = bookings[idx];
+      bookings[idx] = EventBookingAdminItem(
+        id: old.id,
+        customerId: old.customerId,
+        customerName: old.customerName,
+        customerPhone: old.customerPhone,
+        eventTypeId: old.eventTypeId,
+        eventTypeName: old.eventTypeName,
+        category: old.category,
+        startTime: old.startTime,
+        endTime: old.endTime,
+        status: 'PAID',
+        totalPricePiastres: old.totalPricePiastres,
+        paidAmountPiastres: old.paidAmountPiastres + amountPiastres,
+      );
+    }
+    return const Right(null);
+  }
+
+  @override
+  Future<Either<Failure, List<VenueResourceItem>>> fetchVenues() async =>
+      const Right([]);
+
+  @override
+  Future<Either<Failure, List<PriestAdminItem>>> fetchPriests() async =>
+      const Right([]);
+
+  @override
+  Future<Either<Failure, List<PriestAdminItem>>> getAvailablePriests({
+    required DateTime startTime,
+    required DateTime endTime,
+  }) async => const Right([]);
+
+  @override
+  Future<Either<Failure, void>> assignPriestAndVenue({
+    required String bookingId,
+    required String venueId,
+    required int priestId,
+    String? overrideNotes,
+  }) async => const Right(null);
+
+  @override
+  Future<Either<Failure, List<PriestScheduleItem>>> fetchPriestSchedules({
+    DateTime? from,
+    DateTime? to,
+  }) async => const Right([]);
+
+  @override
+  Future<Either<Failure, void>> confirmBooking({
+    required String bookingId,
+    required String venueId,
+    DateTime? confirmedStart,
+    DateTime? confirmedEnd,
+    String? adminNote,
+  }) async => const Right(null);
+
+  @override
+  Future<Either<Failure, void>> rejectBooking({
+    required String bookingId,
+    required String rejectionReason,
+  }) async => const Right(null);
+
+  @override
+  Future<Either<Failure, void>> recordCashPayment({
+    required String bookingId,
+    required int amountPiastres,
+    String? collectorNote,
+  }) async => const Right(null);
+}
+
+void main() {
+  testWidgets(
+    'AdminCashierScreen searches by phone, filters by category, and executes 1-click cash collect',
+    (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final fakeRepo = FakeCashierAdminRepository();
+
+
+      await tester.pumpWidget(
+        MaterialApp(home: AdminCashierScreen(repository: fakeRepo)),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Verify header and initial list
+      expect(find.text('خزينة التحصيل الكنسي المباشر 💵'), findsOneWidget);
+      expect(find.text('سر المعمودية المقدس'), findsOneWidget);
+      expect(find.text('رحلة الفيوم'), findsOneWidget);
+      expect(find.text('المتبقي: 150 ج.م'), findsOneWidget); // 200 - 50 = 150
+      expect(find.text('المتبقي: 0 ج.م'), findsOneWidget); // 300 - 300 = 0
+
+      // Search by phone '01223344556'
+      await tester.enterText(
+        find.byType(TextField).first,
+        '01223344556',
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('سر المعمودية المقدس'), findsOneWidget);
+      expect(find.text('رحلة الفيوم'), findsNothing);
+
+      // Clear search
+      await tester.enterText(find.byType(TextField).first, '');
+      await tester.pumpAndSettle();
+
+      // Filter by Activities
+      await tester.tap(find.text('🚌 رحلات ومؤتمرات'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('سر المعمودية المقدس'), findsNothing);
+      expect(find.text('رحلة الفيوم'), findsOneWidget);
+
+      // Switch back to all
+      await tester.tap(find.text('جميع المعاملات'));
+      await tester.pumpAndSettle();
+
+      // Tap Cash collect on baptism booking
+      await tester.tap(find.text('تحصيل نقدية').first);
+      await tester.pumpAndSettle();
+
+      // Verify modal
+      expect(find.text('تحصيل سريع: سر المعمودية المقدس'), findsOneWidget);
+      expect(find.text('صاحب الحجز: كيرلس مينا'), findsOneWidget);
+
+      expect(find.text('المتبقي للتحصيل:'), findsOneWidget);
+      expect(find.text('150.0 ج.م'), findsOneWidget);
+
+      // Confirm cash collection
+      await tester.tap(find.text('تأكيد التحصيل وإصدار إشعار'));
+      await tester.pumpAndSettle();
+
+      expect(fakeRepo.quickCashCalled, isTrue);
+      expect(fakeRepo.lastCollectedBookingId, equals('b-101'));
+      expect(fakeRepo.lastCollectedAmountPiastres, equals(15000));
+      expect(find.text('تم تحصيل النقدية وتحديث الحجز بنجاح 🎉'), findsOneWidget);
+    },
+  );
+}
+

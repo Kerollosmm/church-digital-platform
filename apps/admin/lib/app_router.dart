@@ -31,6 +31,8 @@ import 'features/sunday_school/sunday_school_admin_dashboard.dart';
 import 'features/sunday_school/sunday_school_admin_repository.dart';
 import 'features/sacraments/sacramental_registrar_screen.dart';
 import 'features/sacraments/sacraments_admin_repository.dart';
+import 'features/cashier/admin_cashier_screen.dart';
+
 
 class AdminShell extends StatelessWidget {
   const AdminShell({super.key, required this.child});
@@ -137,11 +139,18 @@ class AdminShell extends StatelessWidget {
                     onTap: () => context.go('/sacramental-records'),
                   ),
                   ListTile(
+                    leading: const Icon(Icons.point_of_sale),
+                    title: const Text('الخزينة والتحصيل السريع'),
+                    selected: location == '/cashier',
+                    onTap: () => context.go('/cashier'),
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.school),
                     title: const Text('مدارس الأحد'),
                     selected: location == '/sunday-school',
                     onTap: () => context.go('/sunday-school'),
                   ),
+
                 ],
               ),
             ),
@@ -301,6 +310,18 @@ GoRouter createAdminRouter({
           GoRoute(
             path: '/sacraments',
             redirect: (_, _) => '/sacramental-records',
+          ),
+          GoRoute(
+            path: '/cashier',
+            name: 'cashier',
+            builder: (context, state) {
+              final database = resolveDb();
+              return AdminCashierScreen(
+                repository: SupabaseEventBookingsAdminRepository(
+                  client: database,
+                ),
+              );
+            },
           ),
           GoRoute(
             path: '/sunday-school',

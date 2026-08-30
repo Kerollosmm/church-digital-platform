@@ -1,5 +1,6 @@
 import { assertEquals, assertNotEquals } from "jsr:@std/assert";
 import {
+  adminQuickCashCollect,
   approvePaymentProof,
   createPendingPayment,
   markCashReceived,
@@ -143,6 +144,24 @@ Deno.test("gateway: markCashReceived calls mark_cash_received RPC", async () => 
     p_booking_id: 701,
     p_amount: 250,
     p_collector_note: "Received at church office",
+  });
+});
+
+Deno.test("gateway: adminQuickCashCollect calls admin_quick_cash_collect RPC", async () => {
+  const calls: RpcCall[] = [];
+  const res = await adminQuickCashCollect(stubClient(calls) as never, {
+    bookingId: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+    amountPiastres: 50000,
+    collectorNote: "Cash collected in secretariat",
+  });
+
+  assertEquals(res.ok, true);
+  assertEquals(calls.length, 1);
+  assertEquals(calls[0].fn, "admin_quick_cash_collect");
+  assertEquals(calls[0].params, {
+    p_booking_id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+    p_amount_piastres: 50000,
+    p_collector_note: "Cash collected in secretariat",
   });
 });
 

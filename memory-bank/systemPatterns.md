@@ -17,9 +17,9 @@
 │            Edge & Perimeter Gateway (Supabase)         │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │ Deno Edge Functions                              │  │
-│  │ • paymob-checkout   • paymob-webhook             │  │
-│  │ • event-dispatcher  • reconcile-payments         │  │
+│  │ • event-dispatcher  • otp-sms                    │  │
 │  │ • diagnostic-engine • analytics-export           │  │
+│  │ • offline-sync                                   │  │
 │  │ • _shared/payments-gateway.ts (Unified Seam)     │  │
 │  │ • _shared/http.ts (Zero-Leak Error Contract)     │  │
 │  └──────────────────────────┬───────────────────────┘  │
@@ -33,8 +33,10 @@
 │  ├──────────────────────────────────────────────────┤  │
 │  │ SECURITY DEFINER RPC Write Seam                  │  │
 │  │ • book_slot()           • manual_book()          │  │
+│  │ • submit_payment_proof  • approve_payment_proof  │  │
+│  │ • reject_payment_proof  • mark_cash_received     │  │
 │  │ • submit_event_booking  • admin_confirm_booking  │  │
-│  │ • admin_reject_booking  • admin_record_cash_pay  │  │
+│  │ • admin_reject_booking  • admin_quick_cash_collect│ │
 │  │ • submit_complaint_sec()• decrypt_complaint()    │  │
 │  ├──────────────────────────────────────────────────┤  │
 │  │ State Machine Triggers & Exclusion Constraints   │  │
@@ -49,15 +51,17 @@
 
 ## Key Technical Decisions & Patterns
 
-### 1. Hardened RPC-Only Write Seam & Money Boundaries (Feature 010 / US1)
-- Direct client `INSERT/UPDATE/DELETE` is strictly prohibited on sensitive tables (`payments`, `complaints`, `audit_log`, `roles_permissions`, `users`).
+### 1. Hardened RPC-Only Write Seam & Manual Payment Verification Rail (Feature 011 / ADR 0003)
+- Direct client `INSERT/UPDATE/DELETE` is strictly prohibited on sensitive tables (`payments`, `payment_proofs`, `event_bookings`, `complaints`, `audit_log`, `roles_permissions`, `users`).
 - All state-changing operations occur within atomic `SECURITY DEFINER` stored procedures.
 - Payments lifecycle is managed via:
-  - `create_pending_payment(p_booking_id, p_amount, p_gateway_ref)`: Inserts `CREATED` status payment.
-  - `mark_payment_failed(p_payment_id)`: Sets `FAILED` status, idempotent on already-failed, leaves `PAID` untouched.
-  - `record_booking_payment(p_booking_id, p_amount, p_gateway_ref)`: Atomically creates payment and invokes `apply_payment`.
+  - `submit_payment_proof(p_booking_id, p_channel, p_sender_phone, p_reference_number, p_amount_claimed, p_image_path)`: Submits member receipt.
+  - `approve_payment_proof(p_proof_id, p_collector_note)`: Validates proof with `FOR UPDATE` lock, invokes `apply_payment`.
+  - `reject_payment_proof(p_proof_id, p_reason_code)`: Rejects proof with catalog reason code.
+  - `mark_cash_received(p_booking_id, p_amount, p_collector_note)`: Records in-person cash payment on slot bookings.
+  - `admin_quick_cash_collect(p_booking_id, p_amount_piastres, p_collector_note)`: One-click cashier collection on event bookings.
   - `apply_payment(p_payment_id)`: `service_role`-only RPC executing state transition and enqueuing outbox messages.
-- Edge functions interact with financial data exclusively via `_shared/payments-gateway.ts`.
+- Edge functions and clients interact with financial data exclusively via `_shared/payments-gateway.ts`.
 
 ### 2. High-Concurrency Slot Reservation
 - Slot capacity is locked via `SELECT capacity FROM service_slots WHERE id = p_slot_id FOR UPDATE`.

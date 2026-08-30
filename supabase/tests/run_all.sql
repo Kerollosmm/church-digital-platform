@@ -67,3 +67,4 @@
 \ir 0075_priest_hall_allocation_test.sql
 \ir 0076_sacramental_records_test.sql
 \ir 0077_sunday_school_management_test.sql
+\ir 0078_operational_pivot_test.sql
