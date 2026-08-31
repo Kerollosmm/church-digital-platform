@@ -23,7 +23,6 @@ export interface Deps {
   fetch: typeof fetch;
   phoneId: string;
   whatsappToken?: string;
-  amountMultiplier?: number;
   fcmProjectId?: string;
   fcmClientEmail?: string;
   fcmPrivateKey?: string;
