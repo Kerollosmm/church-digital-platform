@@ -416,4 +416,7 @@ verify_jwt = false
 [functions.analytics-export]
 verify_jwt = false
 
+[functions.youtube-sync]
+verify_jwt = false
+
 

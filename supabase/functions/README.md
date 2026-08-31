@@ -14,7 +14,7 @@ All edge functions share a centralized core kernel:
 
 ## 2. Functions Catalog (5 Functions)
 
-All 5 functions disable gateway-level JWT verification in `supabase/config.toml` (`verify_jwt = false`) to enforce application-layer authentication and deterministic error payloads.
+All functions disable gateway-level JWT verification in `supabase/config.toml` (`verify_jwt = false`) to enforce application-layer authentication and deterministic error payloads.
 
 | Function | Auth Mechanism | Purpose / Description |
 | :--- | :--- | :--- |
@@ -22,6 +22,7 @@ All 5 functions disable gateway-level JWT verification in `supabase/config.toml`
 | `otp-sms` | StandardWebhooks | Dispatches SMS/WhatsApp OTP auth templates via Meta Graph API |
 | `diagnostic-engine` | Staff Bearer JWT (`auth({ requireStaff: true })`) | Executes security invariants, RLS penetration probes, and telemetry |
 | `analytics-export` | Staff Bearer JWT (`auth({ requireStaff: true })`) | Exports sanitized CSV reports (utilization, payments, bookings) |
+| `youtube-sync` | Internal / pg_cron (`verifyCronOrServiceAuth`) | Refreshes the free-content YouTube catalog (`youtube_videos`) from the church channel via the YouTube Data API v3 and upserts through the `sync_youtube_videos` RPC |
 
 ## 3. Core Invariants & Architecture Rules
 

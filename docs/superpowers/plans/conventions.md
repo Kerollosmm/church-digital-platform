@@ -80,6 +80,7 @@ waitlist_status        = 'WAITING' | 'OFFERED'              -- values in use (sp
 
 - **Manual Payment Rail (ADR 0003):** Members submit payment proof (Vodafone Cash / InstaPay screenshot or cash reference) via `submit_payment_proof()` RPC; admins review in queue via `approve_payment_proof()` or `reject_payment_proof()`. Paymob gateway stack decommissioned per spec 011.
 - **WhatsApp:** Edge Function `event-dispatcher` / `whatsapp-sender` uses Meta Graph API `POST /v20.0/<phone-id>/messages` with template payloads; every send requires an opt-in row in `whatsapp_optins`; templates: `booking_confirmed`, `booking_payment_received` ({{1}}=link), `booking_cancelled`, `booking_rescheduled`, `booking_apology`, `otp_auth`
+- **YouTube (free-content automation, ADR 0004):** Edge Function `youtube-sync` (YouTube Data API v3) refreshes the `youtube_videos` catalog from the church's public channel hourly via `pg_cron`; all writes go through the `sync_youtube_videos(p_channel_id, p_videos)` SECURITY DEFINER RPC (service-role only). Public read view `v_sermons`. No payments or access gating. Secrets: `YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID` in Vault/edge secrets.
 
 ## Auth & Security (Supabase)
 
