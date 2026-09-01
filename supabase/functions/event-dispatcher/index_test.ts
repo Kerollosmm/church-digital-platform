@@ -199,3 +199,59 @@ Deno.test("event-dispatcher: WHATSAPP booking_payment_received template sends wi
     fetchStub.restore();
   }
 });
+
+Deno.test("event-dispatcher: WHATSAPP event_booking_payment_received template formats 5 params and sends", async () => {
+  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
+  fake.seed("whatsapp_optins", [
+    { phone: "+201011112222" },
+  ]);
+  fake.seed("event_outbox", [
+    {
+      id: 31,
+      handler_type: "WHATSAPP",
+      payload: {
+        phone: "+201011112222",
+        template_name: "event_booking_payment_received",
+        params: {
+          booking_id: "eb-uuid-1234",
+          event_name: "رحلة دير الأنبا بولا",
+          amount_paid_piastres: 25000,
+          total_paid_piastres: 50000,
+          remaining_piastres: 25000,
+        },
+      },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  const calls: { url: string; init?: RequestInit }[] = [];
+  const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init });
+    return Promise.resolve(jsonRes({ messages: [{ id: "wamid.456" }] }));
+  });
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+      whatsappToken: "mock-wa-token",
+    });
+
+    assertEquals(res.status, 200);
+    assertEquals(calls.length, 1);
+
+    const body = JSON.parse(String(calls[0].init?.body));
+    assertEquals(body.template.name, "event_booking_payment_received");
+    assertEquals(body.template.components[0].parameters.length, 5);
+    assertEquals(body.template.components[0].parameters[0], { type: "text", text: "eb-uuid-1234" });
+    assertEquals(body.template.components[0].parameters[1], { type: "text", text: "رحلة دير الأنبا بولا" });
+    assertEquals(body.template.components[0].parameters[2], { type: "text", text: "25000" });
+
+    assertEquals(fake.tableRows("event_outbox")[0].status, "SENT");
+  } finally {
+    fetchStub.restore();
+  }
+});

@@ -12,6 +12,11 @@ export const TEMPLATES: Record<string, { paramCount: number }> = {
   otp_auth: { paramCount: 1 },
   booking_payment_received: { paramCount: 2 },
   booking_offer: { paramCount: 1 },
+  admin_security_alert: { paramCount: 2 },
+  event_booking_submitted: { paramCount: 2 },
+  event_booking_confirmed: { paramCount: 5 },
+  event_booking_rejected: { paramCount: 2 },
+  event_booking_payment_received: { paramCount: 5 },
 };
 export const MAX_ATTEMPTS = 5;
 export const BACKOFF_MS = 30_000;
