@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/either.dart';
 import '../../core/failure.dart';
 import '../../theme/app_colors.dart';
@@ -237,6 +238,64 @@ class _ServantAttendanceSheetScreenState
     });
   }
 
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
+    if (cleanPhone.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('رقم الهاتف غير متوفر')),
+        );
+      }
+      return;
+    }
+    final uri = Uri(scheme: 'tel', path: cleanPhone);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تعذر إجراء المكالمة')),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح تطبيق الهاتف')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openWhatsApp(String phoneNumber, String studentName) async {
+    var cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d]'), '');
+    if (cleanPhone.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('رقم الهاتف غير متوفر للواتساب')),
+        );
+      }
+      return;
+    }
+    if (cleanPhone.startsWith('01')) {
+      cleanPhone = '2$cleanPhone';
+    }
+    final message = Uri.encodeComponent(
+      'سلام ونعمة، افتقدنا $studentName في حصة مدارس الأحد اليوم ونود الاطمئنان عليه 🙏',
+    );
+    final uri = Uri.parse('https://wa.me/$cleanPhone?text=$message');
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح تطبيق واتساب')),
+        );
+      }
+    }
+  }
+
   Future<void> _showVisitationSheet() async {
     if (_selectedClass == null) return;
     showModalBottomSheet(
@@ -409,15 +468,11 @@ class _ServantAttendanceSheetScreenState
                                           ),
                                           label: const Text('اتصال'),
                                           onPressed: () {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'جاري الاتصال بـ ${item.parentPhone.isNotEmpty ? item.parentPhone : item.studentNameAr}',
-                                                ),
-                                              ),
-                                            );
+                                            final targetPhone =
+                                                item.parentPhone.isNotEmpty
+                                                    ? item.parentPhone
+                                                    : item.phone;
+                                            _makePhoneCall(targetPhone);
                                           },
                                         ),
                                         const SizedBox(width: 8),
@@ -433,14 +488,13 @@ class _ServantAttendanceSheetScreenState
                                           ),
                                           label: const Text('واتساب'),
                                           onPressed: () {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'فتح محادثة واتساب مع ولي أمر ${item.studentNameAr}',
-                                                ),
-                                              ),
+                                            final targetPhone =
+                                                item.parentPhone.isNotEmpty
+                                                    ? item.parentPhone
+                                                    : item.phone;
+                                            _openWhatsApp(
+                                              targetPhone,
+                                              item.studentNameAr,
                                             );
                                           },
                                         ),
