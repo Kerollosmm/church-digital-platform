@@ -74,7 +74,7 @@ class SupabaseEventBookingsAdminRepository
           .toList();
       return Right(list);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -91,7 +91,7 @@ class SupabaseEventBookingsAdminRepository
           .toList();
       return Right(list);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -108,7 +108,7 @@ class SupabaseEventBookingsAdminRepository
           .toList();
       return Right(list);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -130,7 +130,7 @@ class SupabaseEventBookingsAdminRepository
           .toList();
       return Right(list);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -153,7 +153,7 @@ class SupabaseEventBookingsAdminRepository
       );
       return const Right(null);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -172,7 +172,7 @@ class SupabaseEventBookingsAdminRepository
           .toList();
       return Right(list);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -197,7 +197,7 @@ class SupabaseEventBookingsAdminRepository
       );
       return const Right(null);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -216,7 +216,7 @@ class SupabaseEventBookingsAdminRepository
       );
       return const Right(null);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -237,7 +237,7 @@ class SupabaseEventBookingsAdminRepository
       );
       return const Right(null);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -258,7 +258,7 @@ class SupabaseEventBookingsAdminRepository
       );
       return const Right(null);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 }

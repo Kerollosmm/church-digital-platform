@@ -23,7 +23,7 @@ class SupabaseEventBookingRepository implements EventBookingRepository {
           .toList();
       return Right(list);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(Failure.fromError(e));
     }
   }
 
@@ -46,7 +46,7 @@ class SupabaseEventBookingRepository implements EventBookingRepository {
       }
       return Right(list);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(Failure.fromError(e));
     }
   }
 
@@ -69,7 +69,7 @@ class SupabaseEventBookingRepository implements EventBookingRepository {
       );
       return Right(bookingId.toString());
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(Failure.fromError(e));
     }
   }
 
@@ -87,7 +87,7 @@ class SupabaseEventBookingRepository implements EventBookingRepository {
           .toList();
       return Right(list);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(Failure.fromError(e));
     }
   }
 }

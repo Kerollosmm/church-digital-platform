@@ -92,7 +92,7 @@ class SupabaseSundaySchoolAdminRepository
 
       return Right(list);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -118,7 +118,7 @@ class SupabaseSundaySchoolAdminRepository
 
       return Right(SundaySchoolClassModel.fromJson(res));
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -144,7 +144,7 @@ class SupabaseSundaySchoolAdminRepository
 
       return const Right(null);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -155,7 +155,7 @@ class SupabaseSundaySchoolAdminRepository
 
       return const Right(null);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -181,7 +181,7 @@ class SupabaseSundaySchoolAdminRepository
 
       return Right(list);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -200,7 +200,7 @@ class SupabaseSundaySchoolAdminRepository
       });
       return const Right(null);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -215,7 +215,7 @@ class SupabaseSundaySchoolAdminRepository
           .eq('id', servantAssignmentId);
       return const Right(null);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -241,7 +241,7 @@ class SupabaseSundaySchoolAdminRepository
 
       return Right(list);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -273,7 +273,7 @@ class SupabaseSundaySchoolAdminRepository
 
       return Right(SundaySchoolStudentModel.fromJson(res));
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -306,7 +306,7 @@ class SupabaseSundaySchoolAdminRepository
 
       return const Right(null);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -316,7 +316,7 @@ class SupabaseSundaySchoolAdminRepository
       await _client.from('sunday_school_students').delete().eq('id', studentId);
       return const Right(null);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -344,7 +344,7 @@ class SupabaseSundaySchoolAdminRepository
 
       return Right(list);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -395,7 +395,7 @@ class SupabaseSundaySchoolAdminRepository
 
       return Right(analytics);
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 
@@ -418,7 +418,7 @@ class SupabaseSundaySchoolAdminRepository
       );
       return Right(Map<String, dynamic>.from(res as Map));
     } catch (e) {
-      return Left(Failure(code: 'INTERNAL', message: e.toString()));
+      return Left(Failure.from(e));
     }
   }
 }

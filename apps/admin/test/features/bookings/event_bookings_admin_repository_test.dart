@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:admin/features/bookings/event_bookings_admin_repository.dart';
 import '../../helpers/mock_supabase.dart';
 
@@ -89,5 +90,33 @@ void main() {
         expect(calledArgs!['p_override_notes'], equals('ملاحظة'));
       },
     );
+
+    test('sanitizes PostgrestException without raw leaks', () async {
+      final mock = MockSupabase(
+        rpc: {
+          'admin_assign_priest_and_venue': (_) async {
+            throw const PostgrestException(
+              message: 'FORBIDDEN',
+              code: '42501',
+              details: 'sensitive db internal table info',
+            );
+          },
+        },
+      );
+
+      final repo = SupabaseEventBookingsAdminRepository(client: mock.build());
+      final res = await repo.assignPriestAndVenue(
+        bookingId: 'b-999',
+        venueId: 'v-111',
+        priestId: 7501,
+      );
+
+      expect(res.isLeft, isTrue);
+      res.fold((f) {
+        expect(f.code, equals('FORBIDDEN'));
+        expect(f.message, equals('ليس لديك صلاحية لتنفيذ هذا الإجراء'));
+        expect(f.message.contains('sensitive db internal'), isFalse);
+      }, (_) => fail('expected failure'));
+    });
   });
 }
