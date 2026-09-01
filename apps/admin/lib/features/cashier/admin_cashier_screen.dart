@@ -32,7 +32,11 @@ class _AdminCashierScreenState extends State<AdminCashierScreen> {
 
   Future<void> _loadBookings() async {
     setState(() => _isLoading = true);
-    final res = await widget.repository.fetchEventBookings();
+    final query = _searchController.text.trim();
+    final res = await widget.repository.fetchEventBookings(
+      categoryFilter: _selectedCategory,
+      searchQuery: query.isNotEmpty ? query : null,
+    );
     res.fold(
       (fail) => setState(() {
         _error = fail.message;
@@ -243,7 +247,7 @@ class _AdminCashierScreenState extends State<AdminCashierScreen> {
                                   icon: const Icon(Icons.clear),
                                   onPressed: () {
                                     _searchController.clear();
-                                    setState(() {});
+                                    _loadBookings();
                                   },
                                 )
                               : null,
@@ -253,6 +257,7 @@ class _AdminCashierScreenState extends State<AdminCashierScreen> {
                             vertical: 12,
                           ),
                         ),
+                        onSubmitted: (_) => _loadBookings(),
                         onChanged: (_) => setState(() {}),
                       ),
                     ),
@@ -266,21 +271,28 @@ class _AdminCashierScreenState extends State<AdminCashierScreen> {
                       ChoiceChip(
                         label: const Text('جميع المعاملات'),
                         selected: _selectedCategory == null,
-                        onSelected: (_) => setState(() => _selectedCategory = null),
+                        onSelected: (_) {
+                          setState(() => _selectedCategory = null);
+                          _loadBookings();
+                        },
                       ),
                       const SizedBox(width: 8),
                       ChoiceChip(
                         label: const Text('✝️ أسرار ومناسبات كنسية'),
                         selected: _selectedCategory == 'SACRAMENT',
-                        onSelected: (_) =>
-                            setState(() => _selectedCategory = 'SACRAMENT'),
+                        onSelected: (_) {
+                          setState(() => _selectedCategory = 'SACRAMENT');
+                          _loadBookings();
+                        },
                       ),
                       const SizedBox(width: 8),
                       ChoiceChip(
                         label: const Text('🚌 رحلات ومؤتمرات'),
                         selected: _selectedCategory == 'ACTIVITY',
-                        onSelected: (_) =>
-                            setState(() => _selectedCategory = 'ACTIVITY'),
+                        onSelected: (_) {
+                          setState(() => _selectedCategory = 'ACTIVITY');
+                          _loadBookings();
+                        },
                       ),
                     ],
                   ),

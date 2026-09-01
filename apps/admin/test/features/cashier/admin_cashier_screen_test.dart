@@ -44,8 +44,22 @@ class FakeCashierAdminRepository implements EventBookingsAdminRepository {
   @override
   Future<Either<Failure, List<EventBookingAdminItem>>> fetchEventBookings({
     String? statusFilter,
+    String? searchQuery,
+    String? categoryFilter,
   }) async {
-    return Right(bookings);
+    var list = bookings;
+    if (categoryFilter != null && categoryFilter.isNotEmpty) {
+      list = list.where((b) => b.category == categoryFilter).toList();
+    }
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      final q = searchQuery.toLowerCase();
+      list = list.where((b) {
+        final phone = b.customerPhone?.toLowerCase() ?? '';
+        final name = b.customerName?.toLowerCase() ?? '';
+        return phone.contains(q) || name.contains(q);
+      }).toList();
+    }
+    return Right(list);
   }
 
   @override

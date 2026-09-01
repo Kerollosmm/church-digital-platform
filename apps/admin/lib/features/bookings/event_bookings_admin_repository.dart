@@ -5,6 +5,8 @@ import 'event_booking_admin_models.dart';
 abstract interface class EventBookingsAdminRepository {
   Future<Either<Failure, List<EventBookingAdminItem>>> fetchEventBookings({
     String? statusFilter,
+    String? searchQuery,
+    String? categoryFilter,
   });
   Future<Either<Failure, List<VenueResourceItem>>> fetchVenues();
   Future<Either<Failure, List<PriestAdminItem>>> fetchPriests();
@@ -56,6 +58,8 @@ class SupabaseEventBookingsAdminRepository
   @override
   Future<Either<Failure, List<EventBookingAdminItem>>> fetchEventBookings({
     String? statusFilter,
+    String? searchQuery,
+    String? categoryFilter,
   }) async {
     try {
       var query = _client
@@ -68,10 +72,29 @@ class SupabaseEventBookingsAdminRepository
         query = query.eq('status', statusFilter);
       }
 
+      if (categoryFilter != null && categoryFilter.isNotEmpty) {
+        query = query.eq('event_types.category', categoryFilter);
+      }
+
       final res = await query.order('created_at', ascending: false);
-      final list = (res as List<dynamic>)
+      var list = (res as List<dynamic>)
           .map((e) => EventBookingAdminItem.fromJson(e as Map<String, dynamic>))
           .toList();
+
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim().toLowerCase();
+        list = list.where((b) {
+          final phone = b.customerPhone?.toLowerCase() ?? '';
+          final name = b.customerName?.toLowerCase() ?? '';
+          final eventName = b.eventTypeName.toLowerCase();
+          final id = b.id.toLowerCase();
+          return phone.contains(q) ||
+              name.contains(q) ||
+              eventName.contains(q) ||
+              id.contains(q);
+        }).toList();
+      }
+
       return Right(list);
     } catch (e) {
       return Left(Failure.from(e));

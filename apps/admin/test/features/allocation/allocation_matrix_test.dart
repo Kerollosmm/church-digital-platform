@@ -74,6 +74,8 @@ class MockAllocationAdminRepository implements EventBookingsAdminRepository {
   @override
   Future<Either<Failure, List<EventBookingAdminItem>>> fetchEventBookings({
     String? statusFilter,
+    String? searchQuery,
+    String? categoryFilter,
   }) async {
     return Right(bookings);
   }
