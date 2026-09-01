@@ -41,22 +41,12 @@ CREATE INDEX IF NOT EXISTS idx_service_slots_service_id ON public.service_slots(
 CREATE INDEX IF NOT EXISTS idx_bookings_slot_id ON public.bookings(slot_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON public.bookings(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON public.payments(booking_id);
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'payments' AND column_name = 'video_id') THEN
-    CREATE INDEX IF NOT EXISTS idx_payments_video_id ON public.payments(video_id);
-  END IF;
-END $$;
+CREATE INDEX IF NOT EXISTS idx_payments_video_id ON public.payments(video_id);
 CREATE INDEX IF NOT EXISTS idx_waiting_list_slot_id ON public.waiting_list(slot_id);
 CREATE INDEX IF NOT EXISTS idx_waiting_list_user_id ON public.waiting_list(user_id);
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'video_purchases') THEN
-    CREATE INDEX IF NOT EXISTS idx_video_purchases_video_id ON public.video_purchases(video_id);
-    CREATE INDEX IF NOT EXISTS idx_video_purchases_user_id ON public.video_purchases(user_id);
-    CREATE INDEX IF NOT EXISTS idx_video_purchases_payment_id ON public.video_purchases(payment_id);
-  END IF;
-END $$;
+CREATE INDEX IF NOT EXISTS idx_video_purchases_video_id ON public.video_purchases(video_id);
+CREATE INDEX IF NOT EXISTS idx_video_purchases_user_id ON public.video_purchases(user_id);
+CREATE INDEX IF NOT EXISTS idx_video_purchases_payment_id ON public.video_purchases(payment_id);
 CREATE INDEX IF NOT EXISTS idx_complaints_user_id ON public.complaints(user_id);
 CREATE INDEX IF NOT EXISTS idx_complaints_assigned_to ON public.complaints(assigned_to);
 

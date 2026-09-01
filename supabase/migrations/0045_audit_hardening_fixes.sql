@@ -43,15 +43,10 @@ REVOKE ALL ON FUNCTION public.claim_event_outbox_batch(INT) FROM PUBLIC, anon, a
 GRANT EXECUTE ON FUNCTION public.claim_event_outbox_batch(INT) TO service_role;
 
 -- 2. Add unique constraint on video_purchases and fix purchase_video RPC
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'video_purchases') THEN
-    ALTER TABLE public.video_purchases
-      DROP CONSTRAINT IF EXISTS uq_video_purchases_user_video;
-    ALTER TABLE public.video_purchases
-      ADD CONSTRAINT uq_video_purchases_user_video UNIQUE (video_id, user_id);
-  END IF;
-END $$;
+ALTER TABLE public.video_purchases 
+  DROP CONSTRAINT IF EXISTS uq_video_purchases_user_video;
+ALTER TABLE public.video_purchases 
+  ADD CONSTRAINT uq_video_purchases_user_video UNIQUE (video_id, user_id);
 
 DROP FUNCTION IF EXISTS public.purchase_video(BIGINT);
 DROP FUNCTION IF EXISTS public.purchase_video(BIGINT, UUID);
@@ -101,12 +96,10 @@ REVOKE ALL ON FUNCTION public.purchase_video(BIGINT, UUID) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.purchase_video(BIGINT, UUID) TO authenticated;
 
 -- 3. video_purchases RLS tenant isolation & grants
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'video_purchases') THEN
-    DROP POLICY IF EXISTS "video_purchases own read" ON public.video_purchases;
-    DROP POLICY IF EXISTS "p0_video_purchases_own_read" ON public.video_purchases;
-    EXECUTE 'CREATE POLICY "p0_video_purchases_own_read" ON public.video_purchases FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()) AND tenant_id = public.tenant_id())';
-    EXECUTE 'GRANT SELECT ON public.video_purchases TO authenticated';
-  END IF;
-END $$;
+DROP POLICY IF EXISTS "video_purchases own read" ON public.video_purchases;
+DROP POLICY IF EXISTS "p0_video_purchases_own_read" ON public.video_purchases;
+CREATE POLICY "p0_video_purchases_own_read" ON public.video_purchases
+  FOR SELECT TO authenticated
+  USING (user_id = (SELECT auth.uid()) AND tenant_id = public.tenant_id());
+
+GRANT SELECT ON public.video_purchases TO authenticated;
