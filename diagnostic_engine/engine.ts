@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import * as crypto from "crypto";
-import * as fs from "fs";
-import * as path from "path";
+import * as crypto from "node:crypto";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as dotenv from "dotenv";
 
 dotenv.config();
@@ -587,7 +587,17 @@ export async function run() {
   console.log("\n" + report);
 }
 
-run().catch((err) => {
-  console.error("Diagnostic engine failure:", err);
-  process.exit(1);
-});
+const isMain =
+  Boolean((import.meta as any).main) ||
+  (typeof process !== "undefined" &&
+    Array.isArray(process.argv) &&
+    process.argv[1] &&
+    (process.argv[1].endsWith("engine.ts") || process.argv[1].endsWith("engine.js")) &&
+    !process.argv.some((arg) => arg.includes("test")));
+
+if (isMain) {
+  run().catch((err) => {
+    console.error("Diagnostic engine failure:", err);
+    process.exit(1);
+  });
+}

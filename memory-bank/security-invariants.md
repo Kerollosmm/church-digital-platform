@@ -9,6 +9,8 @@
     GRANT EXECUTE ON FUNCTION public.<name>(<args>) TO service_role; -- or authenticated
     ```
   - Functions must always specify `SET search_path = public, pg_temp;` to prevent search_path hijacking.
+- **Dynamic SQL Sanitization**:
+  - Dynamic SQL statements granting sequence permissions must use `EXECUTE format('...', v_seq::regclass)` to eliminate injection risks and conform to SAST requirements.
 
 ## 2. Row Level Security (RLS) Rules
 - **RLS Mandatory on All Tables**:
@@ -49,3 +51,5 @@
   - Roles must be resolved directly from `public.users.role` in PostgreSQL using service-role queries, never relying on JWT claims or metadata.
 - **Zero-Leak Error Responses**:
   - All internal 500 errors must return sanitized JSON `{"error": "INTERNAL", "message_ar": "..."}` without stack traces or exception payloads.
+- **Origin-Validated CORS**:
+  - Wildcard `Access-Control-Allow-Origin: *` is forbidden on authenticated edge functions. Must use dynamic origin reflection validated against `ALLOWED_ORIGINS` / `DEFAULT_ALLOWED_ORIGINS` with `Vary: Origin`.

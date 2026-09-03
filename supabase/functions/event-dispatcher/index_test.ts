@@ -146,6 +146,92 @@ Deno.test("event-dispatcher: FCM_PUSH invalid private key -> FAILED", async () =
   }
 });
 
+Deno.test("event-dispatcher: FCM OAuth2 exchange HTTP error returns null and marks outbox row FAILED", async () => {
+  const fake = new FakeClient(["event_outbox"]);
+  fake.seed("event_outbox", [
+    {
+      id: 22,
+      handler_type: "FCM_PUSH",
+      payload: {
+        fcm_token: "token_abc_123",
+        title: "Test Title",
+      },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  Deno.env.set("FCM_PROJECT_ID", "church-app-test");
+  Deno.env.set("FCM_CLIENT_EMAIL", "fcm-test@church-app-test.iam.gserviceaccount.com");
+  const validPem = await generatePemPrivateKey();
+  Deno.env.set("FCM_PRIVATE_KEY", validPem);
+
+  const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL) => {
+    const u = String(url);
+    if (u.includes("oauth2.googleapis.com/token")) {
+      return Promise.resolve(jsonRes({ error: "invalid_client" }, 401));
+    }
+    return Promise.resolve(jsonRes({}, 404));
+  });
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+    });
+
+    assertEquals(res.status, 200);
+    assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
+  } finally {
+    fetchStub.restore();
+  }
+});
+
+Deno.test("event-dispatcher: FCM OAuth2 network throw returns null and marks outbox row FAILED", async () => {
+  const fake = new FakeClient(["event_outbox"]);
+  fake.seed("event_outbox", [
+    {
+      id: 23,
+      handler_type: "FCM_PUSH",
+      payload: {
+        fcm_token: "token_abc_123",
+        title: "Test Title",
+      },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  Deno.env.set("FCM_PROJECT_ID", "church-app-test");
+  Deno.env.set("FCM_CLIENT_EMAIL", "fcm-test@church-app-test.iam.gserviceaccount.com");
+  const validPem = await generatePemPrivateKey();
+  Deno.env.set("FCM_PRIVATE_KEY", validPem);
+
+  const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL) => {
+    const u = String(url);
+    if (u.includes("oauth2.googleapis.com/token")) {
+      throw new TypeError("Failed to fetch");
+    }
+    return Promise.resolve(jsonRes({}, 404));
+  });
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+    });
+
+    assertEquals(res.status, 200);
+    assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
+  } finally {
+    fetchStub.restore();
+  }
+});
+
 Deno.test("event-dispatcher: WHATSAPP booking_payment_received template sends with 2 parameters", async () => {
   const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
   fake.seed("whatsapp_optins", [

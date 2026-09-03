@@ -140,12 +140,6 @@ void main() {
         ),
       );
 
-      if (res.isLeft) {
-        // ignore: avoid_print
-        print(
-          'upsertPayoutChannel error: ${res.leftOrNull?.message} (${res.leftOrNull?.code})',
-        );
-      }
       expect(res.isRight, isTrue);
     });
   });

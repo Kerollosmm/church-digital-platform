@@ -141,6 +141,40 @@ Deno.test("otp-sms: invalid or missing signature returns 401 UNAUTHORIZED", asyn
   }
 });
 
+Deno.test("otp-sms: malformed webhook payload throws verification error and returns 401 UNAUTHORIZED", async () => {
+  const malformedPayload = "{ invalid json payload: missing quote }";
+  const req = new Request("https://localhost/functions/v1/otp-sms", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "webhook-id": "msg_malformed",
+      "webhook-timestamp": String(Math.floor(Date.now() / 1000)),
+      "webhook-signature": "v1,invalid_sig",
+    },
+    body: malformedPayload,
+  });
+
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(jsonRes({}))
+  );
+
+  try {
+    const res = await handleRequest(req, {
+      fetch: fetchStub,
+      phoneId: "phone_12345",
+      whatsappToken: "token_abc123",
+      hookSecret: TEST_SECRET_RAW,
+    });
+
+    assertEquals(res.status, 401);
+    const resBody = await res.json();
+    assertEquals(resBody.error, "UNAUTHORIZED");
+    assertEquals(fetchStub.calls.length, 0);
+  } finally {
+    fetchStub.restore();
+  }
+});
+
 Deno.test("otp-sms: missing phone or otp returns 400 BAD_REQUEST", async () => {
   const payloadObj = {
     user: { phone: "+201234567890" },

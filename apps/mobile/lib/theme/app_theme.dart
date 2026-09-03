@@ -64,8 +64,6 @@ abstract final class AppTheme {
         surfaceContainer: AppColors.surfaceContainer,
         surfaceContainerHigh: AppColors.surfaceContainerHigh,
         surfaceContainerHighest: AppColors.surfaceContainerHighest,
-        // ignore: deprecated_member_use
-        surfaceVariant: AppColors.surfaceVariant,
         outline: AppColors.outline,
         outlineVariant: AppColors.outlineVariant,
         surfaceTint: AppColors.surfaceTint,

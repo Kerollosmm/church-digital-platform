@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'web_download_stub.dart' if (dart.library.html) 'web_download.dart';
+import 'web_download_stub.dart' if (dart.library.js_interop) 'web_download.dart';
 
 class ExportReportButton extends StatefulWidget {
   const ExportReportButton({

@@ -1,9 +1,62 @@
 import { makeServiceClient } from "./client.ts";
 import { messageFor } from "./messages.ts";
 
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:54321',
+  'http://127.0.0.1:54321',
+];
+
+export function getAllowedOrigins(): string[] {
+  const envOrigins = typeof Deno !== 'undefined' && Deno.env ? (Deno.env.get('ALLOWED_ORIGINS') || Deno.env.get('ALLOWED_ORIGIN')) : undefined;
+  if (envOrigins) {
+    return envOrigins.split(',').map((o) => o.trim()).filter(Boolean);
+  }
+  return DEFAULT_ALLOWED_ORIGINS;
+}
+
+export function isAllowedOrigin(origin: string | null | undefined): boolean {
+  if (!origin) return false;
+  const allowed = getAllowedOrigins();
+  if (allowed.includes(origin)) return true;
+  try {
+    const url = new URL(origin);
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+export function getCorsHeaders(originOrReq?: string | Request | Headers | null): Record<string, string> {
+  let origin: string | null = null;
+  if (typeof originOrReq === 'string') {
+    origin = originOrReq;
+  } else if (originOrReq instanceof Request) {
+    origin = originOrReq.headers.get('origin');
+  } else if (originOrReq instanceof Headers) {
+    origin = originOrReq.get('origin');
+  }
+
+  const defaultOrigin = getAllowedOrigins()[0] ?? 'http://localhost:3000';
+  const resolvedOrigin = origin && isAllowedOrigin(origin) ? origin : defaultOrigin;
+
+  return {
+    'Access-Control-Allow-Origin': resolvedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Vary': 'Origin',
+  };
+}
+
 export const corsHeaders: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  'Access-Control-Allow-Origin': (typeof Deno !== 'undefined' && Deno.env && (Deno.env.get('ALLOWED_ORIGIN') || Deno.env.get('ALLOWED_ORIGINS')?.split(',')[0]?.trim())) || 'http://localhost:3000',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Vary': 'Origin',
 };
 
 export type ErrorCode =
@@ -32,9 +85,11 @@ export function respond(
   codeOrBody?: ErrorCode | unknown,
   message?: string,
   body?: unknown,
+  originOrReq?: string | Request | Headers | null,
 ): Response {
+  const dynamicCors = getCorsHeaders(originOrReq);
   const headers = new Headers({
-    ...corsHeaders,
+    ...dynamicCors,
     "Content-Type": "application/json",
   });
 
@@ -57,7 +112,7 @@ export function respond(
       return new Response(codeOrBody, {
         status,
         headers: new Headers({
-          ...corsHeaders,
+          ...dynamicCors,
           "Content-Type": "text/plain; charset=utf-8",
         }),
       });
@@ -65,7 +120,7 @@ export function respond(
     return new Response(JSON.stringify(codeOrBody), { status, headers });
   }
 
-  return new Response(null, { status, headers: new Headers(corsHeaders) });
+  return new Response(null, { status, headers: new Headers(dynamicCors) });
 }
 
 function createStrictServiceClient(): any {
@@ -84,7 +139,7 @@ export async function auth(
   opts?: AuthOptions,
 ): Promise<Response | AuthUser> {
   if (req.method === "OPTIONS") {
-    return respond(200, "ok");
+    return respond(200, "ok", undefined, undefined, req);
   }
 
   const authHeader =

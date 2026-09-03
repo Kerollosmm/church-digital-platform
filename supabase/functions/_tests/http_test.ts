@@ -1,5 +1,5 @@
 import { assertEquals, assertExists } from "jsr:@std/assert";
-import { auth, respond, corsHeaders, ErrorCode, AuthUser } from "../_shared/http.ts";
+import { auth, respond, corsHeaders, ErrorCode, AuthUser, verifyCronOrServiceAuth } from "../_shared/http.ts";
 import { FakeClient } from "../_shared/fake_supabase.ts";
 
 class FakeAuthSupabaseClient extends FakeClient {
@@ -28,7 +28,7 @@ class FakeAuthSupabaseClient extends FakeClient {
 Deno.test("http seam: respond() creates standard error response with CORS headers and message_ar", async () => {
   const res = respond(401, "UNAUTHORIZED", "Missing credentials");
   assertEquals(res.status, 401);
-  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "http://localhost:3000");
   assertEquals(res.headers.get("Content-Type"), "application/json");
 
   const body = await res.json();
@@ -48,7 +48,7 @@ Deno.test("http seam: respond() error body carries NO message field even when su
 Deno.test("http seam: respond() creates standard error with message_ar when message is omitted", async () => {
   const res = respond(500, "INTERNAL");
   assertEquals(res.status, 500);
-  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "http://localhost:3000");
 
   const body = await res.json();
   assertEquals(body, {
@@ -77,7 +77,7 @@ Deno.test("http seam: unknown error code receives FALLBACK message_ar", async ()
 Deno.test("http seam: respond() handles success payloads with CORS headers", async () => {
   const res = respond(200, { ok: true, data: [1, 2, 3] });
   assertEquals(res.status, 200);
-  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "http://localhost:3000");
 
   const body = await res.json();
   assertEquals(body, { ok: true, data: [1, 2, 3] });
@@ -91,8 +91,40 @@ Deno.test("http seam: auth() handles OPTIONS preflight request", async () => {
   assertEquals(res instanceof Response, true);
   if (res instanceof Response) {
     assertEquals(res.status, 200);
-    assertEquals(res.headers.get("Access-Control-Allow-Origin"), "*");
+    assertEquals(res.headers.get("Access-Control-Allow-Origin"), "http://localhost:3000");
   }
+});
+
+Deno.test("http seam: respond(200) returns http://localhost:3000 by default", () => {
+  const res = respond(200, { ok: true });
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "http://localhost:3000");
+  assertEquals(res.headers.get("Vary"), "Origin");
+});
+
+Deno.test("http seam: respond(200) reflects allowed origin", () => {
+  const res = respond(200, { ok: true }, undefined, undefined, "http://localhost:8080");
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "http://localhost:8080");
+  assertEquals(res.headers.get("Vary"), "Origin");
+});
+
+Deno.test("http seam: auth() OPTIONS with allowed origin reflects origin and sets Vary", async () => {
+  const req = new Request("https://localhost/functions/v1/test", {
+    method: "OPTIONS",
+    headers: { Origin: "http://localhost:8080" },
+  });
+  const res = await auth(req);
+  assertEquals(res instanceof Response, true);
+  if (res instanceof Response) {
+    assertEquals(res.status, 200);
+    assertEquals(res.headers.get("Access-Control-Allow-Origin"), "http://localhost:8080");
+    assertEquals(res.headers.get("Vary"), "Origin");
+  }
+});
+
+Deno.test("http seam: disallowed origin falls back to default allowed origin", () => {
+  const res = respond(200, { ok: true }, undefined, undefined, "https://malicious-site.com");
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "http://localhost:3000");
+  assertEquals(res.headers.get("Vary"), "Origin");
 });
 
 Deno.test("http seam: auth() rejects request with missing Authorization header (401)", async () => {
@@ -288,4 +320,68 @@ Deno.test("http seam: auth() token failure leaks NO library message into body (z
   const raw = JSON.stringify(body);
   assertEquals(raw.includes("GoTrue"), false, "library message leaked");
   assertEquals(raw.includes("8812"), false, "internal detail leaked");
+});
+
+Deno.test("verifyCronOrServiceAuth: passes with valid Bearer cronSecret in Authorization header", () => {
+  const req = new Request("https://localhost/test", {
+    headers: { Authorization: "Bearer cron_secret_abc" },
+  });
+  const res = verifyCronOrServiceAuth(req, { cronSecret: "cron_secret_abc" });
+  assertEquals(res, null);
+});
+
+Deno.test("verifyCronOrServiceAuth: passes with valid x-cron-secret header", () => {
+  const req = new Request("https://localhost/test", {
+    headers: { "x-cron-secret": "cron_secret_abc" },
+  });
+  const res = verifyCronOrServiceAuth(req, { cronSecret: "cron_secret_abc" });
+  assertEquals(res, null);
+});
+
+Deno.test("verifyCronOrServiceAuth: passes with valid Bearer serviceRoleKey", () => {
+  const req = new Request("https://localhost/test", {
+    headers: { Authorization: "Bearer service_role_xyz" },
+  });
+  const res = verifyCronOrServiceAuth(req, { serviceRoleKey: "service_role_xyz" });
+  assertEquals(res, null);
+});
+
+Deno.test("verifyCronOrServiceAuth: returns 401 UNAUTHORIZED on missing auth headers", async () => {
+  const req = new Request("https://localhost/test");
+  const res = verifyCronOrServiceAuth(req, { cronSecret: "cron_secret_abc" });
+  assertExists(res);
+  assertEquals(res.status, 401);
+  const body = await res.json();
+  assertEquals(body.error, "UNAUTHORIZED");
+});
+
+Deno.test("verifyCronOrServiceAuth: returns 401 UNAUTHORIZED on invalid token", async () => {
+  const req = new Request("https://localhost/test", {
+    headers: { Authorization: "Bearer wrong_token" },
+  });
+  const res = verifyCronOrServiceAuth(req, { cronSecret: "cron_secret_abc" });
+  assertExists(res);
+  assertEquals(res.status, 401);
+  const body = await res.json();
+  assertEquals(body.error, "UNAUTHORIZED");
+});
+
+Deno.test("verifyCronOrServiceAuth: returns 500 INTERNAL when no secrets configured", async () => {
+  const prevCron = Deno.env.get("CRON_SECRET");
+  const prevServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  Deno.env.delete("CRON_SECRET");
+  Deno.env.delete("SUPABASE_SERVICE_ROLE_KEY");
+  try {
+    const req = new Request("https://localhost/test", {
+      headers: { Authorization: "Bearer any_token" },
+    });
+    const res = verifyCronOrServiceAuth(req, { cronSecret: "", serviceRoleKey: "" });
+    assertExists(res);
+    assertEquals(res.status, 500);
+    const body = await res.json();
+    assertEquals(body.error, "INTERNAL");
+  } finally {
+    if (prevCron !== undefined) Deno.env.set("CRON_SECRET", prevCron);
+    if (prevServiceKey !== undefined) Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", prevServiceKey);
+  }
 });

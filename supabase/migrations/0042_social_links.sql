@@ -38,7 +38,7 @@ DECLARE
 BEGIN
   v_seq := pg_get_serial_sequence('public.social_links', 'id');
   IF v_seq IS NOT NULL THEN
-    EXECUTE 'GRANT USAGE, SELECT ON SEQUENCE ' || v_seq || ' TO authenticated';
+    EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %s TO authenticated', v_seq::regclass);
   END IF;
 END $$;
 
