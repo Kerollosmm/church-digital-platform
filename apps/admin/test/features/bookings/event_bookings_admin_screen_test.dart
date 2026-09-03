@@ -117,6 +117,16 @@ class FakeEventBookingsAdminRepository implements EventBookingsAdminRepository {
     quickCashCalled = true;
     return const Right(null);
   }
+
+  @override
+  Future<Either<Failure, List<EventBookingAdminItem>>> searchCashierBookings({
+    String? searchQuery,
+    String? categoryFilter,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    return Right(bookings);
+  }
 }
 
 

@@ -63,6 +63,19 @@ class FakeCashierAdminRepository implements EventBookingsAdminRepository {
   }
 
   @override
+  Future<Either<Failure, List<EventBookingAdminItem>>> searchCashierBookings({
+    String? searchQuery,
+    String? categoryFilter,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    return fetchEventBookings(
+      searchQuery: searchQuery,
+      categoryFilter: categoryFilter,
+    );
+  }
+
+  @override
   Future<Either<Failure, void>> quickCashCollect({
     required String bookingId,
     required int amountPiastres,
@@ -217,5 +230,59 @@ void main() {
       expect(find.text('تم تحصيل النقدية وتحديث الحجز بنجاح 🎉'), findsOneWidget);
     },
   );
+
+  test('EventBookingAdminItem.fromJson safely parses flat RPC keys', () {
+    final flatRpcJson = {
+      'id': 'b-rpc-1',
+      'customer_id': 'cust-1',
+      'customer_name': 'شنودة جورج',
+      'customer_phone': '01122334455',
+      'event_type_id': 'evt-1',
+      'event_type_name': 'سر مسحة المرضى',
+      'category': 'SACRAMENT',
+      'venue_name': 'هيكل مارمرقس',
+      'assigned_priest_id': 12,
+      'priest_name': 'أبونا ميخائيل',
+      'start_time': '2026-09-12T10:00:00Z',
+      'end_time': '2026-09-12T11:00:00Z',
+      'status': 'CONFIRMED',
+      'total_price_piastres': 10000,
+      'paid_amount_piastres': 5000,
+    };
+
+    final item = EventBookingAdminItem.fromJson(flatRpcJson);
+
+    expect(item.id, equals('b-rpc-1'));
+    expect(item.customerId, equals('cust-1'));
+    expect(item.customerName, equals('شنودة جورج'));
+    expect(item.customerPhone, equals('01122334455'));
+    expect(item.eventTypeName, equals('سر مسحة المرضى'));
+    expect(item.category, equals('SACRAMENT'));
+    expect(item.venueName, equals('هيكل مارمرقس'));
+    expect(item.assignedPriestId, equals(12));
+    expect(item.priestName, equals('أبونا ميخائيل'));
+    expect(item.totalPriceEgp, equals(100.0));
+    expect(item.paidAmountEgp, equals(50.0));
+    expect(item.remainingAmountEgp, equals(50.0));
+  });
+
+  test('searchCashierBookings returns filtered bookings correctly', () async {
+    final repo = FakeCashierAdminRepository();
+    final result = await repo.searchCashierBookings(
+      searchQuery: 'كيرلس',
+      categoryFilter: 'SACRAMENT',
+    );
+
+    expect(result.isRight, isTrue);
+    result.fold(
+      (f) => fail('should not fail: ${f.message}'),
+      (list) {
+        expect(list.length, equals(1));
+        expect(list.first.customerName, equals('كيرلس مينا'));
+        expect(list.first.category, equals('SACRAMENT'));
+      },
+    );
+  });
 }
+
 

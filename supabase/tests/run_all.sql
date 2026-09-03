@@ -69,3 +69,4 @@
 \ir 0077_sunday_school_management_test.sql
 \ir 0078_operational_pivot_test.sql
 \ir 0079_remote_replay_hardening_test.sql
+\ir 0080_drop_sunday_school_stack_test.sql

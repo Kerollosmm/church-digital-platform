@@ -30,6 +30,7 @@
   - **Meta Cloud API**: WhatsApp Business Graph API for transactional message templates
   - **Google Firebase**: FCM v1 HTTP API with OAuth2 bearer token exchange for push notifications
 - **AI Agent Context & Research Tooling**:
+  - **Fable-Engine MCP (`fable-engine`)**: stdio server configured in `~/.gemini/config/mcp_config.json` running `fable_mode_entry.py serve`, providing the `fable_session` tool for System 2 session lifecycle management, epistemic assertion logging, continuous refinement tracking (`log_refinement_cycle`), and formal invariant proofs.
   - **mem0 Vector Memory MCP**: Cross-session preferences and persistent facts
   - **NotebookLM MCP (`notebooklm-mcp`)**: Source-grounded architecture & domain research engine connected to curated project notebook `Flutter with Supabase Research` (`63ddabc2-5d6c-493c-8e2d-d61271d0c4db`, 30 sources) containing official Flutter/Supabase guides, temporal constraints, pgTAP patterns, and Spec 008 architecture blueprints.
 

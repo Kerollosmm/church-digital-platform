@@ -92,7 +92,6 @@ void main() {
       expect(find.text('حسابات التحصيل'), findsOneWidget);
       expect(find.text('التحليلات'), findsOneWidget);
       expect(find.text('الخزينة والتحصيل السريع'), findsOneWidget);
-      expect(find.text('مدارس الأحد'), findsOneWidget);
 
       await tester.tap(find.text('حجز يدوي'));
       await tester.pump();

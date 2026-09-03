@@ -1,22 +1,37 @@
 # Active Context: Church Digital Platform
 
 ## Current Focus & Status
-- **Current Milestone**: Church Platform Administrative & Product Pivot (`refactor/church-operational-pivot`) — **Mechanically Verified & Audited**.
+- **Current Milestone**: Performance Optimizations (OPT-01 – OPT-04) & Operational Hardening — **Completed & Verified**.
 - **Forensic Review Status**:
-  - Complete 12-phase audit performed (2026-08-30).
   - Test suites verification:
-    - PostgreSQL Schema: Migrations 0001–0078 replayed cleanly. 68/68 test suites pass individually (100%).
-    - FIND-001 resolved: Suite 0078 fixtures populated with unique `phone` numbers.
-    - Deno Edge Functions: 59/59 tests PASS (`deno test --allow-env --allow-net supabase/functions/`).
-    - Flutter Mobile: 94/94 tests PASS, 0 analyzer issues (`apps/mobile/`).
-    - Flutter Admin: 81/81 tests PASS, 0 analyzer issues (`apps/admin/`).
-- **Operational Tracks Verified**:
-  1. *Track 1 (Sacraments)*: Pastoral intake workflow for Weddings, Baptisms, Funerals with `required_documents_ar` checklist, zero commercial add-ons, on-the-spot cashier cash collection (`admin_quick_cash_collect`).
-  2. *Track 2 (Activities & Trips)*: Commercial add-on services enabled with price snapshotting, manual payment proof / wallet flow.
-  3. *Track 3 (Sunday School Visitation)*: Attendance checklist (`PRESENT`/`ABSENT`/`EXCUSED`) + 1-click `[📋 كشف الافتقاد]` visitation list (`get_class_visitation_list` RPC) with WhatsApp / Call actions.
+    - PostgreSQL Schema: Migrations 0001–0080 replayed cleanly. 70/70 test suites pass individually (100%).
+    - Deno Edge Functions: 60/60 tests PASS (`deno test --allow-env --allow-net supabase/functions/`).
+    - Flutter Mobile: 88/88 tests PASS, 0 analyzer issues (`apps/mobile/`).
+    - Flutter Admin: 80/80 tests PASS, 0 analyzer issues (`apps/admin/`).
+- **Performance Optimizations (OPT-01 – OPT-04) Completed**:
+  - **OPT-01**: `test-apps/user/app.js:195` DOM NodeList caching outside tab click event loop (164.86x measured speedup).
+  - **OPT-02**: `test-apps/superadmin/app.js:313` direct `for...of` loop over `authData.users` replacing `forEach`.
+  - **OPT-03**: `supabase/functions/event-dispatcher/index.ts:302` bulk status update using `.in('id', batchIds)` in 1 PostgREST roundtrip (10x roundtrip reduction) + `.in()` support on `FakeQuery` in `_shared/fake_supabase.ts`.
+  - **OPT-04**: `test-apps/user/app.js:654` Map lookup `state.slotsById.get(slotId)` with fallback to `find()` (18.36x measured speedup).
 - **Next Immediate Step**:
-  1. Stage and commit verified release branch `refactor/church-operational-pivot`.
-  2. Update `README.md` to prune stale Paymob references.
+  1. Stage and commit verified updates.
+
+---
+
+## Recent Commits / Changes
+- **Performance Optimizations Completed**:
+  - **OPT-01**: `test-apps/user/app.js:195` DOM NodeList caching outside tab click event loop (164.86x measured speedup).
+  - **OPT-02**: `test-apps/superadmin/app.js:313` direct `for...of` loop over `authData.users` replacing `forEach`.
+  - **OPT-03**: `supabase/functions/event-dispatcher/index.ts:302` bulk status update using `.in('id', batchIds)` in 1 PostgREST roundtrip (10x roundtrip reduction) + `.in()` support on `FakeQuery` in `_shared/fake_supabase.ts`.
+  - **OPT-04**: `test-apps/user/app.js:654` Map lookup `state.slotsById.get(slotId)` with fallback to `find()` (18.36x measured speedup).
+- **Sunday School & Attendance Decommissioning + Flutter Mobile Build Config Hardening (`refactor/church-operational-pivot`)**:
+  - *Android Release Signing*: `apps/mobile/android/app/build.gradle.kts` dynamically loads `key.properties` when present, configures `release` signing config, and falls back to `debug` signing without failing CI/local runs.
+  - *Android Application ID*: Retained unique identifier `eg.church.mobile` and cleaned stale TODO placeholder.
+  - *Credential Security Guard*: Added `key.properties.example` template and hardened `apps/mobile/.gitignore` against `key.properties`, `*.keystore`, and `*.jks`.
+  - *CMakeLists Ephemeral Invariant*: Verified that Linux/Windows `CMakeLists.txt` TODOs are upstream Flutter SDK issue #57146 that must remain untouched per engine warnings.
+  - *Database Forward Migration*: `0080_drop_sunday_school_stack.sql` cleanly drops RPCs (`get_class_visitation_list`, `record_bulk_attendance`, `is_class_servant`) and tables (`sunday_school_attendance`, `sunday_school_sessions`, `sunday_school_students`, `sunday_school_servants`, `sunday_school_classes`) CASCADE.
+  - *Client Directories Purged*: `apps/mobile/lib/features/sunday_school/` and `apps/admin/lib/features/sunday_school/` deleted along with their test suites.
+  - *Zero Orphan Invariant Verified*: Zero references remaining in mobile or admin app routers or widgets.
 
 ---
 

@@ -60,13 +60,17 @@ class EventBookingAdminItem {
   ) => EventBookingAdminItem(
     id: json['id'] as String? ?? '',
     customerId: json['customer_id'] as String? ?? '',
-    customerName: json['users']?['name'] as String?,
-    customerPhone: json['users']?['phone'] as String?,
+    customerName:
+        (json['customer_name'] ?? json['users']?['name']) as String?,
+    customerPhone:
+        (json['customer_phone'] ?? json['users']?['phone']) as String?,
     eventTypeId: json['event_type_id'] as String? ?? '',
     eventTypeName:
-        (json['event_types']?['name_ar'] ?? json['event_type_name'] ?? '')
+        (json['event_type_name'] ?? json['event_types']?['name_ar'] ?? '')
             as String,
-    category: (json['event_types']?['category'] ?? json['category'] ?? 'SACRAMENT')
+    category: (json['category'] ??
+            json['event_types']?['category'] ??
+            'SACRAMENT')
         as String,
     requiredDocumentsAr: (json['event_types']?['required_documents_ar']
                 as List<dynamic>?)
@@ -75,9 +79,9 @@ class EventBookingAdminItem {
         const [],
     assignedVenueId: json['assigned_venue_id'] as String?,
     venueName:
-        (json['venues_resources']?['name_ar'] ?? json['venue_name']) as String?,
+        (json['venue_name'] ?? json['venues_resources']?['name_ar']) as String?,
     assignedPriestId: (json['assigned_priest_id'] as num?)?.toInt(),
-    priestName: (json['priests']?['name'] ?? json['priest_name']) as String?,
+    priestName: (json['priest_name'] ?? json['priests']?['name']) as String?,
     startTime:
         DateTime.tryParse(json['start_time'] as String? ?? '') ??
         DateTime.now(),

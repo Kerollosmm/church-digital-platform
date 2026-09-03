@@ -12,6 +12,7 @@
     user: null,
     role: null,
     allSlots: [],
+    slotsById: new Map(),
     services: [],
     myBookings: [],
     lockInterval: null
@@ -185,6 +186,7 @@
 
   function setupTabNavigation() {
     const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
     tabBtns.forEach((btn) => {
       btn.addEventListener('click', () => {
         const targetId = btn.getAttribute('data-tab');
@@ -192,7 +194,7 @@
         tabBtns.forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
 
-        document.querySelectorAll('.tab-content').forEach((sec) => {
+        tabContents.forEach((sec) => {
           sec.style.display = 'none';
           sec.classList.remove('active');
         });
@@ -526,6 +528,7 @@
 
       if (error) throw error;
       state.allSlots = data || [];
+      state.slotsById = new Map(state.allSlots.map((s) => [s.slot_id, s]));
       renderFilteredSlots();
     } catch (err) {
       grid.innerHTML = `<div style="color:var(--ruby); padding:20px; grid-column:1/-1; text-align:center;">تعذر تحميل المواعيد: ${sb.mapErrorMessage(err)}</div>`;
@@ -651,7 +654,7 @@
       return;
     }
 
-    const slot = state.allSlots.find((s) => s.slot_id === slotId);
+    const slot = state.slotsById?.get(slotId) || state.allSlots.find((s) => s.slot_id === slotId);
     if (!slot) return;
 
     activeSelectedSlot = slot;

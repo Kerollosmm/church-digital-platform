@@ -33,7 +33,7 @@ class _AdminCashierScreenState extends State<AdminCashierScreen> {
   Future<void> _loadBookings() async {
     setState(() => _isLoading = true);
     final query = _searchController.text.trim();
-    final res = await widget.repository.fetchEventBookings(
+    final res = await widget.repository.searchCashierBookings(
       categoryFilter: _selectedCategory,
       searchQuery: query.isNotEmpty ? query : null,
     );

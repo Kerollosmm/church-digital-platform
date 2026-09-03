@@ -27,8 +27,6 @@ import 'features/payments/payment_review_queue_screen.dart';
 import 'features/payments/payments_admin_screen.dart';
 import 'features/payments/payouts_config_screen.dart';
 import 'features/slots/slots_admin_screen.dart';
-import 'features/sunday_school/sunday_school_admin_dashboard.dart';
-import 'features/sunday_school/sunday_school_admin_repository.dart';
 import 'features/sacraments/sacramental_registrar_screen.dart';
 import 'features/sacraments/sacraments_admin_repository.dart';
 import 'features/cashier/admin_cashier_screen.dart';
@@ -144,12 +142,7 @@ class AdminShell extends StatelessWidget {
                     selected: location == '/cashier',
                     onTap: () => context.go('/cashier'),
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.school),
-                    title: const Text('مدارس الأحد'),
-                    selected: location == '/sunday-school',
-                    onTap: () => context.go('/sunday-school'),
-                  ),
+
 
                 ],
               ),
@@ -323,18 +316,7 @@ GoRouter createAdminRouter({
               );
             },
           ),
-          GoRoute(
-            path: '/sunday-school',
-            name: 'sunday-school',
-            builder: (context, state) {
-              final database = resolveDb();
-              return SundaySchoolAdminDashboard(
-                repository: SupabaseSundaySchoolAdminRepository(
-                  client: database,
-                ),
-              );
-            },
-          ),
+
         ],
       ),
     ],

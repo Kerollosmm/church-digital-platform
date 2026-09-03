@@ -23,6 +23,17 @@ export class FakeQuery {
     const filtered = this.current().filter((r) => r[col] === val);
     return new FakeQuery(this.db, this.table, filtered, this.pendingUpdate);
   }
+  in(col: string, vals: unknown[]) {
+    const base = this.rows ?? this.db.get(this.table) ?? [];
+    const set = new Set(vals);
+    const filtered = base.filter((r) => set.has(r[col]));
+    if (this.pendingUpdate) {
+      for (const r of filtered) {
+        Object.assign(r, this.pendingUpdate);
+      }
+    }
+    return new FakeQuery(this.db, this.table, filtered, this.pendingUpdate);
+  }
   order(col: string) {
     const sorted = [...this.current()].sort((a, b) => String(a[col]).localeCompare(String(b[col])));
     return new FakeQuery(this.db, this.table, sorted, this.pendingUpdate);

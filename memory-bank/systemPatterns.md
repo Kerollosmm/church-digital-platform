@@ -103,3 +103,14 @@
 - Role hierarchy: `USER` -> `ADMIN` -> `SUPER_ADMIN`.
 - PRIEST role tier purged across database enums, edge functions, and client code.
 - Admin UI routes strictly verify `role IN ('ADMIN', 'SUPER_ADMIN')` directly from Postgres without metadata fallbacks.
+
+### 8. Cognitive Architecture Pattern: Fable Mode (ALWAYS ON)
+- **Deterministic System 2 Deliberation**: Dual-process cognitive reasoning mandates formal deliberation, invariant verification, and counter-factual hypothesis testing before any schema, RPC, or application modification.
+- **Unbypassable Cognitive Time-Lock**: Complex reasoning cycles require sustained contemplation budgets (pacing) without rushing into code mutations or brittle heuristics.
+- **Strict Cognitive Separation**:
+  - **Main Agent (System 2 Conductor & Master Architect)**: Dedicated exclusively to high-level system reasoning, DeepThink deliberation, formal invariant proofs, architectural blueprints, and multi-tier quality gates. Does not write or edit codebase files directly during planning/reasoning phases.
+  - **Subagent Fleet (Task Execution Engine)**: Executes 100% of code edits (`write_to_file`, `replace_file_content`), unit test authoring, migration scripts, and build fixes under explicit, bounded delegation contracts.
+- **Epistemic Calibration & Anti-Hallucination**:
+  - Every architectural assertion, assumption, and claim is strictly classified as `[PROVEN]` (with concrete evidence pointer to test results or source files), `[HYPOTHESIS]` (untested assumption requiring empirical probe), or `[UNKNOWN]` (unmeasured constraint).
+  - Architectures and system invariants are never committed on unverified `[HYPOTHESIS]`.
+

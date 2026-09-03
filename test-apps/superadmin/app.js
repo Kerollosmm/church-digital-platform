@@ -310,9 +310,9 @@
       try {
         const { data: authData } = await admin.auth.admin.listUsers();
         if (authData?.users) {
-          authData.users.forEach(au => {
+          for (const au of authData.users) {
             state.authUsersMap[au.id] = au;
-          });
+          }
         }
       } catch (authErr) {
         console.warn('Auth admin listUsers fallback:', authErr);

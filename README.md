@@ -1,11 +1,11 @@
 # Church Digital Platform
 
 Single Egyptian Coptic church: parishioner app + admin dashboard + booking/payment engine
-(Paymob wallets & Visa) + WhatsApp automation + confirmation-call booking flow (admin approves
+(manual payment rail: Vodafone Cash, InstaPay, cash verification) + WhatsApp automation + confirmation-call booking flow (admin approves
 each booking after calling) + analytics.
 
 Stack: Flutter (mobile + web admin) · Supabase (PostgreSQL 16, Auth phone OTP, RLS, Edge
-Functions) · Paymob · WhatsApp Cloud API.
+Functions) · WhatsApp Cloud API.
 
 Layout:
 - `apps/mobile` — Flutter app (parishioners + servants, Android/iOS)

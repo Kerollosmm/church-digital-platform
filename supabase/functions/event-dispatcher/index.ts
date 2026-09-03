@@ -46,11 +46,16 @@ type Result = { ok: boolean; retryable: boolean; error?: string };
 
 async function setStatus(
   client: SupabaseClient,
-  id: number,
+  id: number | number[],
   status: string,
   extra: Record<string, unknown> = {},
 ) {
-  await client.from("event_outbox").update({ status, ...extra }).eq("id", id);
+  if (Array.isArray(id)) {
+    if (id.length === 0) return;
+    await client.from("event_outbox").update({ status, ...extra }).in("id", id);
+  } else {
+    await client.from("event_outbox").update({ status, ...extra }).eq("id", id);
+  }
 }
 
 export async function sendWhatsApp(row: Row, deps: Deps): Promise<Result> {
@@ -295,8 +300,14 @@ export async function handleRequest(
 
     let handled = 0;
     for (let i = 0; i < rows.length; i += DRAIN_BATCH) {
+      const batch = rows.slice(i, i + DRAIN_BATCH);
+      const validRows = batch.filter((r) => Boolean(HANDLERS[r.handler_type]));
+      if (validRows.length > 0) {
+        await setStatus(client, validRows.map((r) => r.id), "PROCESSING");
+      }
+
       const results = await Promise.all(
-        rows.slice(i, i + DRAIN_BATCH).map(async (row) => {
+        batch.map(async (row) => {
           const handler = HANDLERS[row.handler_type];
           if (!handler) {
             await setStatus(client, row.id, "FAILED", {
@@ -304,7 +315,6 @@ export async function handleRequest(
             });
             return 0;
           }
-          await setStatus(client, row.id, "PROCESSING");
           const outcome = await handler(row as Row, deps);
           if (outcome.ok) {
             await setStatus(client, row.id, "SENT", {

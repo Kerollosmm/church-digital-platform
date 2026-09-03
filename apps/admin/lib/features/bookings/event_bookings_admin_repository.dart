@@ -45,6 +45,12 @@ abstract interface class EventBookingsAdminRepository {
     required int amountPiastres,
     String? collectorNote,
   });
+  Future<Either<Failure, List<EventBookingAdminItem>>> searchCashierBookings({
+    String? searchQuery,
+    String? categoryFilter,
+    int limit = 50,
+    int offset = 0,
+  });
 }
 
 
@@ -280,6 +286,32 @@ class SupabaseEventBookingsAdminRepository
         },
       );
       return const Right(null);
+    } catch (e) {
+      return Left(Failure.from(e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<EventBookingAdminItem>>> searchCashierBookings({
+    String? searchQuery,
+    String? categoryFilter,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      final res = await _client.rpc(
+        'search_cashier_bookings',
+        params: {
+          'p_search_query': searchQuery,
+          'p_category': categoryFilter,
+          'p_limit': limit,
+          'p_offset': offset,
+        },
+      );
+      final list = (res as List<dynamic>)
+          .map((e) => EventBookingAdminItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return Right(list);
     } catch (e) {
       return Left(Failure.from(e));
     }
