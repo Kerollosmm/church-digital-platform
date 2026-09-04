@@ -7,9 +7,7 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const TARGET_PHONE_FORMATTED = Deno.env.get("TARGET_PHONE_FORMATTED") ?? "201000000000";
 
 export async function runEventDispatcherVerification(): Promise<void> {
-  console.log("\x1b[35m===================================================================\x1b[0m");
-  console.log("\x1b[35m       EVENT OUTBOX DISPATCHER & MULTI-CHANNEL RUNNER TEST         \x1b[0m");
-  console.log("\x1b[35m===================================================================\x1b[0m\n");
+
 
 
   // -------------------------------------------------------------------------

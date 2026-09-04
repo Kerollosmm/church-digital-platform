@@ -306,46 +306,72 @@ export async function handleRequest(
         await setStatus(client, validRows.map((r) => r.id), "PROCESSING");
       }
 
-      const results = await Promise.all(
+      const outcomes = await Promise.all(
         batch.map(async (row) => {
           const handler = HANDLERS[row.handler_type];
           if (!handler) {
-            await setStatus(client, row.id, "FAILED", {
-              last_error: `Unknown handler: ${row.handler_type}`,
-            });
-            return 0;
+            return {
+              id: row.id,
+              status: "FAILED",
+              extra: { last_error: `Unknown handler: ${row.handler_type}` },
+              handled: 0,
+            };
           }
           const outcome = await handler(row as Row, deps);
           if (outcome.ok) {
-            await setStatus(client, row.id, "SENT", {
-              last_error: null,
-            });
-            return 1;
+            return {
+              id: row.id,
+              status: "SENT",
+              extra: { last_error: null },
+              handled: 1,
+            };
           }
           if (!outcome.retryable) {
-            await setStatus(client, row.id, "FAILED", {
-              last_error: outcome.error ?? "Non-retryable failure",
-            });
-            return 0;
+            return {
+              id: row.id,
+              status: "FAILED",
+              extra: { last_error: outcome.error ?? "Non-retryable failure" },
+              handled: 0,
+            };
           }
           const attempts = row.attempts + 1;
           if (attempts >= MAX_ATTEMPTS) {
-            await setStatus(client, row.id, "FAILED", {
-              attempts,
-              last_error: outcome.error ?? "Max attempts exceeded",
-            });
-          } else {
-            const backoff = BACKOFF_MS * Math.pow(2, attempts);
-            await setStatus(client, row.id, "PENDING", {
+            return {
+              id: row.id,
+              status: "FAILED",
+              extra: { attempts, last_error: outcome.error ?? "Max attempts exceeded" },
+              handled: 0,
+            };
+          }
+          const backoff = BACKOFF_MS * Math.pow(2, attempts);
+          return {
+            id: row.id,
+            status: "PENDING",
+            extra: {
               attempts,
               next_attempt_at: new Date(Date.now() + backoff).toISOString(),
               last_error: outcome.error ?? "Retry scheduled",
-            });
-          }
-          return 0;
+            },
+            handled: 0,
+          };
         }),
       );
-      handled += results.reduce((a: number, b: number) => a + b, 0);
+
+      const sentIds = outcomes
+        .filter((o) => o.status === "SENT")
+        .map((o) => o.id);
+      if (sentIds.length > 0) {
+        await setStatus(client, sentIds, "SENT", { last_error: null });
+      }
+
+      const nonSent = outcomes.filter((o) => o.status !== "SENT");
+      if (nonSent.length > 0) {
+        await Promise.all(
+          nonSent.map((o) => setStatus(client, o.id, o.status, o.extra)),
+        );
+      }
+
+      handled += outcomes.reduce((a, b) => a + b.handled, 0);
     }
     return respond(200, { ok: true, handled });
   } catch (e) {

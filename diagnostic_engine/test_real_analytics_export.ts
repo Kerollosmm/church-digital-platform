@@ -2,9 +2,7 @@ import { handleRequest, sanitizeCsvCell, buildCsv } from "../supabase/functions/
 import { FakeClient } from "../supabase/functions/_shared/fake_supabase.ts";
 
 export async function runAnalyticsExportVerification(): Promise<void> {
-  console.log("\x1b[35m===================================================================\x1b[0m");
-  console.log("\x1b[35m       ADMIN CSV ANALYTICS EXPORT RUNNER TEST                      \x1b[0m");
-  console.log("\x1b[35m===================================================================\x1b[0m\n");
+
 
   // -------------------------------------------------------------------------
   // Stage 1: Formula Injection Sanitization

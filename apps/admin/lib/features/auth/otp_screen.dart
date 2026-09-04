@@ -37,7 +37,7 @@ class _OtpScreenState extends State<OtpScreen> {
         ).showSnackBar(const SnackBar(content: Text('الرمز غير صحيح')));
       }
     } catch (e, st) {
-      debugPrint('verifyOtp failed for ${widget.phone}: $e\n$st');
+      debugPrint('verifyOtp failed: $e\n$st');
       if (mounted) {
         setState(() => _verifying = false);
         ScaffoldMessenger.of(

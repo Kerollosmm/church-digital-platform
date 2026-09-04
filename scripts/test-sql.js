@@ -11,8 +11,6 @@ const files = fs.readdirSync(testsDir)
   .filter(f => f.endsWith('.sql') && f !== 'run_all.sql')
   .sort();
 
-console.log(`\n=== Running ${files.length} SQL Test Suites via Stdin with TAP Verification ===\n`);
-
 let passed = 0;
 let failed = 0;
 const failedSuites = [];

@@ -92,30 +92,7 @@ class _OtpScreenState extends State<OtpScreen> {
         backgroundColor: AppColors.primaryContainer,
         body: Stack(
           children: [
-            Positioned(
-              top: -100,
-              right: -100,
-              child: Container(
-                width: 500,
-                height: 500,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.secondaryContainer.withValues(alpha: 0.2),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -150,
-              left: -150,
-              child: Container(
-                width: 600,
-                height: 600,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.tertiaryFixed.withValues(alpha: 0.1),
-                ),
-              ),
-            ),
+            const _BackgroundDecorations(),
             Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(AppSpacing.marginMobile),
@@ -142,147 +119,15 @@ class _OtpScreenState extends State<OtpScreen> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Container(
-                              width: 64,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.surfaceContainerHigh,
-                                border: Border.all(
-                                  color: AppColors.outlineVariant.withValues(
-                                    alpha: 0.2,
-                                  ),
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.church,
-                                size: 40,
-                                color: AppColors.primary,
-                              ),
+                            _OtpHeader(
+                              phone: widget.phone,
+                              onChangeNumber: () => Navigator.maybePop(context),
                             ),
                             const SizedBox(height: AppSpacing.sm),
-                            Text(
-                              AppStrings.authTitle,
-                              style: AppTypography.headlineLgMobile.copyWith(
-                                color: AppColors.primary,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              AppStrings.authSubtitle,
-                              style: AppTypography.bodyMd.copyWith(
-                                color: AppColors.onSurfaceVariant,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            Text(
-                              AppStrings.otpIntro,
-                              style: AppTypography.labelMd.copyWith(
-                                color: AppColors.onSurfaceVariant,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '+20 ${widget.phone}',
-                              style: AppTypography.bodyMd.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textDirection: TextDirection.ltr,
-                            ),
-                            const SizedBox(height: AppSpacing.xs),
-                            GestureDetector(
-                              onTap: () => Navigator.maybePop(context),
-                              child: Text(
-                                AppStrings.changeNumber,
-                                style: AppTypography.labelMd.copyWith(
-                                  color: AppColors.secondary,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            Directionality(
-                              textDirection: TextDirection.ltr,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: List.generate(
-                                  6,
-                                  (i) => Flexible(
-                                    child: Container(
-                                      constraints: const BoxConstraints(
-                                        maxWidth: 48,
-                                      ),
-                                      height: 56,
-                                      child: TextField(
-                                        controller: _controllers[i],
-                                        focusNode: _focusNodes[i],
-                                        maxLength: 1,
-                                        textAlign: TextAlign.center,
-                                        style: AppTypography.headlineMd
-                                            .copyWith(color: AppColors.primary),
-                                        keyboardType: TextInputType.number,
-                                        inputFormatters: [
-                                          FilteringTextInputFormatter
-                                              .digitsOnly,
-                                        ],
-                                        decoration: InputDecoration(
-                                          counterText: '',
-                                          filled: true,
-                                          fillColor:
-                                              AppColors.surfaceContainerLow,
-                                          contentPadding: EdgeInsets.zero,
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              AppRadius.sm,
-                                            ),
-                                            borderSide: const BorderSide(
-                                              color: AppColors.outlineVariant,
-                                            ),
-                                          ),
-                                          enabledBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              AppRadius.sm,
-                                            ),
-                                            borderSide: const BorderSide(
-                                              color: AppColors.outlineVariant,
-                                            ),
-                                          ),
-                                          focusedBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              AppRadius.sm,
-                                            ),
-                                            borderSide: const BorderSide(
-                                              color: AppColors.secondary,
-                                              width: 2.0,
-                                            ),
-                                          ),
-                                        ),
-                                        onChanged: (val) {
-                                          if (val.length == 1) {
-                                            if (i < 5) {
-                                              FocusScope.of(
-                                                context,
-                                              ).requestFocus(
-                                                _focusNodes[i + 1],
-                                              );
-                                            } else {
-                                              _verify();
-                                            }
-                                          } else if (val.isEmpty && i > 0) {
-                                            FocusScope.of(
-                                              context,
-                                            ).requestFocus(_focusNodes[i - 1]);
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
+                            _OtpInputRow(
+                              controllers: _controllers,
+                              focusNodes: _focusNodes,
+                              onCompleted: _verify,
                             ),
                             const SizedBox(height: AppSpacing.sm),
                             SizedBox(
@@ -294,57 +139,12 @@ class _OtpScreenState extends State<OtpScreen> {
                               ),
                             ),
                             const SizedBox(height: AppSpacing.sm),
-                            Wrap(
-                              alignment: WrapAlignment.center,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 4,
-                              children: [
-                                Text(
-                                  AppStrings.resendPrompt,
-                                  style: AppTypography.bodyMd.copyWith(
-                                    color: AppColors.onSurfaceVariant,
-                                  ),
-                                ),
-                                GestureDetector(
-                                  onTap: _resendOtp,
-                                  child: Text(
-                                    AppStrings.resendOtp,
-                                    style: AppTypography.labelMd.copyWith(
-                                      color: AppColors.secondary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                            _OtpResendRow(onResend: _resendOtp),
                           ],
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: AppSpacing.md,
-                        runSpacing: AppSpacing.xs,
-                        children: [
-                          Text(
-                            AppStrings.privacyPolicy,
-                            style: AppTypography.labelMd.copyWith(
-                              color: AppColors.inversePrimary,
-                            ),
-                          ),
-                          Text(
-                            AppStrings.termsConditions,
-                            style: AppTypography.labelMd.copyWith(
-                              color: AppColors.inversePrimary,
-                            ),
-                          ),
-                          Text(
-                            AppStrings.support,
-                            style: AppTypography.labelMd.copyWith(
-                              color: AppColors.inversePrimary,
-                            ),
-                          ),
-                        ],
-                      ),
+                      const _FooterLinks(),
                     ],
                   ),
                 ),
@@ -353,6 +153,285 @@ class _OtpScreenState extends State<OtpScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BackgroundDecorations extends StatelessWidget {
+  const _BackgroundDecorations();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.expand(
+      child: IgnorePointer(
+        child: Stack(
+          children: [
+            Positioned(
+              top: -100,
+              right: -100,
+              child: Container(
+                width: 500,
+                height: 500,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.secondaryContainer.withValues(alpha: 0.2),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -150,
+              left: -150,
+              child: Container(
+                width: 600,
+                height: 600,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.tertiaryFixed.withValues(alpha: 0.1),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OtpHeader extends StatelessWidget {
+  const _OtpHeader({
+    required this.phone,
+    required this.onChangeNumber,
+  });
+
+  final String phone;
+  final VoidCallback onChangeNumber;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.surfaceContainerHigh,
+            border: Border.all(
+              color: AppColors.outlineVariant.withValues(
+                alpha: 0.2,
+              ),
+            ),
+          ),
+          child: const Icon(
+            Icons.church,
+            size: 40,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          AppStrings.authTitle,
+          style: AppTypography.headlineLgMobile.copyWith(
+            color: AppColors.primary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          AppStrings.authSubtitle,
+          style: AppTypography.bodyMd.copyWith(
+            color: AppColors.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          AppStrings.otpIntro,
+          style: AppTypography.labelMd.copyWith(
+            color: AppColors.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '+20 $phone',
+          style: AppTypography.bodyMd.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.bold,
+          ),
+          textDirection: TextDirection.ltr,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        GestureDetector(
+          onTap: onChangeNumber,
+          child: Text(
+            AppStrings.changeNumber,
+            style: AppTypography.labelMd.copyWith(
+              color: AppColors.secondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OtpInputRow extends StatelessWidget {
+  const _OtpInputRow({
+    required this.controllers,
+    required this.focusNodes,
+    required this.onCompleted,
+  });
+
+  final List<TextEditingController> controllers;
+  final List<FocusNode> focusNodes;
+  final VoidCallback onCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(
+          6,
+          (i) => Flexible(
+            child: Container(
+              constraints: const BoxConstraints(
+                maxWidth: 48,
+              ),
+              height: 56,
+              child: TextField(
+                controller: controllers[i],
+                focusNode: focusNodes[i],
+                maxLength: 1,
+                textAlign: TextAlign.center,
+                style:
+                    AppTypography.headlineMd.copyWith(color: AppColors.primary),
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
+                decoration: InputDecoration(
+                  counterText: '',
+                  filled: true,
+                  fillColor: AppColors.surfaceContainerLow,
+                  contentPadding: EdgeInsets.zero,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppRadius.sm,
+                    ),
+                    borderSide: const BorderSide(
+                      color: AppColors.outlineVariant,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppRadius.sm,
+                    ),
+                    borderSide: const BorderSide(
+                      color: AppColors.outlineVariant,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppRadius.sm,
+                    ),
+                    borderSide: const BorderSide(
+                      color: AppColors.secondary,
+                      width: 2.0,
+                    ),
+                  ),
+                ),
+                onChanged: (val) {
+                  if (val.length == 1) {
+                    if (i < 5) {
+                      FocusScope.of(
+                        context,
+                      ).requestFocus(
+                        focusNodes[i + 1],
+                      );
+                    } else {
+                      onCompleted();
+                    }
+                  } else if (val.isEmpty && i > 0) {
+                    FocusScope.of(
+                      context,
+                    ).requestFocus(focusNodes[i - 1]);
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OtpResendRow extends StatelessWidget {
+  const _OtpResendRow({required this.onResend});
+
+  final VoidCallback onResend;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 4,
+      children: [
+        Text(
+          AppStrings.resendPrompt,
+          style: AppTypography.bodyMd.copyWith(
+            color: AppColors.onSurfaceVariant,
+          ),
+        ),
+        GestureDetector(
+          onTap: onResend,
+          child: Text(
+            AppStrings.resendOtp,
+            style: AppTypography.labelMd.copyWith(
+              color: AppColors.secondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FooterLinks extends StatelessWidget {
+  const _FooterLinks();
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: AppSpacing.md,
+      runSpacing: AppSpacing.xs,
+      children: [
+        Text(
+          AppStrings.privacyPolicy,
+          style: AppTypography.labelMd.copyWith(
+            color: AppColors.inversePrimary,
+          ),
+        ),
+        Text(
+          AppStrings.termsConditions,
+          style: AppTypography.labelMd.copyWith(
+            color: AppColors.inversePrimary,
+          ),
+        ),
+        Text(
+          AppStrings.support,
+          style: AppTypography.labelMd.copyWith(
+            color: AppColors.inversePrimary,
+          ),
+        ),
+      ],
     );
   }
 }

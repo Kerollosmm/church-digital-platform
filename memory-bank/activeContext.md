@@ -1,7 +1,17 @@
 # Active Context: Church Digital Platform
 
 ## Current Focus & Status
-- **Current Milestone**: Testing Improvements (TEST-01 – TEST-04) — **Completed & Verified**.
+- **Current Milestone**: Code Health Improvements (CLEAN-10 – CLEAN-16) — **Completed & Verified**.
+- **Code Health Improvements (CLEAN-10 – CLEAN-16)**:
+  - *BookingDetailScreen Build Method Decomposition (CLEAN-10)*: Refactored `apps/mobile/lib/features/booking/booking_detail_screen.dart` monolithic `build()` method (226 lines) into modular private widgets: `_CountdownBanner`, `_SummaryCard`, `_WhatsappOptInCard`, `_BottomActionSheet`. All tests pass; 0 analyzer issues.
+  - *OtpScreen Build Method Decomposition (CLEAN-11)*: Refactored `apps/mobile/lib/features/auth/otp_screen.dart` monolithic `build()` method (268 lines) into clean private widgets: `_BackgroundDecorations`, `_OtpHeader`, `_OtpInputRow`, `_OtpResendRow`, `_FooterLinks`. All tests pass; 0 analyzer issues.
+  - *FamilyCertificatesScreen Build Method Decomposition (CLEAN-12)*: Refactored `apps/mobile/lib/features/family_archive/family_certificates_screen.dart` monolithic `build()` method (196 lines) into clean private widgets: `_ErrorView`, `_EmptyCertificatesView`, `_CertificateCard`. 0 analyzer issues.
+  - *Diagnostic & Script Console Log Cleanup (CLEAN-13 – CLEAN-16)*: Removed leftover `console.log` statements in `diagnostic_engine/deno_engine.ts:99`, `diagnostic_engine/test_real_all_features.ts:10`, `diagnostic_engine/engine.ts:101`, and `scripts/test-sql.js:14`. Verified with `deno test`, `deno run`, and `node --check`.
+- **Code Health Improvements (CLEAN-06 – CLEAN-09)**:
+  - *LoginScreen Build Method Decomposition*: Refactored `apps/mobile/lib/features/auth/login_screen.dart` overly long monolithic `build()` method (282 lines) into clean, composable private sub-widgets: `_BackgroundDecorations`, `_LoginHeader`, `_CountryCodePrefix`, `_PhoneInputField`, `_SubmitButton`, `_FooterLinks`. Preserved all RTL directionality, phone input formatters, validator rules, and UI aesthetics. All 4 widget tests pass; 0 analyzer issues.
+  - *Diagnostic Engine Console Log Cleanup*: Removed leftover ASCII banner `console.log` statements at the entry points of `diagnostic_engine/test_real_high_concurrency.ts:10`, `diagnostic_engine/test_real_analytics_export.ts:5`, and `diagnostic_engine/test_real_event_dispatcher.ts:10`. All verification runners continue to pass cleanly with exit code 0.
+- **Security Fix (SEC-OTP-PII)**: Removed plain text phone number PII interpolation from `debugPrint` calls in `apps/mobile/lib/core/auth/phone_verify_gate.dart` (lines 164, 193, 207) and `apps/admin/lib/features/auth/otp_screen.dart` (line 40) (CWE-532 mitigation).
+- **Client Test Status**: Mobile: 88/88 tests PASS, Admin: 80/80 tests PASS, 0 analyzer issues across both apps.
 - **Forensic Review Status**:
   - Test suites verification:
     - PostgreSQL Schema: Migrations 0001–0080 replayed cleanly. 70/70 test suites pass individually (100%).
@@ -10,8 +20,8 @@
     - Flutter Admin: 80/80 tests PASS, 0 analyzer issues (`apps/admin/`).
 - **Performance Optimizations (OPT-01 – OPT-04) Completed**:
   - **OPT-01**: `test-apps/user/app.js:195` DOM NodeList caching outside tab click event loop (164.86x measured speedup).
-  - **OPT-02**: `test-apps/superadmin/app.js:313` direct `for...of` loop over `authData.users` replacing `forEach`.
-  - **OPT-03**: `supabase/functions/event-dispatcher/index.ts:302` bulk status update using `.in('id', batchIds)` in 1 PostgREST roundtrip (10x roundtrip reduction) + `.in()` support on `FakeQuery` in `_shared/fake_supabase.ts`.
+  - **OPT-02**: `test-apps/superadmin/app.js:313` declarative `Object.fromEntries(authData.users.map(au => [au.id, au]))` replacing imperative `for...of` mutation for `authUsersMap`.
+  - **OPT-03**: `supabase/functions/event-dispatcher/index.ts:310` decoupled handler execution from DB writes in `batch.map`, aggregating all `SENT` status updates into 1 bulk `.in('id', sentIds)` call per batch (81.82% DB roundtrip reduction: 110 -> 20 calls; 6.64x speedup).
   - **OPT-04**: `test-apps/user/app.js:654` Map lookup `state.slotsById.get(slotId)` with fallback to `find()` (18.36x measured speedup).
 - **Next Immediate Step**:
   1. Stage and commit verified updates.
@@ -19,6 +29,16 @@
 ---
 
 ## Recent Commits / Changes
+- **Code Health Improvements (CLEAN-10 – CLEAN-16)**:
+  - *BookingDetailScreen Build Method Decomposition (CLEAN-10)*: Refactored `apps/mobile/lib/features/booking/booking_detail_screen.dart` monolithic `build()` method (226 lines) into modular private widgets: `_CountdownBanner`, `_SummaryCard`, `_WhatsappOptInCard`, `_BottomActionSheet`. All tests pass; 0 analyzer issues.
+  - *OtpScreen Build Method Decomposition (CLEAN-11)*: Refactored `apps/mobile/lib/features/auth/otp_screen.dart` monolithic `build()` method (268 lines) into clean private widgets: `_BackgroundDecorations`, `_OtpHeader`, `_OtpInputRow`, `_OtpResendRow`, `_FooterLinks`. All tests pass; 0 analyzer issues.
+  - *FamilyCertificatesScreen Build Method Decomposition (CLEAN-12)*: Refactored `apps/mobile/lib/features/family_archive/family_certificates_screen.dart` monolithic `build()` method (196 lines) into clean private widgets: `_ErrorView`, `_EmptyCertificatesView`, `_CertificateCard`. 0 analyzer issues.
+  - *Diagnostic & Script Console Log Cleanup (CLEAN-13 – CLEAN-16)*: Removed leftover `console.log` statements in `diagnostic_engine/deno_engine.ts:99`, `diagnostic_engine/test_real_all_features.ts:10`, `diagnostic_engine/engine.ts:101`, and `scripts/test-sql.js:14`. Verified with `deno test`, `deno run`, and `node --check`.
+- **Code Health Improvements (CLEAN-06 – CLEAN-09)**:
+  - *LoginScreen Build Method Decomposition*: Refactored `apps/mobile/lib/features/auth/login_screen.dart` overly long monolithic `build()` method (282 lines) into clean, composable private sub-widgets: `_BackgroundDecorations`, `_LoginHeader`, `_CountryCodePrefix`, `_PhoneInputField`, `_SubmitButton`, `_FooterLinks`. Preserved all RTL directionality, phone input formatters, validator rules, and UI aesthetics. All 4 widget tests pass; 0 analyzer issues.
+  - *Diagnostic Engine Console Log Cleanup*: Removed leftover ASCII banner `console.log` statements at the entry points of `diagnostic_engine/test_real_high_concurrency.ts:10`, `diagnostic_engine/test_real_analytics_export.ts:5`, and `diagnostic_engine/test_real_event_dispatcher.ts:10`. All verification runners continue to pass cleanly with exit code 0.
+- **Security Vulnerability Fix (SEC-OTP-PII)**:
+  - *OTP PII Log Redaction (SEC-OTP-PII)*: Redacted raw phone numbers from error `debugPrint` statements in `apps/mobile/lib/core/auth/phone_verify_gate.dart` and `apps/admin/lib/features/auth/otp_screen.dart`, ensuring user phone numbers are never leaked to device system logs during OTP send, verify, or resend failures.
 - **Testing Improvements (TEST-01 – TEST-04)**:
   - *OTP-SMS Webhook Error Handling*: Added malformed payload test in `supabase/functions/otp-sms/index_test.ts` verifying 401 UNAUTHORIZED on corrupted payload without leaking details.
   - *VerifyCronOrServiceAuth Coverage*: Added comprehensive 6-scenario test suite in `supabase/functions/_tests/http_test.ts` covering Bearer cronSecret, x-cron-secret header, Bearer serviceRoleKey, missing auth (401), invalid token (401), and unconfigured secrets (500).

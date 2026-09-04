@@ -161,7 +161,7 @@ class _PhoneVerifyFormState extends State<PhoneVerifyForm> {
         _step = PhoneVerifyStep.otp;
       });
     } catch (e, st) {
-      debugPrint('sendOtp failed for $phone: $e\n$st');
+      debugPrint('sendOtp failed: $e\n$st');
       if (mounted) {
         setState(() => _sending = false);
         ScaffoldMessenger.of(
@@ -190,7 +190,7 @@ class _PhoneVerifyFormState extends State<PhoneVerifyForm> {
         ).showSnackBar(const SnackBar(content: Text(AppStrings.otpInvalid)));
       }
     } catch (e, st) {
-      debugPrint('verifyOtp failed for $_phone: $e\n$st');
+      debugPrint('verifyOtp failed: $e\n$st');
       if (mounted) {
         setState(() => _verifying = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -204,7 +204,7 @@ class _PhoneVerifyFormState extends State<PhoneVerifyForm> {
     try {
       await widget.gateway.sendOtp(_phone);
     } catch (e, st) {
-      debugPrint('resendOtp failed for $_phone: $e\n$st');
+      debugPrint('resendOtp failed: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(
           context,

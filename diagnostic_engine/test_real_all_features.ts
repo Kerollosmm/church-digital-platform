@@ -7,12 +7,6 @@ import { runAnalyticsExportVerification } from "./test_real_analytics_export.ts"
 import { runSocialLinksVerification } from "./test_real_social_links.ts";
 
 async function runMasterVerificationSuite() {
-  console.log("\x1b[35m###################################################################\x1b[0m");
-  console.log("\x1b[35m#                                                                 #\x1b[0m");
-  console.log("\x1b[35m#   UNIFIED REAL-WORLD BACKEND FEATURE & HIGH-CONCURRENCY SUITE   #\x1b[0m");
-  console.log("\x1b[35m#                                                                 #\x1b[0m");
-  console.log("\x1b[35m###################################################################\x1b[0m\n");
-
   const suites = [
     { name: "Live Payment & Settlement Invariants", fn: runRealPaymentVerification },
     { name: "High-Concurrency Atomic Booking Engine", fn: runHighConcurrencyVerification },

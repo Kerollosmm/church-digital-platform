@@ -98,8 +98,6 @@ export class ExplorerAgent {
   constructor(private client: SupabaseClient) {}
 
   async introspect(): Promise<SystemCatalog> {
-    console.log("\x1b[36m[ExplorerAgent]\x1b[0m Introspecting Supabase backend dynamically...");
-
     const tables: Record<string, TableMeta> = {};
     const rpcs: Record<string, RpcMeta> = {};
     const enums: Record<string, string[]> = {

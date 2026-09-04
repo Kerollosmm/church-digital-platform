@@ -7,9 +7,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
 export async function runHighConcurrencyVerification(): Promise<void> {
-  console.log("\x1b[35m===================================================================\x1b[0m");
-  console.log("\x1b[35m   HIGH-CONCURRENCY ATOMIC BOOKING ENGINE STRESS & RACE TEST       \x1b[0m");
-  console.log("\x1b[35m===================================================================\x1b[0m\n");
+
 
   if (SUPABASE_URL && SUPABASE_ANON_KEY && Deno.env.get("RUN_LIVE_TESTS")) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
