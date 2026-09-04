@@ -341,3 +341,116 @@ Deno.test("event-dispatcher: WHATSAPP event_booking_payment_received template fo
     fetchStub.restore();
   }
 });
+
+Deno.test("event-dispatcher: WHATSAPP network throw is isolated and marked retryable", async () => {
+  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
+  fake.seed("whatsapp_optins", [
+    { phone: "+201000000009" },
+  ]);
+  fake.seed("event_outbox", [
+    {
+      id: 50,
+      handler_type: "WHATSAPP",
+      payload: {
+        phone: "+201000000009",
+        template_name: "booking_confirmed",
+        params: { booking_id: 77 },
+      },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.reject(new Error("Simulated network failure"))
+  );
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+      whatsappToken: "mock-wa-token",
+    });
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body, { ok: true, handled: 0 });
+
+    const row = fake.tableRows("event_outbox")[0];
+    assertEquals(row.status, "PENDING");
+    assertEquals(row.attempts, 1);
+    assertEquals(row.last_error, "Simulated network failure");
+  } finally {
+    fetchStub.restore();
+  }
+});
+
+Deno.test("event-dispatcher: mixed batch splits status writes (SENT bulk, FAILED and PENDING individual)", async () => {
+  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
+  fake.seed("whatsapp_optins", [
+    { phone: "+201000000001" },
+    { phone: "+201000000003" },
+  ]);
+  fake.seed("event_outbox", [
+    {
+      id: 40,
+      handler_type: "WHATSAPP",
+      payload: { phone: "+201000000001", template_name: "booking_confirmed", params: { booking_id: 1 } },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+    {
+      id: 41,
+      handler_type: "WHATSAPP",
+      payload: { phone: "+201000000002", template_name: "booking_confirmed", params: { booking_id: 2 } },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+    {
+      id: 42,
+      handler_type: "WHATSAPP",
+      payload: { phone: "+201000000003", template_name: "booking_confirmed", params: { booking_id: 3 } },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  const fetchStub = stub(globalThis, "fetch", (_url: RequestInfo | URL, init?: RequestInit) => {
+    const to = (JSON.parse(String(init?.body ?? "{}")) as { to?: string }).to;
+    if (to === "+201000000003") {
+      return Promise.reject(new Error("Simulated network failure"));
+    }
+    return Promise.resolve(jsonRes({ messages: [{ id: "wamid.mix" }] }));
+  });
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+      whatsappToken: "mock-wa-token",
+    });
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body, { ok: true, handled: 1 });
+
+    const rows = fake.tableRows("event_outbox");
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    assertEquals(byId.get(40)?.status, "SENT");
+    assertEquals(byId.get(40)?.last_error, null);
+    assertEquals(byId.get(41)?.status, "FAILED");
+    assertEquals(byId.get(41)?.last_error, "No WhatsApp opt-in found");
+    assertEquals(byId.get(42)?.status, "PENDING");
+    assertEquals(byId.get(42)?.attempts, 1);
+    assertEquals(byId.get(42)?.last_error, "Simulated network failure");
+  } finally {
+    fetchStub.restore();
+  }
+});
+

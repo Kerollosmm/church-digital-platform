@@ -317,7 +317,16 @@ export async function handleRequest(
               handled: 0,
             };
           }
-          const outcome = await handler(row as Row, deps);
+          let outcome: Result;
+          try {
+            outcome = await handler(row as Row, deps);
+          } catch (err) {
+            outcome = {
+              ok: false,
+              retryable: true,
+              error: err instanceof Error ? err.message : "Handler threw",
+            };
+          }
           if (outcome.ok) {
             return {
               id: row.id,

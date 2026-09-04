@@ -5,7 +5,7 @@
 | Component | Status | Test / Gate Outcome | Notes |
 | :--- | :--- | :--- | :--- |
 | **PostgreSQL Schema (0001-0080)** | **100% Passing** | 70 registered, 70 PASS, 0 FAIL | Migration 0080 dropped Sunday School tables/RPCs |
-| **Deno Edge Functions** | **100% Passing** | 73/73 tests PASS (100%) + 5/5 Diagnostic Engine tests PASS | Edge functions, payments gateway `adminQuickCashCollect`, zero-leak contract, CORS origin validation, TEST-01–04 suites, CLEAN-07–09 runner log cleanup |
+| **Deno Edge Functions** | **100% Passing** | 75/75 tests PASS (100%) + 5/5 Diagnostic Engine tests PASS | Edge functions, payments gateway `adminQuickCashCollect`, zero-leak contract, CORS origin validation, TEST-01–04 suites, CLEAN-07–09 runner log cleanup, SEC-OUTBOX-THROW handler isolation + `FakeQuery.eq` fake repair |
 | **Flutter Mobile App** | **100% Passing** | 88/88 tests PASS, 0 lints | Sunday School feature removed cleanly, 0 analyzer issues, SEC-OTP-PII verified, CLEAN-06 LoginScreen decomposition |
 | **Flutter Web Admin App** | **100% Passing** | 80/80 tests PASS, 0 lints | Sunday School feature removed cleanly, 0 analyzer issues, SEC-OTP-PII verified |
 | **Security & PII Hardening** | **100% Remediated** | SEC-OTP-PII verified (CWE-532 mitigation) | Plain text phone number PII redacted from client debugPrint calls |
@@ -15,6 +15,11 @@
 ---
 
 ## Deliverables Completed
+
+### SEC-OUTBOX-THROW: Event-Dispatcher Handler Throw Isolation (2026-09-04)
+- **Handler Throw Isolation**: Wrapped `await handler(row as Row, deps)` in `supabase/functions/event-dispatcher/index.ts` batch loop with try/catch → `{ ok: false, retryable: true, error }`. Eliminates duplicate WhatsApp/FCM send blasts caused by one row's network exception rejecting `Promise.all`, orphaning batch status writes, and letting the 5-minute `reap_stuck_outbox_events` cron re-dispatch already-sent messages.
+- **Regression Coverage**: Added throw-isolation test (HTTP 200 + retryable PENDING) and mixed-batch split-write test (SENT bulk `.in()` + individual FAILED/PENDING updates). Dispatcher suite 8/8.
+- **Test-Fake Repair**: Fixed `FakeQuery.eq` in `supabase/functions/_shared/fake_supabase.ts` — `.update().eq()` mutated all table rows before filtering; now filters first (mirrors `.in()`). Full edge suite 75/75.
 
 ### CLEAN-10 – CLEAN-16: Code Health Improvements
 - **BookingDetailScreen Build Method Decomposition (CLEAN-10)**: Refactored `apps/mobile/lib/features/booking/booking_detail_screen.dart` monolithic `build()` method (226 lines) into modular private widgets: `_CountdownBanner`, `_SummaryCard`, `_WhatsappOptInCard`, `_BottomActionSheet`. All tests pass; 0 analyzer issues.

@@ -24,11 +24,17 @@
   - **OPT-03**: `supabase/functions/event-dispatcher/index.ts:310` decoupled handler execution from DB writes in `batch.map`, aggregating all `SENT` status updates into 1 bulk `.in('id', sentIds)` call per batch (81.82% DB roundtrip reduction: 110 -> 20 calls; 6.64x speedup).
   - **OPT-04**: `test-apps/user/app.js:654` Map lookup `state.slotsById.get(slotId)` with fallback to `find()` (18.36x measured speedup).
 - **Next Immediate Step**:
-  1. Stage and commit verified updates.
+  1. Production deployment and staging smoke tests.
+  2. Optional follow-ups from 2026-09-04 two-axis code review: shared auth widgets (`_BackgroundDecorations`/`_FooterLinks` duplicated across 3 files), 202-line `_openVerificationDialog` decomposition, `_SummaryCard` `dynamic price` typing.
 
 ---
 
 ## Recent Commits / Changes
+- **Outbox Handler Throw Isolation (SEC-OUTBOX-THROW, 2026-09-04)**:
+  - Wrapped per-row `handler(row, deps)` calls in `event-dispatcher` `batch.map` with try/catch converting throws to `{ ok: false, retryable: true }` outcomes — one network failure can no longer reject `Promise.all`, orphan batch status writes, and trigger duplicate WhatsApp/FCM sends via the 5-min reaper.
+  - Added throw-isolation test (WHATSAPP network throw → HTTP 200, row PENDING, attempts+1) and mixed-batch split-write regression test (SENT bulk + FAILED + PENDING in one batch). Dispatcher suite 8/8.
+  - Fixed latent `FakeQuery.eq` test-fake bug (fake_supabase.ts): `.update().eq()` applied the update to ALL table rows before filtering; now filters first, mirroring `.in()`. Full edge suite 75/75.
+  - Plan: `docs/superpowers/plans/2026-09-04-event-dispatcher-handler-isolation.md`.
 - **Code Health Improvements (CLEAN-10 – CLEAN-16)**:
   - *BookingDetailScreen Build Method Decomposition (CLEAN-10)*: Refactored `apps/mobile/lib/features/booking/booking_detail_screen.dart` monolithic `build()` method (226 lines) into modular private widgets: `_CountdownBanner`, `_SummaryCard`, `_WhatsappOptInCard`, `_BottomActionSheet`. All tests pass; 0 analyzer issues.
   - *OtpScreen Build Method Decomposition (CLEAN-11)*: Refactored `apps/mobile/lib/features/auth/otp_screen.dart` monolithic `build()` method (268 lines) into clean private widgets: `_BackgroundDecorations`, `_OtpHeader`, `_OtpInputRow`, `_OtpResendRow`, `_FooterLinks`. All tests pass; 0 analyzer issues.
