@@ -20,7 +20,13 @@ export class FakeQuery {
 
   select() { return this; }
   eq(col: string, val: unknown) {
-    const filtered = this.current().filter((r) => r[col] === val);
+    const base = this.rows ?? this.db.get(this.table) ?? [];
+    const filtered = base.filter((r) => r[col] === val);
+    if (this.pendingUpdate) {
+      for (const r of filtered) {
+        Object.assign(r, this.pendingUpdate);
+      }
+    }
     return new FakeQuery(this.db, this.table, filtered, this.pendingUpdate);
   }
   in(col: string, vals: unknown[]) {
