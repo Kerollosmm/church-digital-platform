@@ -1,7 +1,20 @@
 # Active Context: Church Digital Platform
 
 ## Current Focus & Status
-- **Current Milestone**: Round-2 Review Follow-Ups (2026-09-05) — **Completed & Verified**.
+- **Current Milestone**: Staging Deployment & Smoke Tests (2026-09-05) — **Staging Complete; Prod Push Pending User Approval**.
+- **Staging Deployment (2026-09-05)**:
+  - Preview-branch path rejected (Pro plan only, $25/mo) — used a FREE second project instead: `church-staging` ref `vkognohmnqxzegxqhvmm` (eu-west-1, org vercel_icfg_JNcH8d7Gif8aFTDl8wQP3XcI). Created by orchestrator; DB password shown once at creation (user holds it).
+  - All 83 migrations applied cleanly + seed (agy note: seed needed `extensions` schema in search_path for `gen_salt` — relevant if prod seed ever runs via psql outside supabase CLI).
+  - Edge functions deployed to staging: analytics-export, diagnostic-engine, event-dispatcher, otp-sms (all ACTIVE). `CRON_SECRET` set (random UUID); WhatsApp/FCM secrets intentionally unset.
+  - Smoke suite committed: `scripts/staging-smoke.mjs` (commit `1b10604`) — 7 checks (REST liveness, schema sanity incl. 0080 drops + 0081/0082 columns, piastres money=2000, RLS anon-blocking, RPC error contract, edge 401 contract, auth liveness). Independently re-run by orchestrator: 7/7 PASS.
+  - **PROD (qksgphryemrdrkwaqnxp) UNTOUCHED**: verified frozen at migration 0078; 0079–0083 pending. Functions NOT yet deployed to prod.
+- **Next Immediate Step**:
+  1. Push migrations 0079–0083 + deploy functions to PROD (qksgphryemrdrkwaqnxp) after user approval; then run staging-smoke.mjs against prod.
+  2. Real credentials: WhatsApp (Meta) token/phone ID/webhook secret, FCM service account — needed for notifications to actually send.
+  3. Admin PWA hosting decision + Android release keystore before public distribution.
+
+---
+
 - **Round-2 Review Follow-Ups (2026-09-05)** — LOW-severity backlog from the 2026-09-04 review (plan: `docs/superpowers/plans/2026-09-05-review-followups.md`, implemented by agy/gemini-3.8-flash-high, verified and landed by orchestrator; zero DB changes):
   - *FUP-01 Dead Admin Screens*: deleted `apps/admin/lib/screens/home_screen.dart`, `features/auth/login_screen.dart`, `features/auth/otp_screen.dart` + their tests; `widget_test.dart` rewritten to smoke-test the real `AdminLoginScreen` (phone field + Arabic title) via `supabaseClientProvider.overrideWithValue`.
   - *FUP-02 Auth Widget Dedup*: `AuthBackgroundDecorations`/`AuthFooterLinks` extracted to `apps/mobile/lib/core/auth/widgets/auth_shared_widgets.dart`, shared by login + OTP screens (Positioned.fill variant serves both Stack call sites).
@@ -12,9 +25,8 @@
   - *FUP-07 Allocation Matrix Decomposition*: `build()` 297→~60 lines via `_AllocationControlsCard` (date nav + venue/priest filters) and `_UnassignedBookingsPanel` (unassigned queue); test file unchanged and passing.
   - *Housekeeping*: `opencode.json` (contains a live API key) added to `.gitignore` — never to be committed.
   - **Test Status after landing**: Flutter Admin 87/87; Flutter Mobile 94/94; Deno edge 75/75; diagnostic engine 5/5; `deno check` clean; 0 analyzer issues both apps; grep sweeps confirm zero references to deleted files.
-- **Next Immediate Step**:
-  1. Production deployment and staging smoke tests.
-  2. Remaining known LOW items (deferred): `_openVerificationDialog`-style decomposition elsewhere, English strings in any residual admin screens if found in future sweeps.
+
+---
 
 ---
 
