@@ -1,18 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/result.dart';
+import 'analytics_repository.dart';
 import 'web_download_stub.dart' if (dart.library.js_interop) 'web_download.dart';
 
 class ExportReportButton extends StatefulWidget {
   const ExportReportButton({
     super.key,
-    this.client,
+    this.repository,
     this.onExport,
     this.label = 'تصدير التقرير (CSV)',
   });
 
-  final dynamic client;
+  final AnalyticsRepository? repository;
   final Future<void> Function()? onExport;
   final String label;
 
@@ -29,43 +30,49 @@ class _ExportReportButtonState extends State<ExportReportButton> {
     });
 
     try {
+      Either<Failure, String> result;
       if (widget.onExport != null) {
-        await widget.onExport!();
-      } else if (widget.client != null) {
-        final res = await widget.client!.functions.invoke(
-          'analytics-export',
-          method: HttpMethod.get,
-          queryParameters: const {'report': 'payments'},
-        );
-        if (res.status != 200) {
-          throw Exception('Failed with status ${res.status}');
+        try {
+          await widget.onExport!();
+          result = const Right('');
+        } catch (_) {
+          result = const Left(
+            Failure(code: 'INTERNAL', message: 'فشل تصدير التقرير'),
+          );
         }
-        final csvData = res.data?.toString() ?? '';
-        if (kIsWeb && csvData.isNotEmpty) {
-          downloadCsvOnWeb(csvData, 'analytics.csv');
-        }
+      } else if (widget.repository != null) {
+        result = await widget.repository!.exportPaymentsCsv();
       } else {
-        throw Exception('No client or export handler provided');
+        result = const Left(
+          Failure(code: 'INTERNAL', message: 'فشل تصدير التقرير'),
+        );
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم تصدير التقرير بنجاح'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Export failed: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('فشل تصدير التقرير: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      result.fold(
+        (f) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(f.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        (csv) {
+          if (kIsWeb && csv.isNotEmpty) {
+            downloadCsvOnWeb(csv, 'analytics.csv');
+          }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('تم تصدير التقرير بنجاح'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        },
+      );
     } finally {
       if (mounted) {
         setState(() {

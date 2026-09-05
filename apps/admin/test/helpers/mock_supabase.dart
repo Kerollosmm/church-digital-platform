@@ -13,6 +13,8 @@ class MockSupabase {
   MockSupabase({
     Map<String, List<Map<String, dynamic>>>? tables,
     Map<String, RpcHandler>? rpc,
+    this.failureStatus,
+    this.errorMessage,
   }) : data = tables != null
            ? tables.map(
                (k, v) => MapEntry(
@@ -23,8 +25,17 @@ class MockSupabase {
            : {},
        rpcHandlers = rpc ?? {};
 
+  MockSupabase.failing({
+    int status = 500,
+    this.errorMessage = 'فشل الاتصال بالخادم',
+  }) : failureStatus = status,
+       data = {},
+       rpcHandlers = {};
+
   final Map<String, List<Row>> data;
   final Map<String, RpcHandler> rpcHandlers;
+  final int? failureStatus;
+  final String? errorMessage;
   final List<String> requestLog = [];
   int _nextId = 1000;
 
@@ -40,6 +51,18 @@ class MockSupabase {
   Future<http.Response> _handle(http.Request req) async {
     final path = req.url.path;
     requestLog.add(path);
+
+    if (failureStatus != null) {
+      return http.Response(
+        jsonEncode({
+          'message': errorMessage ?? 'فشل الاتصال بالخادم',
+          'code': failureStatus.toString(),
+        }),
+        failureStatus!,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+        request: req,
+      );
+    }
 
     if (path.contains('/rest/v1/rpc/')) {
       final fn = path.split('/rest/v1/rpc/').last;

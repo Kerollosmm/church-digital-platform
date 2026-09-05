@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile/core/auth/auth_gateway.dart';
+import 'package:mobile/core/auth/widgets/auth_shared_widgets.dart';
 import 'package:mobile/services/app_strings.dart';
 import 'package:mobile/theme/app_colors.dart';
 import 'package:mobile/theme/app_theme.dart';
@@ -92,7 +93,7 @@ class _OtpScreenState extends State<OtpScreen> {
         backgroundColor: AppColors.primaryContainer,
         body: Stack(
           children: [
-            const _BackgroundDecorations(),
+            const AuthBackgroundDecorations(),
             Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(AppSpacing.marginMobile),
@@ -144,7 +145,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      const _FooterLinks(),
+                      const AuthFooterLinks(),
                     ],
                   ),
                 ),
@@ -157,45 +158,6 @@ class _OtpScreenState extends State<OtpScreen> {
   }
 }
 
-class _BackgroundDecorations extends StatelessWidget {
-  const _BackgroundDecorations();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.expand(
-      child: IgnorePointer(
-        child: Stack(
-          children: [
-            Positioned(
-              top: -100,
-              right: -100,
-              child: Container(
-                width: 500,
-                height: 500,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.secondaryContainer.withValues(alpha: 0.2),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -150,
-              left: -150,
-              child: Container(
-                width: 600,
-                height: 600,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.tertiaryFixed.withValues(alpha: 0.1),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _OtpHeader extends StatelessWidget {
   const _OtpHeader({
@@ -403,35 +365,3 @@ class _OtpResendRow extends StatelessWidget {
   }
 }
 
-class _FooterLinks extends StatelessWidget {
-  const _FooterLinks();
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: AppSpacing.md,
-      runSpacing: AppSpacing.xs,
-      children: [
-        Text(
-          AppStrings.privacyPolicy,
-          style: AppTypography.labelMd.copyWith(
-            color: AppColors.inversePrimary,
-          ),
-        ),
-        Text(
-          AppStrings.termsConditions,
-          style: AppTypography.labelMd.copyWith(
-            color: AppColors.inversePrimary,
-          ),
-        ),
-        Text(
-          AppStrings.support,
-          style: AppTypography.labelMd.copyWith(
-            color: AppColors.inversePrimary,
-          ),
-        ),
-      ],
-    );
-  }
-}

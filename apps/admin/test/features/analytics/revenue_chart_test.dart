@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:admin/features/analytics/analytics_repository.dart';
 import 'package:admin/features/analytics/revenue_chart_widget.dart';
 import 'package:admin/features/analytics/export_report_button.dart';
 import '../../helpers/fake_supabase.dart';
@@ -98,7 +99,11 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: ExportReportButton(client: fakeDb)),
+          home: Scaffold(
+            body: ExportReportButton(
+              repository: AnalyticsRepository(fakeDb),
+            ),
+          ),
         ),
       );
 
@@ -113,6 +118,29 @@ void main() {
       expect(fakeDb.functions.invokedFunctions, contains('analytics-export'));
       expect(fakeDb.functions.lastMethod, HttpMethod.get);
       expect(fakeDb.functions.lastQueryParameters, {'report': 'payments'});
+    },
+  );
+
+  testWidgets(
+    'ExportReportButton calls onExport when provided',
+    (tester) async {
+      var called = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ExportReportButton(
+              onExport: () async {
+                called = true;
+              },
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(ExportReportButton));
+      await tester.pump();
+
+      expect(called, isTrue);
     },
   );
 }

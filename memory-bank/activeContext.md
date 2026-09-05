@@ -1,7 +1,24 @@
 # Active Context: Church Digital Platform
 
 ## Current Focus & Status
-- **Current Milestone**: Full-Codebase Review Remediation (2026-09-05) — **Completed & Verified**.
+- **Current Milestone**: Round-2 Review Follow-Ups (2026-09-05) — **Completed & Verified**.
+- **Round-2 Review Follow-Ups (2026-09-05)** — LOW-severity backlog from the 2026-09-04 review (plan: `docs/superpowers/plans/2026-09-05-review-followups.md`, implemented by agy/gemini-3.8-flash-high, verified and landed by orchestrator; zero DB changes):
+  - *FUP-01 Dead Admin Screens*: deleted `apps/admin/lib/screens/home_screen.dart`, `features/auth/login_screen.dart`, `features/auth/otp_screen.dart` + their tests; `widget_test.dart` rewritten to smoke-test the real `AdminLoginScreen` (phone field + Arabic title) via `supabaseClientProvider.overrideWithValue`.
+  - *FUP-02 Auth Widget Dedup*: `AuthBackgroundDecorations`/`AuthFooterLinks` extracted to `apps/mobile/lib/core/auth/widgets/auth_shared_widgets.dart`, shared by login + OTP screens (Positioned.fill variant serves both Stack call sites).
+  - *FUP-03 Dead Diagnostic Files*: deleted `deno_engine.ts` (unreferenced Deno duplicate) and `test_real_{payment_flow,reconcile_payments,all_features}.ts` (imported Paymob functions deleted by migration 0070).
+  - *FUP-04 Analytics Screens*: all 3 admin analytics screens (payments/bookings/utilization) now fold `Either` without throwing in setState, render Arabic error/empty states, use Arabic labels, format piastres via `formatEgp`, and dropped their no-op Export CSV buttons; `MockSupabase.failing()` test helper added with failure-path coverage.
+  - *FUP-05 Export Seam*: `ExportReportButton` takes `AnalyticsRepository?` (was `dynamic client`); `AnalyticsRepository.exportPaymentsCsv()` returns `Either<Failure, String>` with Arabic messages; raw `$e` no longer leaks into SnackBars. `AnalyticsRepository._db` is `dynamic` (duck-typed to accept `FakeSupabase` in tests — contained in one private field). Second call site in `revenue_chart_widget.dart` migrated too.
+  - *FUP-06 Verification Sheet*: 202-line `StatefulBuilder` modal extracted to `CertificateVerificationSheet` StatefulWidget (owns controller + dispose) in `apps/mobile/lib/features/family_archive/certificate_verification_sheet.dart`.
+  - *FUP-07 Allocation Matrix Decomposition*: `build()` 297→~60 lines via `_AllocationControlsCard` (date nav + venue/priest filters) and `_UnassignedBookingsPanel` (unassigned queue); test file unchanged and passing.
+  - *Housekeeping*: `opencode.json` (contains a live API key) added to `.gitignore` — never to be committed.
+  - **Test Status after landing**: Flutter Admin 87/87; Flutter Mobile 94/94; Deno edge 75/75; diagnostic engine 5/5; `deno check` clean; 0 analyzer issues both apps; grep sweeps confirm zero references to deleted files.
+- **Next Immediate Step**:
+  1. Production deployment and staging smoke tests.
+  2. Remaining known LOW items (deferred): `_openVerificationDialog`-style decomposition elsewhere, English strings in any residual admin screens if found in future sweeps.
+
+---
+
+## Prior Milestone: Full-Codebase Review Remediation (2026-09-05) — Completed & Verified.
 - **Review Remediation (2026-09-05)** — fixes for the verified findings of the 2026-09-04 Gemini full-codebase review (plan: `docs/superpowers/plans/2026-09-04-review-remediation.md`, implemented by agy/gemini-3.8-flash-high, verified and landed by orchestrator):
   - *Fail-Closed Auth Gate (CRITICAL)*: `PhoneVerifyGate.checkSession()` now returns `false` on Supabase init failure instead of `true`; `isLoggedIn` callback plumbed through `ServicesListScreen` → `SlotGridScreen` for test injection.
   - *Admin UI Error Deadlocks (CRITICAL/HIGH)*: `unwrapOrThrow`/`throw f` inside `setState` eliminated across `payments_admin_screen`, `slots_admin_screen`, `faq_admin_screen`, `announcements_admin_screen`; `FutureBuilder`s check `snapshot.hasError` and render Arabic failure messages. `payment_review_queue_screen` kept `unwrapOrThrow` (its FutureBuilder already handled errors).
@@ -13,9 +30,6 @@
   - *Dead Suite Cleanup*: deleted `0077_sunday_school_management_test.sql` (entirely Sunday-school, orphaned by 0080) and stripped Sunday-school tests from `0078_operational_pivot_test.sql` (18→12 tests) — both had been failing on main since the 0080 pivot because the full sweep hadn't been run since.
   - **Test Status after landing**: pgTAP 72/72 suites PASS (full sweep, TAP-verified); Flutter Mobile 94/94; Flutter Admin 88/88; Deno edge 75/75; 0 analyzer issues both apps; migrations 0001–0083 replay cleanly via `npx supabase db reset`.
   - *RLS audit note*: `roles_permissions` has no `tenant_id` column (global RBAC catalog, policy is `is_admin()` only) — accepted as pre-existing single-tenant reference data.
-- **Next Immediate Step**:
-  1. Production deployment and staging smoke tests.
-  2. Optional LOW follow-ups from the 2026-09-04 review: dead admin auth/home screens, 296-line allocation matrix `build()` decomposition, shared auth widgets dedup, diagnostic-engine Node/Deno dedup, English strings in admin analytics screens, `export_report_button` repo-seam bypass.
 
 ---
 

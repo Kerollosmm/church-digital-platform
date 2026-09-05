@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'analytics_repository.dart';
 import 'attendance_chart_widget.dart';
 import 'export_report_button.dart';
 import 'revenue_chart_widget.dart';
@@ -21,7 +22,9 @@ class AnalyticsAdminScreen extends StatelessWidget {
               horizontal: 16.0,
               vertical: 8.0,
             ),
-            child: ExportReportButton(client: client),
+            child: ExportReportButton(
+              repository: client == null ? null : AnalyticsRepository(client!),
+            ),
           ),
         ],
       ),

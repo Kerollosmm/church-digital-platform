@@ -97,48 +97,8 @@ class _AllocationMatrixCalendarScreenState
     }
   }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'CONFIRMED':
-        return Colors.blue;
-      case 'PENDING_PAYMENT':
-        return Colors.amber.shade700;
-      case 'PAID':
-        return Colors.green;
-      case 'SUBMITTED':
-        return Colors.orange;
-      case 'REJECTED':
-      case 'CANCELLED':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _statusLabelAr(String status) {
-    switch (status) {
-      case 'SUBMITTED':
-        return 'قيد الانتظار';
-      case 'CONFIRMED':
-        return 'مؤكد ومسند';
-      case 'PENDING_PAYMENT':
-        return 'بانتظار الدفع';
-      case 'PAID':
-        return 'مدفوع';
-      case 'REJECTED':
-        return 'مرفوض';
-      case 'CANCELLED':
-        return 'ملغي';
-      default:
-        return status;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final dateStr =
-        '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('مصفوفة تخصيص القاعات والآباء الكهنة'),
@@ -165,119 +125,18 @@ class _AllocationMatrixCalendarScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Controls bar: Date navigation & Filters
-                        Card(
-                          elevation: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                              vertical: 12.0,
-                            ),
-                            child: Wrap(
-                              spacing: 16,
-                              runSpacing: 12,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              alignment: WrapAlignment.spaceBetween,
-                              children: [
-                                // Date Navigator
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.chevron_left),
-                                      onPressed: () {
-                                        setState(() {
-                                          _selectedDate = _selectedDate
-                                              .subtract(
-                                                const Duration(days: 1),
-                                              );
-                                        });
-                                      },
-                                    ),
-                                    TextButton.icon(
-                                      icon: const Icon(Icons.calendar_today),
-                                      label: Text(
-                                        dateStr,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      onPressed: () async {
-                                        final picked = await showDatePicker(
-                                          context: context,
-                                          initialDate: _selectedDate,
-                                          firstDate: DateTime(2020),
-                                          lastDate: DateTime(2030),
-                                        );
-                                        if (picked != null) {
-                                          setState(
-                                            () => _selectedDate = picked,
-                                          );
-                                        }
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.chevron_right),
-                                      onPressed: () {
-                                        setState(() {
-                                          _selectedDate = _selectedDate.add(
-                                            const Duration(days: 1),
-                                          );
-                                        });
-                                      },
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () => setState(
-                                        () => _selectedDate = DateTime.now(),
-                                      ),
-                                      child: const Text('اليوم'),
-                                    ),
-                                  ],
-                                ),
-                                // Venue Filter
-                                DropdownButton<String?>(
-                                  value: _selectedVenueFilter,
-                                  hint: const Text('كل القاعات'),
-                                  items: [
-                                    const DropdownMenuItem(
-                                      value: null,
-                                      child: Text('كل القاعات'),
-                                    ),
-                                    ..._venues.map(
-                                      (v) => DropdownMenuItem(
-                                        value: v.id,
-                                        child: Text(v.nameAr),
-                                      ),
-                                    ),
-                                  ],
-                                  onChanged: (val) => setState(
-                                    () => _selectedVenueFilter = val,
-                                  ),
-                                ),
-                                // Priest Filter
-                                DropdownButton<int?>(
-                                  value: _selectedPriestFilter,
-                                  hint: const Text('كل الكهنة'),
-                                  items: [
-                                    const DropdownMenuItem(
-                                      value: null,
-                                      child: Text('كل الكهنة'),
-                                    ),
-                                    ..._priests.map(
-                                      (p) => DropdownMenuItem(
-                                        value: p.id,
-                                        child: Text(p.name),
-                                      ),
-                                    ),
-                                  ],
-                                  onChanged: (val) => setState(
-                                    () => _selectedPriestFilter = val,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                        _AllocationControlsCard(
+                          selectedDate: _selectedDate,
+                          onDateChanged: (val) =>
+                              setState(() => _selectedDate = val),
+                          selectedVenueFilter: _selectedVenueFilter,
+                          venues: _venues,
+                          onVenueFilterChanged: (val) =>
+                              setState(() => _selectedVenueFilter = val),
+                          selectedPriestFilter: _selectedPriestFilter,
+                          priests: _priests,
+                          onPriestFilterChanged: (val) =>
+                              setState(() => _selectedPriestFilter = val),
                         ),
                         const SizedBox(height: 16),
                         // Matrix Calendar View
@@ -293,140 +152,9 @@ class _AllocationMatrixCalendarScreenState
                 // Right Sidebar: Unassigned Bookings Queue
                 Expanded(
                   flex: 1,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      border: Border(
-                        right: BorderSide(color: Colors.grey.shade300),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          color: Colors.blue.shade50,
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.pending_actions,
-                                color: Colors.blue,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'طلبات بانتظار التخصيص (${_unassignedBookings.length})',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: _unassignedBookings.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    'لا توجد طلبات جديدة معلقة',
-                                    style: TextStyle(color: Colors.grey),
-                                  ),
-                                )
-                              : ListView.separated(
-                                  padding: const EdgeInsets.all(12),
-                                  itemCount: _unassignedBookings.length,
-                                  separatorBuilder: (context, index) =>
-                                      const SizedBox(height: 8),
-                                  itemBuilder: (ctx, i) {
-                                    final item = _unassignedBookings[i];
-                                    return Card(
-                                      elevation: 1,
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Text(
-                                                  item.eventTypeName,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 6,
-                                                        vertical: 2,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: _statusColor(
-                                                      item.status,
-                                                    ).withValues(alpha: 0.15),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          4,
-                                                        ),
-                                                  ),
-                                                  child: Text(
-                                                    _statusLabelAr(item.status),
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: _statusColor(
-                                                        item.status,
-                                                      ),
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'صاحب الحجز: ${item.customerName ?? item.customerPhone ?? "غير محدد"}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                            Text(
-                                              'الموعد: ${item.startTime.toLocal().toString().substring(0, 16)}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            SizedBox(
-                                              width: double.infinity,
-                                              child: ElevatedButton.icon(
-                                                icon: const Icon(
-                                                  Icons.assignment_ind,
-                                                  size: 16,
-                                                ),
-                                                label: const Text(
-                                                  'إسناد وتأكيد',
-                                                ),
-                                                style: ElevatedButton.styleFrom(
-                                                  visualDensity:
-                                                      VisualDensity.compact,
-                                                ),
-                                                onPressed: () =>
-                                                    _openAssignDialog(item),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                        ),
-                      ],
-                    ),
+                  child: _UnassignedBookingsPanel(
+                    unassignedBookings: _unassignedBookings,
+                    onAssign: _openAssignDialog,
                   ),
                 ),
               ],
@@ -607,6 +335,315 @@ class _AllocationMatrixCalendarScreenState
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+Color _statusColor(String status) {
+  switch (status) {
+    case 'CONFIRMED':
+      return Colors.blue;
+    case 'PENDING_PAYMENT':
+      return Colors.amber.shade700;
+    case 'PAID':
+      return Colors.green;
+    case 'SUBMITTED':
+      return Colors.orange;
+    case 'REJECTED':
+    case 'CANCELLED':
+      return Colors.red;
+    default:
+      return Colors.grey;
+  }
+}
+
+String _statusLabelAr(String status) {
+  switch (status) {
+    case 'SUBMITTED':
+      return 'قيد الانتظار';
+    case 'CONFIRMED':
+      return 'مؤكد ومسند';
+    case 'PENDING_PAYMENT':
+      return 'بانتظار الدفع';
+    case 'PAID':
+      return 'مدفوع';
+    case 'REJECTED':
+      return 'مرفوض';
+    case 'CANCELLED':
+      return 'ملغي';
+    default:
+      return status;
+  }
+}
+
+class _AllocationControlsCard extends StatelessWidget {
+  const _AllocationControlsCard({
+    required this.selectedDate,
+    required this.onDateChanged,
+    required this.selectedVenueFilter,
+    required this.venues,
+    required this.onVenueFilterChanged,
+    required this.selectedPriestFilter,
+    required this.priests,
+    required this.onPriestFilterChanged,
+  });
+
+  final DateTime selectedDate;
+  final ValueChanged<DateTime> onDateChanged;
+  final String? selectedVenueFilter;
+  final List<VenueResourceItem> venues;
+  final ValueChanged<String?> onVenueFilterChanged;
+  final int? selectedPriestFilter;
+  final List<PriestAdminItem> priests;
+  final ValueChanged<int?> onPriestFilterChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final dateStr =
+        '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16.0,
+          vertical: 12.0,
+        ),
+        child: Wrap(
+          spacing: 16,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.spaceBetween,
+          children: [
+            // Date Navigator
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () {
+                    onDateChanged(
+                      selectedDate.subtract(
+                        const Duration(days: 1),
+                      ),
+                    );
+                  },
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.calendar_today),
+                  label: Text(
+                    dateStr,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (picked != null) {
+                      onDateChanged(picked);
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: () {
+                    onDateChanged(
+                      selectedDate.add(
+                        const Duration(days: 1),
+                      ),
+                    );
+                  },
+                ),
+                ElevatedButton(
+                  onPressed: () => onDateChanged(DateTime.now()),
+                  child: const Text('اليوم'),
+                ),
+              ],
+            ),
+            // Venue Filter
+            DropdownButton<String?>(
+              value: selectedVenueFilter,
+              hint: const Text('كل القاعات'),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('كل القاعات'),
+                ),
+                ...venues.map(
+                  (v) => DropdownMenuItem(
+                    value: v.id,
+                    child: Text(v.nameAr),
+                  ),
+                ),
+              ],
+              onChanged: onVenueFilterChanged,
+            ),
+            // Priest Filter
+            DropdownButton<int?>(
+              value: selectedPriestFilter,
+              hint: const Text('كل الكهنة'),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('كل الكهنة'),
+                ),
+                ...priests.map(
+                  (p) => DropdownMenuItem(
+                    value: p.id,
+                    child: Text(p.name),
+                  ),
+                ),
+              ],
+              onChanged: onPriestFilterChanged,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UnassignedBookingsPanel extends StatelessWidget {
+  const _UnassignedBookingsPanel({
+    required this.unassignedBookings,
+    required this.onAssign,
+  });
+
+  final List<EventBookingAdminItem> unassignedBookings;
+  final ValueChanged<EventBookingAdminItem> onAssign;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        border: Border(
+          right: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.blue.shade50,
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.pending_actions,
+                  color: Colors.blue,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'طلبات بانتظار التخصيص (${unassignedBookings.length})',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: unassignedBookings.isEmpty
+                ? const Center(
+                    child: Text(
+                      'لا توجد طلبات جديدة معلقة',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: unassignedBookings.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
+                    itemBuilder: (ctx, i) {
+                      final item = unassignedBookings[i];
+                      return Card(
+                        elevation: 1,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    item.eventTypeName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _statusColor(
+                                        item.status,
+                                      ).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      _statusLabelAr(item.status),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: _statusColor(item.status),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'صاحب الحجز: ${item.customerName ?? item.customerPhone ?? "غير محدد"}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                'الموعد: ${item.startTime.toLocal().toString().substring(0, 16)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(
+                                    Icons.assignment_ind,
+                                    size: 16,
+                                  ),
+                                  label: const Text(
+                                    'إسناد وتأكيد',
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    visualDensity:
+                                        VisualDensity.compact,
+                                  ),
+                                  onPressed: () => onAssign(item),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }

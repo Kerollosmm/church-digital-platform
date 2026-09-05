@@ -100,7 +100,12 @@ class _RevenueChartWidgetState extends State<RevenueChartWidget> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ExportReportButton(client: widget.client),
+                  ExportReportButton(
+                    repository: widget.repo ??
+                        (widget.client == null
+                            ? null
+                            : AnalyticsRepository(widget.client!)),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
