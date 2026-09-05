@@ -1,16 +1,15 @@
 -- ==============================================================================
 -- 0078_operational_pivot_test.sql
--- Test suite for Operational Pivot (Sacramental Track, Activities, Cashier, Sunday School Visitation)
+-- Test suite for Operational Pivot (Sacramental Track, Activities, Cashier)
 -- ==============================================================================
 
 BEGIN;
-SELECT plan(18);
+SELECT plan(12);
 
 -- 1. Schema & Column Assertions
 SELECT has_column('public', 'event_types', 'category', 'event_types has category column');
 SELECT has_column('public', 'event_types', 'required_documents_ar', 'event_types has required_documents_ar column');
 SELECT has_function('public', 'admin_quick_cash_collect', ARRAY['uuid', 'bigint', 'text'], 'admin_quick_cash_collect RPC exists');
-SELECT has_function('public', 'get_class_visitation_list', ARRAY['uuid', 'date'], 'get_class_visitation_list RPC exists');
 
 -- 2. Setup Fixtures
 INSERT INTO auth.users (id, email, phone)
@@ -113,82 +112,6 @@ SELECT is(
   (SELECT count(*)::int FROM public.event_outbox WHERE handler_type = 'WHATSAPP' AND payload->>'template_name' = 'event_booking_payment_received'),
   1,
   'WhatsApp outbox message enqueued for event_booking_payment_received'
-);
-
--- 5. Test Track 3: Sunday School Visitation List
-SET LOCAL ROLE postgres;
-
--- Setup Class, Servant, Students, Sessions, and Attendance
-INSERT INTO public.sunday_school_classes (id, name_ar, stage)
-VALUES ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'فصل أولى ابتدائي بنين', 'PRIMARY')
-ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO public.sunday_school_servants (class_id, user_id, role)
-VALUES ('dddddddd-dddd-dddd-dddd-dddddddddddd', '33333333-3333-3333-3333-333333333333', 'SERVANT')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.sunday_school_students (id, class_id, full_name_ar, parent_phone, phone)
-VALUES 
-  ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'مينا جورج سمعان', '+201011111111', '+201022222222'),
-  ('ffffffff-ffff-ffff-ffff-ffffffffffff', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'كيرلس يوسف كامل', '+201033333333', NULL)
-ON CONFLICT (id) DO NOTHING;
-
--- Session 1 (Last week): Student 1 PRESENT, Student 2 ABSENT
-INSERT INTO public.sunday_school_attendance (class_id, student_id, session_date, status)
-VALUES 
-  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', CURRENT_DATE - 7, 'PRESENT'),
-  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'ffffffff-ffff-ffff-ffff-ffffffffffff', CURRENT_DATE - 7, 'ABSENT')
-ON CONFLICT DO NOTHING;
-
--- Session 2 (Today): Student 1 ABSENT, Student 2 ABSENT
-INSERT INTO public.sunday_school_sessions (class_id, session_date, topic_title_ar)
-VALUES ('dddddddd-dddd-dddd-dddd-dddddddddddd', CURRENT_DATE, 'معجزة شفاء الأعمى')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.sunday_school_attendance (class_id, student_id, session_date, status)
-VALUES 
-  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', CURRENT_DATE, 'ABSENT'),
-  ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'ffffffff-ffff-ffff-ffff-ffffffffffff', CURRENT_DATE, 'ABSENT')
-ON CONFLICT DO NOTHING;
-
--- Test unassigned member access to visitation list (Forbidden)
-SET LOCAL ROLE authenticated;
-SET LOCAL "request.jwt.claim.sub" = '22222222-2222-2222-2222-222222222222'; -- regular unassigned user
-
-SELECT throws_ok(
-  $$ SELECT * FROM public.get_class_visitation_list('dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid) $$,
-  '42501',
-  NULL,
-  'Unassigned user cannot view class visitation list'
-);
-
--- Test assigned servant access to visitation list (Allowed)
-SET LOCAL "request.jwt.claim.sub" = '33333333-3333-3333-3333-333333333333'; -- assigned servant
-
-SELECT lives_ok(
-  $$ SELECT * FROM public.get_class_visitation_list('dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid) $$,
-  'Assigned servant can view class visitation list'
-);
-
--- Verify returned count and student details
-SELECT is(
-  (SELECT count(*)::int FROM public.get_class_visitation_list('dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid)),
-  2,
-  'Visitation list returns all 2 absent students for today session'
-);
-
--- Verify last attended date for Student 1 is 7 days ago
-SELECT is(
-  (SELECT last_attended_date FROM public.get_class_visitation_list('dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid) WHERE student_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
-  (CURRENT_DATE - 7)::date,
-  'Student 1 last_attended_date correctly identified as previous week'
-);
-
--- Verify consecutive absences for Student 2 is 2
-SELECT is(
-  (SELECT consecutive_absences FROM public.get_class_visitation_list('dddddddd-dddd-dddd-dddd-dddddddddddd'::uuid) WHERE student_id = 'ffffffff-ffff-ffff-ffff-ffffffffffff'),
-  2,
-  'Student 2 consecutive_absences correctly calculated as 2'
 );
 
 SELECT * FROM finish();

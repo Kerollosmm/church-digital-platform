@@ -41,8 +41,8 @@ class PhoneVerifyGate extends StatefulWidget {
     try {
       return Supabase.instance.client.auth.currentSession != null;
     } catch (e, st) {
-      debugPrint('Supabase session check fallback: $e\n$st');
-      return true; // Safe fallback when Supabase isn't initialized in unit tests
+      debugPrint('Supabase session check failed, failing closed: $e\n$st');
+      return false;
     }
   }
 

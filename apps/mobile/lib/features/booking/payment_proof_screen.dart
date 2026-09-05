@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/money_format.dart';
 import '../../models/payment_channel.dart';
 import '../../models/payment_proof_input.dart';
 import '../../models/payout_channel.dart';
@@ -44,7 +45,14 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
     super.initState();
     _senderPhoneController = TextEditingController();
     _referenceController = TextEditingController();
-    _amountController = TextEditingController(text: widget.amount.toString());
+    final initialEgp = widget.amount / 100.0;
+    _amountController = TextEditingController(
+      text: widget.amount > 0
+          ? initialEgp.toStringAsFixed(
+              initialEgp.truncateToDouble() == initialEgp ? 0 : 2,
+            )
+          : '',
+    );
     _loadPayoutChannels();
   }
 
@@ -148,8 +156,9 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
       }
     }
 
-    final amountVal =
-        int.tryParse(_amountController.text.trim()) ?? widget.amount;
+    final entered = double.tryParse(_amountController.text.trim()) ??
+        (widget.amount / 100.0);
+    final amountVal = egpToPiastres(entered);
     final input = PaymentProofInput(
       bookingId: widget.bookingId,
       channel: _selectedChannel,
@@ -379,6 +388,17 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
 
+                if (widget.amount > 0) ...[
+                  Text(
+                    'المبلغ المطلوب: ${formatEgp(widget.amount)}',
+                    style: AppTypography.labelMd.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                ],
+
                 // Amount
                 TextFormField(
                   controller: _amountController,
@@ -386,12 +406,12 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
                     labelText: AppStrings.amountClaimedLabel,
                     border: OutlineInputBorder(),
                   ),
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   validator: (val) {
                     if (val == null || val.trim().isEmpty) {
                       return AppStrings.fieldRequired;
                     }
-                    final numVal = int.tryParse(val.trim());
+                    final numVal = double.tryParse(val.trim());
                     if (numVal == null || numVal <= 0) {
                       return AppStrings.invalidAmount;
                     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/core/money_format.dart';
 import 'package:mobile/features/booking/slot_grid_screen.dart';
 import 'package:mobile/repositories/booking_repository.dart';
 import 'package:mobile/services/app_strings.dart';
@@ -7,8 +8,13 @@ import 'package:mobile/theme/app_theme.dart';
 import 'package:mobile/theme/app_typography.dart';
 
 class ServicesListScreen extends StatelessWidget {
-  const ServicesListScreen({super.key, required this.repository});
+  const ServicesListScreen({
+    super.key,
+    required this.repository,
+    this.isLoggedIn,
+  });
   final BookingRepository repository;
+  final bool Function()? isLoggedIn;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +67,7 @@ class ServicesListScreen extends StatelessWidget {
                       builder: (_) => SlotGridScreen(
                         serviceId: service['id'] as int,
                         repository: repository,
+                        isLoggedIn: isLoggedIn,
                       ),
                     ),
                   ),
@@ -122,7 +129,7 @@ class ServicesListScreen extends StatelessWidget {
                               if (priceFrom != null) ...[
                                 const SizedBox(height: AppSpacing.xs / 2),
                                 Text(
-                                  '${AppStrings.priceFrom} $priceFrom ${AppStrings.egp}',
+                                  '${AppStrings.priceFrom} ${formatEgp((priceFrom as num).toInt())}',
                                   style: AppTypography.labelMd.copyWith(
                                     color: AppColors.secondary,
                                   ),

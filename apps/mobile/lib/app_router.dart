@@ -6,10 +6,23 @@ import 'features/complaints/complaints_repository.dart';
 import 'features/family_archive/family_certificates_screen.dart';
 import 'features/family_archive/sacramental_repository.dart';
 import 'features/portal/portal_repository.dart';
+import 'repositories/event_booking_repository.dart';
 import 'repositories/supabase_booking_repository.dart';
+import 'repositories/supabase_event_booking_repository.dart';
+import 'screens/event_booking_screen.dart';
 import 'services/app_routes.dart';
 import 'services/app_supabase.dart';
 import 'widgets/bottom_nav_scaffold.dart';
+
+GoRoute eventBookingRoute([EventBookingRepository? repository]) {
+  return GoRoute(
+    path: '/event-booking',
+    name: AppRoutes.eventBooking,
+    builder: (context, state) => EventBookingScreen(
+      repository: repository ?? SupabaseEventBookingRepository(),
+    ),
+  );
+}
 
 GoRoute paymentProofRoute(AppSupabase db) {
   final bookings = SupabaseBookingRepository(db);
@@ -65,6 +78,7 @@ GoRouter buildRouter({
     ),
     paymentProofRoute(db),
     familyArchiveRoute(db),
+    eventBookingRoute(),
   ],
 );
 

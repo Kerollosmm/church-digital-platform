@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:admin/core/result.dart';
 import 'package:admin/features/payments/payments_admin_repository.dart';
 import 'package:admin/features/payments/payments_admin_screen.dart';
 import '../../helpers/mock_supabase.dart';
+
+class _FailingPaymentsRepo implements PaymentsAdminRepository {
+  @override
+  Future<Either<Failure, List<Map<String, dynamic>>>> list() async =>
+      const Left(Failure(code: 'INTERNAL', message: 'حدث خطأ في الاتصال بالخادم'));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   testWidgets('payments admin lists payments with status', (tester) async {
@@ -12,7 +22,7 @@ void main() {
           {
             'id': 1,
             'booking_id': 7,
-            'amount': 50,
+            'amount': 5000,
             'status': 'PAID',
             'gateway_ref': 9001,
           },
@@ -28,5 +38,13 @@ void main() {
     await tester.pump();
     expect(find.textContaining('PAID'), findsOneWidget);
     expect(find.textContaining('50'), findsOneWidget);
+  });
+
+  testWidgets('shows Arabic error instead of infinite spinner on failure', (tester) async {
+    final repo = _FailingPaymentsRepo();
+    await tester.pumpWidget(MaterialApp(home: PaymentsAdminScreen(repo: repo)));
+    await tester.pumpAndSettle();
+    expect(find.text('حدث خطأ في الاتصال بالخادم'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 }

@@ -1,7 +1,25 @@
 # Active Context: Church Digital Platform
 
 ## Current Focus & Status
-- **Current Milestone**: Code Health Improvements (CLEAN-10 – CLEAN-16) — **Completed & Verified**.
+- **Current Milestone**: Full-Codebase Review Remediation (2026-09-05) — **Completed & Verified**.
+- **Review Remediation (2026-09-05)** — fixes for the verified findings of the 2026-09-04 Gemini full-codebase review (plan: `docs/superpowers/plans/2026-09-04-review-remediation.md`, implemented by agy/gemini-3.8-flash-high, verified and landed by orchestrator):
+  - *Fail-Closed Auth Gate (CRITICAL)*: `PhoneVerifyGate.checkSession()` now returns `false` on Supabase init failure instead of `true`; `isLoggedIn` callback plumbed through `ServicesListScreen` → `SlotGridScreen` for test injection.
+  - *Admin UI Error Deadlocks (CRITICAL/HIGH)*: `unwrapOrThrow`/`throw f` inside `setState` eliminated across `payments_admin_screen`, `slots_admin_screen`, `faq_admin_screen`, `announcements_admin_screen`; `FutureBuilder`s check `snapshot.hasError` and render Arabic failure messages. `payment_review_queue_screen` kept `unwrapOrThrow` (its FutureBuilder already handled errors).
+  - *SUPER_ADMIN Export Parity (HIGH)*: `analytics-export` `exportAllowed()` accepts `ADMIN` and `SUPER_ADMIN`.
+  - *Migration 0081*: `offline_sync_log` gains `tenant_id BIGINT NOT NULL DEFAULT public.tenant_id()`, tenant-checked RLS policy, write DML revoked from `authenticated`.
+  - *Migration 0082*: `audit_log.entity_uuid uuid` added; `submit_event_booking`, `admin_confirm_booking`, `admin_reject_booking`, `admin_quick_cash_collect` populate it; `apply_payment` re-created with `SET search_path = public, pg_temp`.
+  - *Event Booking Route (HIGH)*: `EventBookingScreen` wired into mobile router (`/event-booking`, `AppRoutes.eventBooking`) with a home-hub quick card `حجز مناسبة خاصة` — Spec 008 flow no longer dead code.
+  - *Money Unification (Migration 0083)*: legacy slot-domain money converted to integer piastres (×100): `service_slots.price`, `bookings.paid_amount`, `payments.amount`, `payment_proofs.amount_claimed`; seed price 20→2000; 12 pgTAP suites' EGP literals ×100. Client seam: `formatEgp()`/`egpToPiastres()` in both apps' `core/money_format.dart`; payment-proof/cash-entry collect EGP and convert at the seam; `_SummaryCard` retyped `int? pricePiastres`.
+  - *Dead Suite Cleanup*: deleted `0077_sunday_school_management_test.sql` (entirely Sunday-school, orphaned by 0080) and stripped Sunday-school tests from `0078_operational_pivot_test.sql` (18→12 tests) — both had been failing on main since the 0080 pivot because the full sweep hadn't been run since.
+  - **Test Status after landing**: pgTAP 72/72 suites PASS (full sweep, TAP-verified); Flutter Mobile 94/94; Flutter Admin 88/88; Deno edge 75/75; 0 analyzer issues both apps; migrations 0001–0083 replay cleanly via `npx supabase db reset`.
+  - *RLS audit note*: `roles_permissions` has no `tenant_id` column (global RBAC catalog, policy is `is_admin()` only) — accepted as pre-existing single-tenant reference data.
+- **Next Immediate Step**:
+  1. Production deployment and staging smoke tests.
+  2. Optional LOW follow-ups from the 2026-09-04 review: dead admin auth/home screens, 296-line allocation matrix `build()` decomposition, shared auth widgets dedup, diagnostic-engine Node/Deno dedup, English strings in admin analytics screens, `export_report_button` repo-seam bypass.
+
+---
+
+## Prior Milestone: Code Health Improvements (CLEAN-06 – CLEAN-16) — Completed & Verified.
 - **Code Health Improvements (CLEAN-10 – CLEAN-16)**:
   - *BookingDetailScreen Build Method Decomposition (CLEAN-10)*: Refactored `apps/mobile/lib/features/booking/booking_detail_screen.dart` monolithic `build()` method (226 lines) into modular private widgets: `_CountdownBanner`, `_SummaryCard`, `_WhatsappOptInCard`, `_BottomActionSheet`. All tests pass; 0 analyzer issues.
   - *OtpScreen Build Method Decomposition (CLEAN-11)*: Refactored `apps/mobile/lib/features/auth/otp_screen.dart` monolithic `build()` method (268 lines) into clean private widgets: `_BackgroundDecorations`, `_OtpHeader`, `_OtpInputRow`, `_OtpResendRow`, `_FooterLinks`. All tests pass; 0 analyzer issues.

@@ -14,7 +14,7 @@ begin
   insert into public.services (id, title_ar, tenant_id) overriding system value values (99912, 'خدمة 012', 1) on conflict do nothing;
   insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   overriding system value
-  values (999121, 99912, now() + interval '8 days', now() + interval '8 days 1 hour', 1, 50, 'OPEN', 1)
+  values (999121, 99912, now() + interval '8 days', now() + interval '8 days 1 hour', 1, 5000, 'OPEN', 1)
   on conflict (id) do update set starts_at = now() + interval '8 days', capacity = 1, status = 'OPEN';
   v_slot := 999121;
   set local role authenticated;
@@ -25,7 +25,7 @@ begin
   reset role;
   perform set_config('request.jwt.claims', '{"role":"service_role"}', true);
   insert into public.payments (booking_id, amount, status, gateway_ref, merchant_order_id, tenant_id)
-  values (v_book, 50, 'CREATED', null, 'order-1', public.tenant_id()) returning id into v_pay;
+  values (v_book, 5000, 'CREATED', null, 'order-1', public.tenant_id()) returning id into v_pay;
   -- apply_payment is service-role only (webhook edge fn)
   perform public.apply_payment(v_pay);
   if (select status from public.bookings where id = v_book) <> 'AWAITING_CALL'
@@ -42,7 +42,7 @@ begin
   -- late-webhook race: webhook arrives AFTER the slot was lost (booking cancelled / lock expired) -> money must be auto-refunded, seat must NOT be granted
   begin
     insert into public.payments (booking_id, amount, status, gateway_ref, merchant_order_id, tenant_id)
-    values (v_book, 50, 'CREATED', null, 'order-2', public.tenant_id()) returning id into v_pay2;
+    values (v_book, 5000, 'CREATED', null, 'order-2', public.tenant_id()) returning id into v_pay2;
     update public.bookings set status = 'CANCELLED', locked_until = null where id = v_book;  -- simulate lock expiry + cancel
     perform public.apply_payment(v_pay2);
     if (select status from public.payments where id = v_pay2) <> 'REFUND_PENDING'

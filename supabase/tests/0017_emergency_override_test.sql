@@ -20,12 +20,12 @@ begin
   delete from public.bookings where user_id = v_user;
 
   insert into public.service_slots (service_id, starts_at, ends_at, capacity, price, status, tenant_id)
-  select service_id, now() + interval '10 days', now() + interval '10 days 1 hour', 1, 50, 'OPEN', public.tenant_id()
+  select service_id, now() + interval '10 days', now() + interval '10 days 1 hour', 1, 5000, 'OPEN', public.tenant_id()
   from public.service_slots limit 1
   returning id into v_slot1;
 
   insert into public.service_slots (service_id, starts_at, ends_at, capacity, price, status, tenant_id)
-  select service_id, now() + interval '11 days', now() + interval '11 days 1 hour', 1, 50, 'OPEN', public.tenant_id()
+  select service_id, now() + interval '11 days', now() + interval '11 days 1 hour', 1, 5000, 'OPEN', public.tenant_id()
   from public.service_slots limit 1
   returning id into v_slot2;
 
@@ -37,7 +37,7 @@ begin
   reset role;
   perform set_config('request.jwt.claims', null, true);
   insert into public.payments (booking_id, amount, status, gateway_ref, merchant_order_id, tenant_id)
-  values (v_book, 50, 'PAID', 555, 'order-5', public.tenant_id()) returning id into v_pay;
+  values (v_book, 5000, 'PAID', 555, 'order-5', public.tenant_id()) returning id into v_pay;
 
   -- ADMIN/PRIEST overrides: old booking -> RESCHEDULED, new booking on v_slot2, apology + refund requested
   set local role authenticated;

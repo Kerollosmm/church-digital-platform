@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:mobile/app_router.dart';
 import 'package:mobile/core/either.dart';
 import 'package:mobile/core/failure.dart';
 import 'package:mobile/models/event_booking.dart';
 import 'package:mobile/repositories/event_booking_repository.dart';
 import 'package:mobile/screens/event_booking_screen.dart';
+import 'package:mobile/services/app_routes.dart';
 
 class FakeEventBookingRepository implements EventBookingRepository {
   List<EventType> eventTypes = [
@@ -150,4 +153,26 @@ void main() {
       expect(fakeRepo.submitCalled, isTrue);
     },
   );
+
+  testWidgets('event booking screen is reachable via named route', (tester) async {
+    final fakeRepo = FakeEventBookingRepository();
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () => context.pushNamed(AppRoutes.eventBooking),
+              child: const Text('go'),
+            ),
+          ),
+        ),
+        eventBookingRoute(fakeRepo),
+      ],
+    );
+    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    await tester.tap(find.text('go'));
+    await tester.pumpAndSettle();
+    expect(find.byType(EventBookingScreen), findsOneWidget);
+  });
 }

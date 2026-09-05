@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../features/booking/my_bookings_screen.dart';
 import '../features/booking/services_list_screen.dart';
 import '../features/complaints/complaints_repository.dart';
@@ -62,6 +63,7 @@ class _BottomNavScaffoldState extends State<BottomNavScaffold> {
       onTapMass: () => _switchTab(1),
       onTapConfession: () => PriestsDirectorySheet.show(context, portalRepo),
       onTapBooking: () => _switchTab(1),
+      onTapEventBooking: () => context.push('/event-booking'),
       onTapComplaints: () => _switchTab(2),
     );
   }

@@ -4,6 +4,7 @@ import 'package:mobile/controllers/booking_flow_controller.dart';
 import 'package:mobile/controllers/run_guarded.dart';
 import 'package:mobile/core/auth/auth_gateway.dart';
 import 'package:mobile/core/auth/phone_verify_gate.dart';
+import 'package:mobile/core/money_format.dart';
 import 'package:mobile/repositories/booking_repository.dart';
 import 'package:mobile/services/app_routes.dart';
 import 'package:mobile/services/app_strings.dart';
@@ -106,7 +107,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Widget build(BuildContext context) {
     final title = widget.slot['title_ar'] as String? ?? '';
     final startsAt = _formatDateTime(widget.slot['starts_at']);
-    final price = widget.slot['price'];
+    final pricePiastres = (widget.slot['price'] as num?)?.toInt();
     final location = widget.slot['location'] as String?;
 
     return Scaffold(
@@ -131,7 +132,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   title: title,
                   startsAt: startsAt,
                   location: location,
-                  price: price,
+                  pricePiastres: pricePiastres,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _WhatsappOptInCard(
@@ -191,13 +192,13 @@ class _SummaryCard extends StatelessWidget {
     required this.title,
     required this.startsAt,
     required this.location,
-    required this.price,
+    required this.pricePiastres,
   });
 
   final String title;
   final String startsAt;
   final String? location;
-  final dynamic price;
+  final int? pricePiastres;
 
   @override
   Widget build(BuildContext context) {
@@ -258,7 +259,7 @@ class _SummaryCard extends StatelessWidget {
               ],
             ),
           ],
-          if (price != null) ...[
+          if (pricePiastres != null) ...[
             const SizedBox(height: AppSpacing.xs),
             Row(
               children: [
@@ -269,7 +270,7 @@ class _SummaryCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  '$price ${AppStrings.egp}',
+                  formatEgp(pricePiastres!),
                   style: AppTypography.headlineMd.copyWith(
                     color: AppColors.secondary,
                     fontSize: 18,

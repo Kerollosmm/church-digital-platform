@@ -17,7 +17,7 @@ void main() {
             id: 5,
             status: 'PENDING_PAYMENT',
             serviceName: 'قداس',
-            paidAmount: 50,
+            paidAmount: 5000,
           ),
         ],
       );
@@ -29,16 +29,17 @@ void main() {
             'slot_id': 101,
             'title_ar': 'القداس الأول',
             'starts_at': '2026-08-15T06:00:00+02:00',
-            'price': 50,
+            'price': 5000,
             'location': 'الكنيسة الكبيرة',
           },
           repository: repo,
+          isLoggedIn: () => true,
         ),
       );
 
       expect(find.text(AppStrings.completeBookingPrompt), findsOneWidget);
       expect(find.text('القداس الأول'), findsOneWidget);
-      expect(find.text('50 ${AppStrings.egp}'), findsOneWidget);
+      expect(find.text('50 ج.م'), findsOneWidget);
       expect(find.text(AppStrings.whatsappOptIn), findsOneWidget);
       expect(find.text(AppStrings.confirmBooking), findsOneWidget);
 

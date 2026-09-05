@@ -39,32 +39,32 @@ select set_eq(
 -- ------------------------------------------------- 2..4: table CHECKs
 select throws_ok(
   $$ insert into public.payment_proofs (booking_id, channel, sender_phone, reference_number, amount_claimed, image_path)
-     values (661, 'VODAFONE_CASH', '+201000006601', 'ref661a', 100, null) $$,
+     values (661, 'VODAFONE_CASH', '+201000006601', 'ref661a', 10000, null) $$,
   '23514', null,
   'wallet proof without image_path rejected by CHECK'
 );
 
 select throws_ok(
   $$ insert into public.payment_proofs (booking_id, channel, sender_phone, reference_number, amount_claimed, image_path)
-     values (661, 'CASH', '+201000006601', 'receipt661', 100, '1/661/x.jpg') $$,
+     values (661, 'CASH', '+201000006601', 'receipt661', 10000, '1/661/x.jpg') $$,
   '23514', null,
   'CASH proof carrying an image rejected by CHECK'
 );
 
 select throws_ok(
   $$ insert into public.payment_proofs (booking_id, channel, sender_phone, reference_number, amount_claimed, image_path, status)
-     values (661, 'CASH', '+201000006601', 'receipt661', 100, null, 'REJECTED') $$,
+     values (661, 'CASH', '+201000006601', 'receipt661', 10000, null, 'REJECTED') $$,
   '23514', null,
   'REJECTED proof without reason code rejected by CHECK'
 );
 
 -- ------------------------------------------------- 5..6: one PENDING per booking
 insert into public.payment_proofs (booking_id, channel, sender_phone, reference_number, amount_claimed, image_path)
-values (661, 'INSTAPAY', '+201000006601', 'ref661ok', 150, '1/661/proof.jpg');
+values (661, 'INSTAPAY', '+201000006601', 'ref661ok', 15000, '1/661/proof.jpg');
 
 select throws_ok(
   $$ insert into public.payment_proofs (booking_id, channel, sender_phone, reference_number, amount_claimed, image_path)
-     values (661, 'VODAFONE_CASH', '+201000006601', 'ref661dup', 150, '1/661/dup.jpg') $$,
+     values (661, 'VODAFONE_CASH', '+201000006601', 'ref661dup', 15000, '1/661/dup.jpg') $$,
   '23505', null,
   'second PENDING proof for same booking rejected by partial unique index'
 );
@@ -96,7 +96,7 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"cccccccc-0000-0000-0000-000000006601"}';
 select throws_ok(
   $$ insert into public.payment_proofs (booking_id, channel, sender_phone, reference_number, amount_claimed, image_path)
-     values (661, 'CASH', '+201000006601', 'direct', 50, null) $$,
+     values (661, 'CASH', '+201000006601', 'direct', 5000, null) $$,
   '42501', null,
   'authenticated direct INSERT into payment_proofs denied (RPC-only writes)'
 );

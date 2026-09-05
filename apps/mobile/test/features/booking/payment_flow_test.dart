@@ -65,7 +65,10 @@ void main() {
       final repo = SupabaseBookingRepository(fake);
       await pumpWithRouter(
         tester,
-        home: MyBookingsScreen(repository: repo),
+        home: MyBookingsScreen(
+          repository: repo,
+          isLoggedIn: () => true,
+        ),
         db: fake,
       );
       expect(find.text('في انتظار الدفع'), findsOneWidget);

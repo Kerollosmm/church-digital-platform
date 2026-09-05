@@ -31,7 +31,7 @@ void main() {
                   ctx,
                   repository: repo,
                   bookingId: 801,
-                  initialAmount: 350,
+                  initialAmount: 35000,
                   onSuccess: () => successCalled = true,
                 ),
                 child: const Text('Open Sheet'),
@@ -52,7 +52,7 @@ void main() {
 
       expect(calledArgs, isNotNull);
       expect(calledArgs!['p_booking_id'], 801);
-      expect(calledArgs!['p_amount'], 350);
+      expect(calledArgs!['p_amount'], 35000);
       expect(successCalled, isTrue);
     });
 

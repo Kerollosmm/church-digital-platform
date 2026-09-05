@@ -27,8 +27,8 @@ BEGIN
     ON CONFLICT DO NOTHING;
   INSERT INTO public.payments (id, booking_id, amount, status, tenant_id)
     OVERRIDING SYSTEM VALUE
-    VALUES (901, 901, 100, 'PAID', 1),
-           (902, 902, 50, 'REFUNDED', 1)
+    VALUES (901, 901, 10000, 'PAID', 1),
+           (902, 902, 5000, 'REFUNDED', 1)
     ON CONFLICT DO NOTHING;
 
   PERFORM public.materialize_analytics();
@@ -50,7 +50,7 @@ BEGIN
   SELECT p.total_paid, p.total_refunded, p.count_paid INTO v_total_paid, v_total_refunded, v_count_paid
     FROM public.payments_monthly p
     WHERE p.month = (date_trunc('month', now() AT TIME ZONE 'Africa/Cairo'))::date LIMIT 1;
-  IF v_total_paid < 100 OR v_total_refunded < 50 OR v_count_paid < 1 THEN
+  IF v_total_paid < 10000 OR v_total_refunded < 5000 OR v_count_paid < 1 THEN
     RAISE EXCEPTION 'FAIL: payments %, %, %', v_total_paid, v_total_refunded, v_count_paid;
   END IF;
 

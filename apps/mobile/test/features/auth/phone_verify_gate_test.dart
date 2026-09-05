@@ -28,6 +28,15 @@ class FakeAuthGateway implements AuthGateway {
 }
 
 void main() {
+  test('checkSession fails closed when Supabase is not initialized', () {
+    // In the test zone Supabase.instance throws (never initialized).
+    // Injected callbacks remain authoritative when provided:
+    expect(PhoneVerifyGate.checkSession(() => true), isTrue);
+    expect(PhoneVerifyGate.checkSession(() => false), isFalse);
+    // Uninitialized client must NOT be treated as logged in:
+    expect(PhoneVerifyGate.checkSession(), isFalse);
+  });
+
   testWidgets('PhoneVerifyGate skips verification when session exists', (
     tester,
   ) async {

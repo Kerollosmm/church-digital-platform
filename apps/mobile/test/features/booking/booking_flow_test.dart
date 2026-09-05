@@ -49,7 +49,7 @@ void main() {
     final repo = SupabaseBookingRepository(fake);
     await pumpWithRouter(
       tester,
-      home: ServicesListScreen(repository: repo),
+      home: ServicesListScreen(repository: repo, isLoggedIn: () => true),
       db: fake,
     );
     await tester.tap(find.text('قداس'));

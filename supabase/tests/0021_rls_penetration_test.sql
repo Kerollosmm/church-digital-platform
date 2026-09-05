@@ -20,7 +20,7 @@ begin
   insert into public.services (id, title_ar, tenant_id) overriding system value values (99921, 'خدمة 021', 1) on conflict do nothing;
   insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   overriding system value
-  values (999211, 99921, now() + interval '12 days', now() + interval '12 days 1 hour', 5, 50, 'OPEN', 1)
+  values (999211, 99921, now() + interval '12 days', now() + interval '12 days 1 hour', 5, 5000, 'OPEN', 1)
   on conflict (id) do update set starts_at = now() + interval '12 days', capacity = 5, status = 'OPEN';
 
   -- seed a complaint owned by someone else (as postgres, bypasses RLS; trigger encrypts it)
@@ -58,7 +58,7 @@ begin
   reset role;
   insert into public.payments (id, booking_id, amount, status, tenant_id)
     overriding system value
-    values (99921, v_other_booking, 50, 'PENDING', 1)
+    values (99921, v_other_booking, 5000, 'PENDING', 1)
     on conflict (id) do nothing;
   select sum(amount) into v_sum from public.payments;
 

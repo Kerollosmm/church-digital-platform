@@ -94,7 +94,7 @@ void main() {
       repository = FakeProofBookingRepository();
     });
 
-    Widget buildTestWidget({int bookingId = 101, int amount = 150}) {
+    Widget buildTestWidget({int bookingId = 101, int amount = 5000}) {
       return MaterialApp(
         home: PaymentProofScreen(
           bookingId: bookingId,
@@ -109,6 +109,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(AppStrings.paymentProofTitle), findsOneWidget);
+      expect(find.text('المبلغ المطلوب: 50 ج.م'), findsOneWidget);
       expect(find.text('01000000000'), findsWidgets);
       expect(find.text('الكنيسة القبطية'), findsOneWidget);
       expect(find.byType(TextFormField), findsWidgets);
@@ -162,6 +163,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(repository.lastSubmittedInput, isNotNull);
+        expect(repository.lastSubmittedInput!.amount, 5000);
         expect(repository.lastSubmittedInput!.channel, PaymentChannel.cash);
         expect(repository.lastSubmittedInput!.referenceNumber, 'TALAB123');
         expect(repository.lastSubmittedInput!.imagePath, isNull);

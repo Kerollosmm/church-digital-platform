@@ -14,7 +14,7 @@ void main() {
           {
             'id': 1,
             'title_ar': 'قداس الأحد',
-            'price_from': 50,
+            'price_from': 5000,
             'location': 'الكنيسة الكبيرة',
           },
         ],
@@ -28,7 +28,7 @@ void main() {
       expect(find.text(AppStrings.selectSlot), findsOneWidget);
       expect(find.text('قداس الأحد'), findsOneWidget);
       expect(
-        find.text('${AppStrings.priceFrom} 50 ${AppStrings.egp}'),
+        find.text('${AppStrings.priceFrom} 50 ج.م'),
         findsOneWidget,
       );
       expect(find.text('الكنيسة الكبيرة'), findsOneWidget);

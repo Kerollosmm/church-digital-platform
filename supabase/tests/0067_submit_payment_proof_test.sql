@@ -41,7 +41,7 @@ insert into storage.objects (bucket_id, name) values ('payment-proofs', '1/661/p
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"cccccccc-0000-0000-0000-000000006701"}';
 select ok(
-  public.submit_payment_proof(661, 'VODAFONE_CASH', '+201000006701', 'ref67001', 200, '1/661/proof.jpg') > 0,
+  public.submit_payment_proof(661, 'VODAFONE_CASH', '+201000006701', 'ref67001', 20000, '1/661/proof.jpg') > 0,
   'owner submit returns a proof id'
 );
 reset role;
@@ -49,7 +49,7 @@ reset role;
 select is(
   (select count(*) from public.payment_proofs
     where booking_id = 661 and channel = 'VODAFONE_CASH' and status = 'PENDING'
-      and reference_number = 'ref67001' and amount_claimed = 200
+      and reference_number = 'ref67001' and amount_claimed = 20000
       and image_path = '1/661/proof.jpg'
       and payment_id is not null),
   1::bigint,
@@ -81,7 +81,7 @@ delete from public.payments where booking_id = 662;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"cccccccc-0000-0000-0000-000000006702"}';
 select throws_ok(
-  $$ select public.submit_payment_proof(661, 'INSTAPAY', '+201000006702', 'refX', 200, null) $$,
+  $$ select public.submit_payment_proof(661, 'INSTAPAY', '+201000006702', 'refX', 20000, null) $$,
   '42501', null,
   'non-owner submission raises FORBIDDEN'
 );
@@ -96,28 +96,28 @@ select is(
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"cccccccc-0000-0000-0000-000000006701"}';
 select throws_ok(
-  $$ select public.submit_payment_proof(661, 'VODAFONE_CASH', '+201000006701', 'refNoImg', 200, null) $$,
+  $$ select public.submit_payment_proof(661, 'VODAFONE_CASH', '+201000006701', 'refNoImg', 20000, null) $$,
   'P0001', null,
   'wallet channel without image rejected BAD_REQUEST'
 );
 
 -- ------------------------------------------------- 9: CASH with image
 select throws_ok(
-  $$ select public.submit_payment_proof(661, 'CASH', '+201000006701', 'refCashImg', 100, '1/661/cash.jpg') $$,
+  $$ select public.submit_payment_proof(661, 'CASH', '+201000006701', 'refCashImg', 10000, '1/661/cash.jpg') $$,
   'P0001', null,
   'CASH channel carrying an image rejected BAD_REQUEST'
 );
 
 -- ------------------------------------------------- 10: duplicate PENDING
 select throws_ok(
-  $$ select public.submit_payment_proof(661, 'CASH', '+201000006701', 'refDup', 200, null) $$,
+  $$ select public.submit_payment_proof(661, 'CASH', '+201000006701', 'refDup', 20000, null) $$,
   'P0001', null,
   'second PENDING proof for same booking rejected BAD_REQUEST'
 );
 
 -- ------------------------------------------------- 11: booking not awaiting payment
 select throws_ok(
-  $$ select public.submit_payment_proof(662, 'CASH', '+201000006701', 'refLate', 100, null) $$,
+  $$ select public.submit_payment_proof(662, 'CASH', '+201000006701', 'refLate', 10000, null) $$,
   'P0001', null,
   'submission against non-PENDING_PAYMENT booking rejected BAD_REQUEST'
 );

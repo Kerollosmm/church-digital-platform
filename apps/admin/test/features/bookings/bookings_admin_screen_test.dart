@@ -55,14 +55,14 @@ void main() {
         'slot_id': 1,
         'status': 'AWAITING_CALL',
         'user_id': 'u1',
-        'paid_amount': 50,
+        'paid_amount': 5000,
       },
       {
         'id': 2,
         'slot_id': 2,
         'status': 'CONFIRMED',
         'user_id': 'u2',
-        'paid_amount': 50,
+        'paid_amount': 5000,
       },
     ]);
     await tester.pumpWidget(
@@ -98,7 +98,7 @@ void main() {
           'slot_id': 1,
           'status': 'AWAITING_CALL',
           'user_id': 'u1',
-          'paid_amount': 50,
+          'paid_amount': 5000,
         },
       ]);
 
@@ -118,7 +118,7 @@ void main() {
         'slot_id': 1,
         'status': 'PENDING_PAYMENT',
         'user_id': 'u3',
-        'paid_amount': 100,
+        'paid_amount': 10000,
       });
       gateway.triggerChange('bookings');
 
@@ -132,7 +132,7 @@ void main() {
         'slot_id': 2,
         'status': 'CONFIRMED',
         'user_id': 'u4',
-        'paid_amount': 75,
+        'paid_amount': 7500,
       });
       gateway.triggerChange('service_slots');
 

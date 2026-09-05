@@ -82,7 +82,7 @@ begin
             tstzrange(now() + interval '3 days', now() + interval '3 days' + interval '1 hour', '[)'), 0, 1),
            ((select id from public.services where title_ar = 'قداس العيد'),
             now() + interval '7 days', now() + interval '7 days' + interval '2 hours', 80,
-            tstzrange(now() + interval '7 days', now() + interval '7 days' + interval '2 hours', '[)'), 20, 1);
+            tstzrange(now() + interval '7 days', now() + interval '7 days' + interval '2 hours', '[)'), 2000, 1);
   end if;
 
   if (select count(*) from public.priests) = 0 then

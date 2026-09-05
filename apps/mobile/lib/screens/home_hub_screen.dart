@@ -13,6 +13,7 @@ class HomeHubScreen extends StatefulWidget {
     this.onTapMass,
     this.onTapConfession,
     this.onTapBooking,
+    this.onTapEventBooking,
     this.onTapComplaints,
   });
 
@@ -20,6 +21,7 @@ class HomeHubScreen extends StatefulWidget {
   final VoidCallback? onTapMass;
   final VoidCallback? onTapConfession;
   final VoidCallback? onTapBooking;
+  final VoidCallback? onTapEventBooking;
   final VoidCallback? onTapComplaints;
 
   @override
@@ -203,6 +205,11 @@ class _HomeHubScreenState extends State<HomeHubScreen> {
                 label: AppStrings.quickBooking,
                 icon: Icons.event_available,
                 onTap: widget.onTapBooking,
+              ),
+              _buildQuickCard(
+                label: 'حجز مناسبة خاصة',
+                icon: Icons.celebration,
+                onTap: widget.onTapEventBooking,
               ),
               _buildQuickCard(
                 label: AppStrings.quickComplaints,

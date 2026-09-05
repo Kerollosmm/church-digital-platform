@@ -53,18 +53,18 @@ insert into storage.objects (bucket_id, name) values
 
 -- Booking 694 already has a PENDING proof
 insert into public.payments (id, booking_id, amount, status, tenant_id)
-  overriding system value values (694, 694, 200, 'CREATED', 1);
+  overriding system value values (694, 694, 20000, 'CREATED', 1);
 
 insert into public.payment_proofs (id, booking_id, payment_id, channel, sender_phone, reference_number, amount_claimed, image_path, status, tenant_id)
   overriding system value values
-    (694, 694, 694, 'VODAFONE_CASH', '+201000006903', 'REF694', 200, '1/694/proof.jpg', 'PENDING', 1);
+    (694, 694, 694, 'VODAFONE_CASH', '+201000006903', 'REF694', 20000, '1/694/proof.jpg', 'PENDING', 1);
 
 -- ------------------------------------------------- 1..5: ADMIN mark_cash_received happy path
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"dddddddd-0000-0000-0000-000000006901"}';
 
 select is(
-  (public.mark_cash_received(691, 250, 'استلم بالخزينة دياكون يوسف')->>'booking_id')::bigint,
+  (public.mark_cash_received(691, 25000, 'استلم بالخزينة دياكون يوسف')->>'booking_id')::bigint,
   691::bigint,
   'admin mark_cash_received returns jsonb with booking_id'
 );
@@ -102,7 +102,7 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"dddddddd-0000-0000-0000-000000006902"}';
 
 select is(
-  (public.mark_cash_received(692, 300)->>'booking_id')::bigint,
+  (public.mark_cash_received(692, 30000)->>'booking_id')::bigint,
   692::bigint,
   'superadmin mark_cash_received succeeds'
 );
@@ -119,7 +119,7 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"dddddddd-0000-0000-0000-000000006903"}';
 
 select throws_ok(
-  $$ select public.mark_cash_received(691, 100) $$,
+  $$ select public.mark_cash_received(691, 10000) $$,
   '42501', null,
   'regular member cannot call mark_cash_received (FORBIDDEN)'
 );
@@ -130,14 +130,14 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"dddddddd-0000-0000-0000-000000006901"}';
 
 select throws_ok(
-  $$ select public.mark_cash_received(693, 100) $$,
+  $$ select public.mark_cash_received(693, 10000) $$,
   'P0001', null,
   'booking not in PENDING_PAYMENT status rejected BAD_REQUEST'
 );
 
 -- ------------------------------------------------- 10: Existing PENDING proof conflict denied BAD_REQUEST
 select throws_ok(
-  $$ select public.mark_cash_received(694, 200) $$,
+  $$ select public.mark_cash_received(694, 20000) $$,
   'P0001', null,
   'booking with existing PENDING proof rejected BAD_REQUEST (decide proof first)'
 );
@@ -151,7 +151,7 @@ select throws_ok(
 
 -- ------------------------------------------------- 12: Non-existent booking denied BAD_REQUEST
 select throws_ok(
-  $$ select public.mark_cash_received(999999, 100) $$,
+  $$ select public.mark_cash_received(999999, 10000) $$,
   'P0001', null,
   'non-existent booking rejected BAD_REQUEST'
 );

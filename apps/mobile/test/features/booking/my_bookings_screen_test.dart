@@ -23,7 +23,12 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: MyBookingsScreen(repository: repo)),
+        MaterialApp(
+          home: MyBookingsScreen(
+            repository: repo,
+            isLoggedIn: () => true,
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 

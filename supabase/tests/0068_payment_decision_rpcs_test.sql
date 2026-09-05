@@ -61,19 +61,19 @@ insert into storage.objects (bucket_id, name) values
 -- Create payment snapshots & proofs
 insert into public.payments (id, booking_id, amount, status, tenant_id)
   overriding system value values
-    (681, 681, 150, 'CREATED', 1),
-    (682, 682, 150, 'CREATED', 1),
-    (683, 683, 150, 'CREATED', 1),
-    (684, 684, 150, 'CREATED', 1),
-    (685, 685, 150, 'CREATED', 1);
+    (681, 681, 15000, 'CREATED', 1),
+    (682, 682, 15000, 'CREATED', 1),
+    (683, 683, 15000, 'CREATED', 1),
+    (684, 684, 15000, 'CREATED', 1),
+    (685, 685, 15000, 'CREATED', 1);
 
 insert into public.payment_proofs (id, booking_id, payment_id, channel, sender_phone, reference_number, amount_claimed, image_path, status, tenant_id)
   overriding system value values
-    (681, 681, 681, 'VODAFONE_CASH', '+201000006803', 'REF681', 150, '1/681/proof.jpg', 'PENDING', 1),
-    (682, 682, 682, 'INSTAPAY', '+201000006803', 'REF682', 150, '1/682/proof.jpg', 'PENDING', 1),
-    (683, 683, 683, 'VODAFONE_CASH', '+201000006803', 'REF683', 150, '1/683/proof.jpg', 'PENDING', 1),
-    (684, 684, 684, 'VODAFONE_CASH', '+201000006803', 'REF684', 150, '1/684/proof.jpg', 'PENDING', 1),
-    (685, 685, 685, 'VODAFONE_CASH', '+201000006803', 'REF685', 150, '1/685/proof.jpg', 'PENDING', 1);
+    (681, 681, 681, 'VODAFONE_CASH', '+201000006803', 'REF681', 15000, '1/681/proof.jpg', 'PENDING', 1),
+    (682, 682, 682, 'INSTAPAY', '+201000006803', 'REF682', 15000, '1/682/proof.jpg', 'PENDING', 1),
+    (683, 683, 683, 'VODAFONE_CASH', '+201000006803', 'REF683', 15000, '1/683/proof.jpg', 'PENDING', 1),
+    (684, 684, 684, 'VODAFONE_CASH', '+201000006803', 'REF684', 15000, '1/684/proof.jpg', 'PENDING', 1),
+    (685, 685, 685, 'VODAFONE_CASH', '+201000006803', 'REF685', 15000, '1/685/proof.jpg', 'PENDING', 1);
 
 -- ------------------------------------------------- 1..5: ADMIN approve happy path
 set local role authenticated;
@@ -186,7 +186,7 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"cccccccc-0000-0000-0000-000000006803"}';
 
 select ok(
-  public.submit_payment_proof(684, 'VODAFONE_CASH', '+201000006803', 'REF684_FIXED', 150, '1/684/proof2.jpg') > 0,
+  public.submit_payment_proof(684, 'VODAFONE_CASH', '+201000006803', 'REF684_FIXED', 15000, '1/684/proof2.jpg') > 0,
   'member can resubmit new proof for booking 684 after previous was rejected'
 );
 reset role;

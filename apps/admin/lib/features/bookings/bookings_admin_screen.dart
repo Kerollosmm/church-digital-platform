@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/money_format.dart';
 import 'bookings_provider.dart';
 
 class BookingsAdminScreen extends ConsumerWidget {
@@ -62,7 +63,7 @@ class BookingsAdminScreen extends ConsumerWidget {
                     final r = rows[i];
                     return ListTile(
                       title: Text('حجز #${r['id']} — ${r['status']}'),
-                      subtitle: Text('${r['paid_amount']} جنيه'),
+                      subtitle: Text(formatEgp((r['paid_amount'] as num?)?.toInt() ?? 0)),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

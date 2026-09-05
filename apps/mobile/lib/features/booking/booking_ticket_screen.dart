@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/core/money_format.dart';
 import 'package:mobile/controllers/run_guarded.dart';
 import 'package:mobile/features/booking/services_list_screen.dart';
 import 'package:mobile/models/booking_status.dart';
@@ -229,7 +230,7 @@ class _BookingTicketScreenState extends State<BookingTicketScreen> {
                               const Divider(height: AppSpacing.md),
                               _buildDataRow(
                                 AppStrings.paidAmountLabel,
-                                '$paidAmount ${AppStrings.egp}',
+                                formatEgp((paidAmount as num).toInt()),
                               ),
                             ],
                             if (createdAt.isNotEmpty) ...[

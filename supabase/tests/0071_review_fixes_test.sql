@@ -35,10 +35,10 @@ insert into public.bookings (id, user_id, slot_id, tenant_id, status)
 
 insert into public.payments (id, booking_id, amount, status, gateway_ref, tenant_id)
   overriding system value values
-  (99991, 711, 100, 'CREATED', 'txn71_a', 1);
+  (99991, 711, 10000, 'CREATED', 'txn71_a', 1);
 
 insert into public.payment_proofs (booking_id, payment_id, channel, sender_phone, reference_number, amount_claimed)
-values (711, 99991, 'CASH', '+201000007101', 'CASH_711_manual', 100);
+values (711, 99991, 'CASH', '+201000007101', 'CASH_711_manual', 10000);
 
 -- ------------------------------------------------- 1..3: approve refuses stale bookings
 update public.bookings set status = 'CANCELLED', locked_until = null where id = 711;

@@ -11,7 +11,7 @@ void main() {
     'id': 123,
     'status': 'CONFIRMED',
     'service_name': 'قداس الأحد',
-    'paid_amount': 150,
+    'paid_amount': 15000,
     'created_at': '2026-10-15T08:00:00',
   };
 

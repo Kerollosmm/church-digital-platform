@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/money_format.dart';
 import '../../core/result.dart';
 import 'models/payment_proof_review.dart';
 import 'payments_admin_repository.dart';
@@ -42,7 +43,7 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('المرجع: ${proof.referenceNumber}'),
-            Text('المبلغ: ${proof.amountClaimed} جنيه'),
+            Text('المبلغ: ${formatEgp(proof.amountClaimed)}'),
             const SizedBox(height: 8),
             Text(
               'المسار: ${proof.imagePath}',
@@ -94,7 +95,7 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'المبلغ: ${proof.amountClaimed} جنيه (حجز #${proof.bookingId})',
+                'المبلغ: ${formatEgp(proof.amountClaimed)} (حجز #${proof.bookingId})',
               ),
               const SizedBox(height: 12),
               TextField(
@@ -128,7 +129,7 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
         builder: (ctx) => AlertDialog(
           title: const Text('تأكيد قبول إثبات الدفع'),
           content: Text(
-            'هل تم التحقق من استلام مبلغ ${proof.amountClaimed} جنيه على حساب الكنيسة بالمرجع ${proof.referenceNumber}؟',
+            'هل تم التحقق من استلام مبلغ ${formatEgp(proof.amountClaimed)} على حساب الكنيسة بالمرجع ${proof.referenceNumber}؟',
           ),
           actions: [
             TextButton(
@@ -187,7 +188,7 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'حجز #${proof.bookingId} — مبلغ: ${proof.amountClaimed} جنيه',
+                'حجز #${proof.bookingId} — مبلغ: ${formatEgp(proof.amountClaimed)}',
               ),
               const SizedBox(height: 12),
               const Text(
@@ -327,7 +328,7 @@ class _PaymentReviewQueueScreenState extends State<PaymentReviewQueueScreen> {
                       const Divider(),
                       const SizedBox(height: 6),
                       Text(
-                        'المبلغ المطلوب: ${p.amountClaimed} جنيه',
+                        'المبلغ المطلوب: ${formatEgp(p.amountClaimed)}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,

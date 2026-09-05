@@ -66,7 +66,9 @@
 \ir 0074_event_booking_rpcs_test.sql
 \ir 0075_priest_hall_allocation_test.sql
 \ir 0076_sacramental_records_test.sql
-\ir 0077_sunday_school_management_test.sql
 \ir 0078_operational_pivot_test.sql
 \ir 0079_remote_replay_hardening_test.sql
 \ir 0080_drop_sunday_school_stack_test.sql
+\ir 0081_offline_sync_tenant_test.sql
+\ir 0082_audit_entity_uuid_test.sql
+\ir 0083_money_piastres_test.sql

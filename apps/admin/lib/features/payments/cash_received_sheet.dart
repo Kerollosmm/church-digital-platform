@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/money_format.dart';
 import 'payments_admin_repository.dart';
 
 /// Modal bottom sheet for staff to record direct in-person cash payment.
@@ -52,8 +53,13 @@ class _CashReceivedSheetState extends State<CashReceivedSheet> {
   @override
   void initState() {
     super.initState();
+    final initialEgp = widget.initialAmount / 100.0;
     _amountController = TextEditingController(
-      text: widget.initialAmount.toString(),
+      text: widget.initialAmount > 0
+          ? initialEgp.toStringAsFixed(
+              initialEgp.truncateToDouble() == initialEgp ? 0 : 2,
+            )
+          : '',
     );
     _noteController = TextEditingController(text: 'استلام نقدي بالخزينة');
   }
@@ -66,11 +72,12 @@ class _CashReceivedSheetState extends State<CashReceivedSheet> {
   }
 
   Future<void> _submit() async {
-    final amount = int.tryParse(_amountController.text.trim());
-    if (amount == null || amount <= 0) {
+    final entered = double.tryParse(_amountController.text.trim());
+    if (entered == null || entered <= 0) {
       setState(() => _error = 'يرجى إدخال مبلغ صحيح أكبر من الصفر');
       return;
     }
+    final amount = egpToPiastres(entered);
 
     setState(() {
       _loading = true;
@@ -157,7 +164,7 @@ class _CashReceivedSheetState extends State<CashReceivedSheet> {
             const SizedBox(height: 6),
             TextField(
               controller: _amountController,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 filled: true,

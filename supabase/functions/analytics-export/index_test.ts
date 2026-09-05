@@ -21,11 +21,13 @@ Deno.test("builds CSV from rows with BOM + formula-char guard", () => {
   assertEquals(csv, "\uFEFFmonth,rate_pct\n2026-08-01,50.00\n2026-09-01,66.67\n'=1+1,'-0.50\n");
 });
 
-Deno.test("exportAllowed allows ADMIN and denies PRIEST, SUPER_ADMIN, USER", () => {
-  assertEquals(exportAllowed("USER"), false);
-  assertEquals(exportAllowed("PRIEST"), false);
-  assertEquals(exportAllowed("SUPER_ADMIN"), false);
+Deno.test("exportAllowed permits admins and super admins only", () => {
   assertEquals(exportAllowed("ADMIN"), true);
+  assertEquals(exportAllowed("admin"), true);
+  assertEquals(exportAllowed("SUPER_ADMIN"), true);
+  assertEquals(exportAllowed("super_admin"), true);
+  assertEquals(exportAllowed("USER"), false);
+  assertEquals(exportAllowed(undefined), false);
 });
 
 function createDeps(overrides: Partial<Deps> = {}): { deps: Deps; fakeAnon: FakeClient; fakeService: FakeClient } {

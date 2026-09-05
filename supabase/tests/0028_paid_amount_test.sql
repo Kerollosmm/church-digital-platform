@@ -10,7 +10,7 @@ begin
   update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id = '00000000-0000-0000-0000-000000000038';
   delete from public.bookings where user_id = '00000000-0000-0000-0000-000000000038';
   insert into public.service_slots (service_id, starts_at, ends_at, capacity, price, status, tenant_id)
-  select id, now() + interval '3 days', now() + interval '3 days 1 hour', 5, 75, 'OPEN', 1
+  select id, now() + interval '3 days', now() + interval '3 days 1 hour', 5, 7500, 'OPEN', 1
   from public.services limit 1
   returning id, price into v_slot, v_price;
 
@@ -20,7 +20,7 @@ begin
 
   reset role;
   select paid_amount into v_paid from public.bookings where id = v_book;
-  if v_paid <> 75 then raise exception 'FAIL: book_slot must snapshot slot price (expected 75, got %)', v_paid; end if;
+  if v_paid <> 7500 then raise exception 'FAIL: book_slot must snapshot slot price (expected 7500, got %)', v_paid; end if;
 
   raise notice 'OK';
 end $$;

@@ -19,7 +19,7 @@ void main() {
                 'channel': 'VODAFONE_CASH',
                 'sender_phone': '01000000001',
                 'reference_number': 'REF101',
-                'amount_claimed': 150,
+                'amount_claimed': 15000,
                 'image_path': '1/501/proof.jpg',
                 'status': 'PENDING',
                 'created_at': DateTime.now().toIso8601String(),
@@ -38,7 +38,7 @@ void main() {
         expect(proofs.first.bookingId, 501);
         expect(proofs.first.channel, 'VODAFONE_CASH');
         expect(proofs.first.channelDisplayName, 'فودافون كاش');
-        expect(proofs.first.amountClaimed, 150);
+        expect(proofs.first.amountClaimed, 15000);
       },
     );
 
@@ -107,7 +107,7 @@ void main() {
               'channel': 'VODAFONE_CASH',
               'sender_phone': '01000000042',
               'reference_number': 'VF-4242',
-              'amount_claimed': 200,
+              'amount_claimed': 20000,
               'image_path': '1/42/screenshot.png',
               'status': 'PENDING',
               'created_at': DateTime.now().toIso8601String(),
@@ -167,7 +167,7 @@ void main() {
                 'channel': 'INSTAPAY',
                 'sender_phone': '01011112222',
                 'reference_number': 'INSTA-999',
-                'amount_claimed': 100,
+                'amount_claimed': 10000,
                 'image_path': '1/43/screenshot.png',
                 'status': 'PENDING',
                 'created_at': DateTime.now().toIso8601String(),

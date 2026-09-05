@@ -29,7 +29,8 @@ export function buildCsv(headers: string[], rows: string[][]): string {
 }
 
 export function exportAllowed(role: string | undefined): boolean {
-  return role?.toUpperCase() === "ADMIN";
+  const r = role?.toUpperCase();
+  return r === "ADMIN" || r === "SUPER_ADMIN";
 }
 
 export async function handleRequest(

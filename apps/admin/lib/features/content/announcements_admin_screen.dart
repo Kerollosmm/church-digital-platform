@@ -12,6 +12,7 @@ class AnnouncementsAdminScreen extends StatefulWidget {
 class _AnnouncementsAdminScreenState extends State<AnnouncementsAdminScreen> {
   List<Map<String, dynamic>>? _rows;
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -21,17 +22,22 @@ class _AnnouncementsAdminScreenState extends State<AnnouncementsAdminScreen> {
 
   Future<void> _load() async {
     final res = await widget.repo.list();
-    if (mounted) {
-      setState(() {
-        _rows = res.fold(
-          (f) => throw f,
-          (rows) => List<Map<String, dynamic>>.from(
+    if (!mounted) return;
+    setState(() {
+      res.fold(
+        (f) {
+          _error = f.message;
+          _rows = null;
+        },
+        (rows) {
+          _error = null;
+          _rows = List<Map<String, dynamic>>.from(
             rows.map((r) => Map<String, dynamic>.from(r)),
-          ),
-        );
-        _loading = false;
-      });
-    }
+          );
+        },
+      );
+      _loading = false;
+    });
   }
 
   Future<void> _create() async {
@@ -67,13 +73,22 @@ class _AnnouncementsAdminScreenState extends State<AnnouncementsAdminScreen> {
                 bodyAr: body.text.trim(),
               );
               if (ctx.mounted) Navigator.pop(ctx);
-              res.fold((f) => throw f, (created) {
-                if (mounted) {
-                  setState(() {
-                    _rows = [...?_rows, created];
-                  });
-                }
-              });
+              res.fold(
+                (f) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(f.message)),
+                    );
+                  }
+                },
+                (created) {
+                  if (mounted) {
+                    setState(() {
+                      _rows = [...?_rows, created];
+                    });
+                  }
+                },
+              );
             },
             child: const Text('نشر'),
           ),
@@ -92,6 +107,13 @@ class _AnnouncementsAdminScreenState extends State<AnnouncementsAdminScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(_error!),
+              ),
+            )
           : ListView.builder(
               itemCount: _rows?.length ?? 0,
               itemBuilder: (_, i) {
@@ -104,13 +126,22 @@ class _AnnouncementsAdminScreenState extends State<AnnouncementsAdminScreen> {
                     onPressed: () async {
                       final id = row['id'] as int;
                       final res = await widget.repo.delete(id);
-                      res.fold((f) => throw f, (_) {
-                        if (mounted) {
-                          setState(() {
-                            _rows?.removeWhere((r) => r['id'] == id);
-                          });
-                        }
-                      });
+                      res.fold(
+                        (f) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(f.message)),
+                            );
+                          }
+                        },
+                        (_) {
+                          if (mounted) {
+                            setState(() {
+                              _rows?.removeWhere((r) => r['id'] == id);
+                            });
+                          }
+                        },
+                      );
                     },
                   ),
                 );

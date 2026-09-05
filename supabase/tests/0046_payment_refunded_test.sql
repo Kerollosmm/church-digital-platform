@@ -14,9 +14,9 @@ BEGIN;
 INSERT INTO public.payments (id, amount, status, gateway_ref, tenant_id)
 OVERRIDING SYSTEM VALUE
 VALUES 
-  (99991, 50.00, 'PAID', 'txn_paid_test', 1),
-  (99992, 75.00, 'REFUND_PENDING', 'txn_refund_pending_test', 1),
-  (99993, 100.00, 'PENDING', 'txn_pending_test', 1);
+  (99991, 5000, 'PAID', 'txn_paid_test', 1),
+  (99992, 7500, 'REFUND_PENDING', 'txn_refund_pending_test', 1),
+  (99993, 10000, 'PENDING', 'txn_pending_test', 1);
 
 -- 1. PAID -> REFUNDED transition succeeds
 SET LOCAL ROLE service_role;

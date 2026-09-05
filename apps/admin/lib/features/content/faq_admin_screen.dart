@@ -11,6 +11,7 @@ class FaqAdminScreen extends StatefulWidget {
 class _FaqAdminScreenState extends State<FaqAdminScreen> {
   List<Map<String, dynamic>>? _rows;
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -20,17 +21,22 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
 
   Future<void> _load() async {
     final res = await widget.repository.faq();
-    if (mounted) {
-      setState(() {
-        _rows = res.fold(
-          (f) => throw f,
-          (rows) => List<Map<String, dynamic>>.from(
+    if (!mounted) return;
+    setState(() {
+      res.fold(
+        (f) {
+          _error = f.message;
+          _rows = null;
+        },
+        (rows) {
+          _error = null;
+          _rows = List<Map<String, dynamic>>.from(
             rows.map((r) => Map<String, dynamic>.from(r)),
-          ),
-        );
-        _loading = false;
-      });
-    }
+          );
+        },
+      );
+      _loading = false;
+    });
   }
 
   Future<void> _add() async {
@@ -60,15 +66,24 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
           ),
           TextButton(
             onPressed: () async {
-              (await widget.repository.createFaq({
+              final res = await widget.repository.createFaq({
                 'question_ar': q.text,
                 'answer_ar': a.text,
                 'position': 999,
                 'published': true,
                 'tenant_id': 1,
-              })).fold((f) => throw f, (_) => {});
+              });
               if (ctx.mounted) Navigator.pop(ctx);
-              _load();
+              res.fold(
+                (f) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(f.message)),
+                    );
+                  }
+                },
+                (_) => _load(),
+              );
             },
             child: const Text('حفظ'),
           ),
@@ -87,6 +102,13 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(_error!),
+              ),
+            )
           : ListView.builder(
               itemCount: _rows?.length ?? 0,
               itemBuilder: (_, i) {
@@ -98,14 +120,23 @@ class _FaqAdminScreenState extends State<FaqAdminScreen> {
                     icon: const Icon(Icons.delete),
                     onPressed: () async {
                       final id = r['id'] as int;
-                      (await widget.repository.deleteFaq(
-                        id,
-                      )).fold((f) => throw f, (_) => {});
-                      if (mounted) {
-                        setState(() {
-                          _rows?.removeWhere((row) => row['id'] == id);
-                        });
-                      }
+                      final res = await widget.repository.deleteFaq(id);
+                      res.fold(
+                        (f) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(f.message)),
+                            );
+                          }
+                        },
+                        (_) {
+                          if (mounted) {
+                            setState(() {
+                              _rows?.removeWhere((row) => row['id'] == id);
+                            });
+                          }
+                        },
+                      );
                     },
                   ),
                 );
