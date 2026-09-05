@@ -6,12 +6,11 @@
   - Migrations 0079–0084 all applied (`migration list` confirms 0001–0084). First push attempt failed on 0083: prod-only manual drift — trigger `trg_log_payment_change` on `payments` calling `log_payment_change()` inserting into `payment_audit_logs` columns that don't exist (objects in NO repo migration). Fixed by migration `0084_drop_payment_trigger_drift.sql` (idempotent `DROP TRIGGER/FUNCTION IF EXISTS`); drops applied via Management API, then push re-ran 0083+0084 cleanly. Locally verified before push: 84/84 replay + pgTAP 72/72.
   - Edge functions deployed + ACTIVE: analytics-export, diagnostic-engine, event-dispatcher, otp-sms. `CRON_SECRET` set (random UUID, value never printed/persisted).
   - Smoke suite re-run by orchestrator against prod with revealed keys (env-only, deleted after): **7/7 PASS** (REST, schema sanity incl. 0080 drops, piastres 2000, RLS anon-block, RPC error contract, edge 401 contract, auth liveness). Prod's seed slot survived 0083 (price=2000).
-- **Remaining prod drift (pending user decision, NOT blocking)**: 9 legacy edge functions on prod that exist in no repo dir — paymob-checkout, paymob-refund, paymob-webhook, reconcile-payments, complaints-decrypt, complaints-encrypt, whatsapp-sender, youtube-expiry, offline-sync (old Paymob/complaints/video-era code running against the new schema; several `verify_jwt: false`). Plus benign `payments.event_booking_id` column + index.
+- **Prod drift resolved (2026-09-05)**: the 9 legacy edge functions (paymob-checkout/refund/webhook, reconcile-payments, complaints-decrypt/encrypt, whatsapp-sender, youtube-expiry, offline-sync) were deleted from prod with user approval — `functions list` now shows exactly the 4 repo functions. Remaining benign drift: `payments.event_booking_id` column + index.
 - **Staging (vkognohmnqxzegxqhvmm)**: complete and frozen — 83 migrations + seed, 4 functions, CRON_SECRET, smoke 7/7. Free-tier second project (preview branches are Pro-only).
 - **Next Immediate Step**:
-  1. Decide on deleting the 9 legacy prod functions (stale code + unauthenticated surface).
-  2. Real credentials: WhatsApp (Meta) token/phone ID/webhook secret, FCM service account — needed for notifications to actually send.
-  3. Admin PWA hosting decision + Android release keystore before public distribution.
+  1. Real credentials: WhatsApp (Meta) token/phone ID/webhook secret, FCM service account — needed for notifications to actually send.
+  2. Admin PWA hosting decision + Android release keystore before public distribution.
 
 ---
 
