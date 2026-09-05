@@ -24,3 +24,6 @@ test-apps/shared/.local-credentials.json
 
 # Local AI-tool config with embedded API keys
 opencode.json
+
+# agy-delegate operational briefs (never commit)
+.agy-briefs/
