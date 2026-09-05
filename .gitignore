@@ -21,3 +21,6 @@ Thumbs.db
 
 # Per-run portal credentials (FR-006)
 test-apps/shared/.local-credentials.json
+
+# Local AI-tool config with embedded API keys
+opencode.json
