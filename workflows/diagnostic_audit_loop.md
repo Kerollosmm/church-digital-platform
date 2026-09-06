@@ -2,9 +2,7 @@
 
 ## Loop Lens
 - **Recurring Cycle:** Continuous automated audit running every hour / nightly via Supabase `pg_cron`.
-- **Target Backend:** Supabase PostgreSQL 16 + RLS + Edge Functions (`https://qksgphryemrdrkwaqnxp.supabase.co`).
-- **Primary Operator Phone:** `+201274173806` (Admin).
-- **Secondary Identity:** `+201018306120` (Parishioner).
+- **Primary Operator:** Admin (alert phone configured via the `DIAGNOSTIC_ALERT_PHONE` env secret on the function).
 
 ---
 
@@ -43,7 +41,7 @@ The self-hosted engine autonomously runs through four agent stages with zero hum
 - **Execution Policy:** Runs fully autonomously when status is `100% SECURE & INVARIANT-COMPLIANT`.
 - **Checkpoint Trigger:** Activates **ONLY** when a `CRITICAL` RLS leak or `MAJOR` functional regression is detected.
 - **Decision Brief Dispatch:**
-  1. **WhatsApp Alert (Admin Phone: `+201274173806`):**
+  1. **WhatsApp Alert (Admin Phone via `DIAGNOSTIC_ALERT_PHONE`):**
      - Enqueues high-priority alert to `event_outbox` (`handler_type = 'WHATSAPP'`).
      - Content: Brief summary of failure target, severity, and instant incident identifier.
   2. **GitHub Issue Dispatch:**

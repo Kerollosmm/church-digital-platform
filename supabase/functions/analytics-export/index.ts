@@ -1,7 +1,7 @@
 import type { SupabaseClient, User } from "npm:@supabase/supabase-js@2";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { makeServiceClient } from "../_shared/client.ts";
-import { auth, respond, corsHeaders } from "../_shared/http.ts";
+import { auth, respond, getCorsHeaders } from "../_shared/http.ts";
 
 export interface Deps {
   getServiceClient?: () => SupabaseClient;
@@ -101,7 +101,7 @@ export async function handleRequest(
 
   return new Response(buildCsv(headers, rows), {
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(req),
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${report}-${month}.csv"`,
     },

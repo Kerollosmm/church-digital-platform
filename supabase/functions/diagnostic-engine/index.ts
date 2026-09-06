@@ -1,13 +1,12 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { auth, respond } from "../_shared/http.ts";
 
-const ADMIN_PHONE = "+201274173806";
-
 export interface DiagnosticDeps {
   serviceClient?: any;
   anonClient?: any;
   getUser?: (token: string) => Promise<{ data: { user: any } | null; error: any }>;
   client?: any;
+  alertPhone?: string;
 }
 
 export async function handleRequest(
@@ -20,6 +19,11 @@ export async function handleRequest(
     getUser: deps?.getUser,
   });
   if (authRes instanceof Response) return authRes;
+
+  const alertPhone =
+    deps?.alertPhone ??
+    (typeof Deno !== "undefined" ? Deno.env.get("DIAGNOSTIC_ALERT_PHONE") : undefined) ??
+    "";
 
   try {
     const serviceClient =
@@ -124,14 +128,16 @@ export async function handleRequest(
 
     // Evaluate Checkpoint & Alert Dispatch
     const criticals = findings.filter((f) => f.severity === "CRITICAL");
-    if (criticals.length > 0) {
+    if (criticals.length > 0 && alertPhone !== "") {
       await serviceClient.from("event_outbox").insert({
         handler_type: "WHATSAPP",
         payload: {
-          phone: ADMIN_PHONE,
+          phone: alertPhone,
           template_name: "admin_security_alert",
-          critical_count: criticals.length,
-          findings: criticals.map((c: any) => c.title),
+          params: {
+            param1: String(criticals.length),
+            param2: criticals.map((c: any) => c.title).join("; "),
+          },
           timestamp: new Date().toISOString(),
         },
         status: "PENDING",

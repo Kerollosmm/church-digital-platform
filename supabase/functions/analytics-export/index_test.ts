@@ -160,3 +160,15 @@ Deno.test("analytics-export: date range filtering with from and to query params"
   const text = await res.text();
   assertEquals(text, "\uFEFFmonth,count\n2026-01-01,5\n2026-03-15,10\n");
 });
+
+Deno.test("analytics-export: CSV response reflects allowed request origin (dynamic CORS)", async () => {
+  const { deps } = createDeps();
+  const req = new Request("https://x/analytics-export?report=utilization", {
+    method: "GET",
+    headers: { Authorization: "Bearer valid-token", Origin: "http://localhost:54321" },
+  });
+  const res = await handleRequest(req, deps);
+  assertEquals(res.status, 200);
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "http://localhost:54321");
+  assertEquals(res.headers.get("Vary"), "Origin");
+});

@@ -19,7 +19,6 @@
 │  │ Deno Edge Functions                              │  │
 │  │ • event-dispatcher  • otp-sms                    │  │
 │  │ • diagnostic-engine • analytics-export           │  │
-│  │ • offline-sync                                   │  │
 │  │ • _shared/payments-gateway.ts (Unified Seam)     │  │
 │  │ • _shared/http.ts (Zero-Leak Error Contract)     │  │
 │  └──────────────────────────┬───────────────────────┘  │
