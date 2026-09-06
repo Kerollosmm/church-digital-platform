@@ -1,8 +1,9 @@
--- 0085: prod drift purge + reify v_services
+-- 0086: prod drift purge + reify v_services
 -- Prod predates the migration baseline (history partially "repaired" without
 -- executing), so objects that later migrations were supposed to drop/create
 -- diverged. Verified 2026-09-06 by full schema diff (prod dump post-0084 vs
 -- local reset). Every drop is IF EXISTS -> no-op on fresh local resets.
+-- 0085 (immediately before this) rescues live rows out of drift venues.
 --
 -- Residual drift intentionally NOT touched: booking_status enum on prod has
 -- 4 extra labels (SUBMITTED, REJECTED, PARTIALLY_PAID, PAID) that cannot be
@@ -82,7 +83,8 @@ alter table public.payments
 -- ---------------------------------------------------------------------------
 -- 5. Drop drift tables (all FKs are internal to this set — verified in dump).
 --    Single statement so inter-table dependencies resolve atomically.
---    whatsapp_outbox/refund_requests rows were already migrated by 0027.
+--    whatsapp_outbox/refund_requests rows were already migrated by 0027;
+--    venues rows were rescued into venues_resources by 0085.
 -- ---------------------------------------------------------------------------
 drop table if exists
   public.alerts,

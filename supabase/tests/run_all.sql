@@ -72,4 +72,5 @@
 \ir 0081_offline_sync_tenant_test.sql
 \ir 0082_audit_entity_uuid_test.sql
 \ir 0083_money_piastres_test.sql
-\ir 0085_prod_drift_purge_test.sql
+\ir 0085_venues_data_rescue_test.sql
+\ir 0086_prod_drift_purge_test.sql
