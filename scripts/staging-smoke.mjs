@@ -154,6 +154,18 @@ await runCheck(2, 'Schema sanity', async () => {
     };
   }
 
+  // v_services view present (mobile booking home screen reads it)
+  const vServicesRes = await fetch(`${url}/rest/v1/v_services?limit=0`, {
+    headers: getHeaders(serviceKey)
+  });
+  if (vServicesRes.status !== 200) {
+    const text = await vServicesRes.text();
+    return {
+      pass: false,
+      detail: `v_services query returned HTTP ${vServicesRes.status} (expected 200) | ${snippet(text)}`
+    };
+  }
+
   // sunday_school_classes does NOT exist
   const sundayRes = await fetch(`${url}/rest/v1/sunday_school_classes?limit=0`, {
     headers: getHeaders(serviceKey)
@@ -167,7 +179,7 @@ await runCheck(2, 'Schema sanity', async () => {
 
   return {
     pass: true,
-    detail: `Tables present, columns verified, sunday_school_classes absent (HTTP ${sundayRes.status})`
+    detail: `Tables present, columns verified, v_services present, sunday_school_classes absent (HTTP ${sundayRes.status})`
   };
 });
 
