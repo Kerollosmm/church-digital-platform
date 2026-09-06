@@ -1,4 +1,7 @@
 \set ON_ERROR_STOP on
+
+BEGIN;
+
 create schema if not exists tests;
 create or replace function tests.expect(p_cond boolean, p_msg text) returns void
 language plpgsql as $$
@@ -30,7 +33,7 @@ begin
      where role = 'USER' and action = 'DELETE') = 0,
     'USER must never DELETE');
   perform tests.expect(
-    not exists (select 1 from public.roles_permissions where role = 'SERVANT'),
+    not exists (select 1 from public.roles_permissions where role::text = 'SERVANT'),
     'SERVANT role must not exist in matrix');
 
   perform tests.expect(
@@ -43,3 +46,5 @@ begin
     public.rbac_allows('ADMIN', 'payments', 'DELETE'),
     'ADMIN delete grants missing');
 end $$;
+
+ROLLBACK;

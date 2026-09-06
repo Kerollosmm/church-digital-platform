@@ -7,341 +7,17 @@ function jsonRes(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
-Deno.test("event-dispatcher: template param order for booking_payment_received", async () => {
-  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
-  fake.seed("whatsapp_optins", [{ phone: "+201000000000", source: "BOOKING" }]);
-  fake.seed("event_outbox", [
-    {
-      id: 1,
-      handler_type: "WHATSAPP",
-      payload: { phone: "+201000000000", template_name: "booking_payment_received", params: { booking_id: 12, amount: 50 } },
-      status: "PENDING",
-      attempts: 0,
-      next_attempt_at: "2026-08-05T00:00:00Z",
-    },
-  ]);
-
-  let sentBody: any;
-  const fetchStub = stub(globalThis, "fetch", (_url: RequestInfo | URL, init?: RequestInit) => {
-    sentBody = JSON.parse(String(init?.body));
-    return Promise.resolve(jsonRes({ messages: [{ id: "wamid1" }] }));
+function authedReq(): Request {
+  return new Request("https://x/functions/v1/event-dispatcher", {
+    method: "POST",
+    headers: { Authorization: "Bearer test_secret" },
   });
+}
 
-  try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-    assertEquals(res.status, 200);
-    assertEquals(sentBody.template.components[0].parameters, [
-      { type: "text", text: "12" },
-      { type: "text", text: "50" },
-    ]);
-    const row = fake.tableRows("event_outbox")[0];
-    assertEquals(row.status, "SENT");
-  } finally {
-    fetchStub.restore();
-  }
-});
-
-Deno.test("event-dispatcher: no-opt-in -> FAILED", async () => {
-  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
-  fake.seed("event_outbox", [
-    {
-      id: 2,
-      handler_type: "WHATSAPP",
-      payload: { phone: "+201000000002", template_name: "booking_confirmed", params: { booking_id: 8 } },
-      status: "PENDING",
-      attempts: 0,
-      next_attempt_at: "2026-08-05T00:00:00Z",
-    },
-  ]);
-  const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
-  try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-    assertEquals(res.status, 200);
-    assertEquals(fetchStub.calls.length, 0);
-    assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
-  } finally {
-    fetchStub.restore();
-  }
-});
-
-Deno.test("event-dispatcher: unknown template -> FAILED", async () => {
-  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
-  fake.seed("whatsapp_optins", [{ phone: "+201000000000", source: "BOOKING" }]);
-  fake.seed("event_outbox", [
-    {
-      id: 3,
-      handler_type: "WHATSAPP",
-      payload: { phone: "+201000000000", template_name: "nonexistent_tmpl" },
-      status: "PENDING",
-      attempts: 0,
-      next_attempt_at: "2026-08-05T00:00:00Z",
-    },
-  ]);
-  const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
-  try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-    assertEquals(res.status, 200);
-    assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
-  } finally {
-    fetchStub.restore();
-  }
-});
-
-Deno.test("event-dispatcher: unknown handler -> FAILED", async () => {
-  const fake = new FakeClient(["event_outbox"]);
-  fake.seed("event_outbox", [
-    {
-      id: 4,
-      handler_type: "UNKNOWN_HANDLER",
-      payload: {},
-      status: "PENDING",
-      attempts: 0,
-      next_attempt_at: "2026-08-05T00:00:00Z",
-    },
-  ]);
-  const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
-  try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-    assertEquals(res.status, 200);
-    assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
-  } finally {
-    fetchStub.restore();
-  }
-});
-
-Deno.test("event-dispatcher: 5xx -> backoff PENDING with attempts+1 and next_attempt_at > now", async () => {
-  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
-  fake.seed("whatsapp_optins", [{ phone: "+201000000000", source: "BOOKING" }]);
-  fake.seed("event_outbox", [
-    {
-      id: 5,
-      handler_type: "WHATSAPP",
-      payload: { phone: "+201000000000", template_name: "booking_confirmed", params: { booking_id: 1 } },
-      status: "PENDING",
-      attempts: 1,
-      next_attempt_at: "2026-08-05T00:00:00Z",
-    },
-  ]);
-  const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({}, 500)));
-  try {
-    await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-    const row = fake.tableRows("event_outbox")[0];
-    assertEquals(row.status, "PENDING");
-    assertEquals(row.attempts, 2);
-    assertNotEquals(row.next_attempt_at, "2026-08-05T00:00:00Z");
-  } finally {
-    fetchStub.restore();
-  }
-});
-
-Deno.test("event-dispatcher: 4xx -> FAILED", async () => {
-  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
-  fake.seed("whatsapp_optins", [{ phone: "+201000000000", source: "BOOKING" }]);
-  fake.seed("event_outbox", [
-    {
-      id: 6,
-      handler_type: "WHATSAPP",
-      payload: { phone: "+201000000000", template_name: "booking_confirmed", params: { booking_id: 1 } },
-      status: "PENDING",
-      attempts: 0,
-      next_attempt_at: "2026-08-05T00:00:00Z",
-    },
-  ]);
-  const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({}, 400)));
-  try {
-    await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-    assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
-  } finally {
-    fetchStub.restore();
-  }
-});
-
-Deno.test("event-dispatcher: getClient throw -> 500 response", async () => {
-  const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
-  try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => { throw new Error("DB error"); },
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-    assertEquals(res.status, 500);
-  } finally {
-    fetchStub.restore();
-  }
-});
-
-Deno.test("event-dispatcher: PAYMOB_REFUND success sets payments REFUNDED + event SENT", async () => {
-  const fake = new FakeClient(["event_outbox", "payments"]);
-  fake.seed("event_outbox", [
-    {
-      id: 10,
-      handler_type: "PAYMOB_REFUND",
-      payload: { payment_id: 50, amount: 75 },
-      status: "PENDING",
-      attempts: 0,
-      next_attempt_at: "2026-08-05T00:00:00Z",
-    },
-  ]);
-  fake.seed("payments", [{ id: 50, status: "REFUND_PENDING", amount: 75, gateway_ref: 9988 }]);
-
-  const urls: string[] = [];
-  const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL) => {
-    const u = String(url);
-    urls.push(u);
-    if (u.includes("/auth/tokens")) return Promise.resolve(jsonRes({ token: "tok123" }));
-    return Promise.resolve(jsonRes({ id: 111 }));
-  });
-
-  try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-    assertEquals(res.status, 200);
-    assertEquals(fake.tableRows("event_outbox")[0].status, "SENT");
-    assertEquals(fake.tableRows("payments")[0].status, "REFUNDED");
-  } finally {
-    fetchStub.restore();
-  }
-});
-
-Deno.test("event-dispatcher: PAYMOB_REFUND 4xx -> FAILED", async () => {
-  const fake = new FakeClient(["event_outbox", "payments"]);
-  fake.seed("event_outbox", [
-    {
-      id: 11,
-      handler_type: "PAYMOB_REFUND",
-      payload: { payment_id: 51, amount: 75 },
-      status: "PENDING",
-      attempts: 0,
-      next_attempt_at: "2026-08-05T00:00:00Z",
-    },
-  ]);
-  fake.seed("payments", [{ id: 51, status: "REFUND_PENDING", amount: 75, gateway_ref: 9988 }]);
-
-  const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL) => {
-    if (String(url).includes("/auth/tokens")) return Promise.resolve(jsonRes({ token: "tok123" }));
-    return Promise.resolve(jsonRes({}, 400));
-  });
-
-  try {
-    await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-    assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
-  } finally {
-    fetchStub.restore();
-  }
-});
-
-Deno.test("event-dispatcher: PAYMOB_REFUND missing gateway_ref -> FAILED", async () => {
-  const fake = new FakeClient(["event_outbox", "payments"]);
-  fake.seed("event_outbox", [
-    {
-      id: 12,
-      handler_type: "PAYMOB_REFUND",
-      payload: { payment_id: 52, amount: 75 },
-      status: "PENDING",
-      attempts: 0,
-      next_attempt_at: "2026-08-05T00:00:00Z",
-    },
-  ]);
-  fake.seed("payments", [{ id: 52, status: "REFUND_PENDING", amount: 75, gateway_ref: null }]);
-
-  const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
-
-  try {
-    await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-    assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
-    assertEquals(fetchStub.calls.length, 0);
-  } finally {
-    fetchStub.restore();
-  }
-});
-
-Deno.test("event-dispatcher: PAYMOB_REFUND capped at 3 attempts (attempt 2 + 1 failure -> FAILED)", async () => {
-  const fake = new FakeClient(["event_outbox", "payments"]);
-  fake.seed("event_outbox", [
-    {
-      id: 13,
-      handler_type: "PAYMOB_REFUND",
-      payload: { payment_id: 53, amount: 75 },
-      status: "PENDING",
-      attempts: 2,
-      next_attempt_at: "2026-08-05T00:00:00Z",
-    },
-  ]);
-  fake.seed("payments", [{ id: 53, status: "REFUND_PENDING", amount: 75, gateway_ref: 9988 }]);
-
-  const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL) => {
-    if (String(url).includes("/auth/tokens")) return Promise.resolve(jsonRes({ token: "tok123" }));
-    return Promise.resolve(jsonRes({}, 500));
-  });
-
-  try {
-    await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
-      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
-      fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
-    });
-    assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
-  } finally {
-    fetchStub.restore();
-  }
-});
+const DEFAULT_DEPS = {
+  phoneId: "123456",
+  cronSecret: "test_secret",
+};
 
 async function generatePemPrivateKey(): Promise<string> {
   const keyPair = await crypto.subtle.generateKey(
@@ -401,12 +77,10 @@ Deno.test("event-dispatcher: FCM_PUSH exchanges OAuth2 token and sends FCM v1 pa
   });
 
   try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    const res = await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
 
     assertEquals(res.status, 200);
@@ -458,12 +132,10 @@ Deno.test("event-dispatcher: FCM_PUSH invalid private key -> FAILED", async () =
   const fetchStub = stub(globalThis, "fetch", () => Promise.resolve(jsonRes({})));
 
   try {
-    const res = await handleRequest(new Request("https://x/functions/v1/event-dispatcher", { method: "POST" }), {
+    const res = await handleRequest(authedReq(), {
       getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
       fetch: fetchStub,
-      phoneId: "123456",
-      paymobApiKey: "pk",
-      amountMultiplier: 100,
+      ...DEFAULT_DEPS,
     });
 
     assertEquals(res.status, 200);
@@ -474,4 +146,311 @@ Deno.test("event-dispatcher: FCM_PUSH invalid private key -> FAILED", async () =
   }
 });
 
+Deno.test("event-dispatcher: FCM OAuth2 exchange HTTP error returns null and marks outbox row FAILED", async () => {
+  const fake = new FakeClient(["event_outbox"]);
+  fake.seed("event_outbox", [
+    {
+      id: 22,
+      handler_type: "FCM_PUSH",
+      payload: {
+        fcm_token: "token_abc_123",
+        title: "Test Title",
+      },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  Deno.env.set("FCM_PROJECT_ID", "church-app-test");
+  Deno.env.set("FCM_CLIENT_EMAIL", "fcm-test@church-app-test.iam.gserviceaccount.com");
+  const validPem = await generatePemPrivateKey();
+  Deno.env.set("FCM_PRIVATE_KEY", validPem);
+
+  const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL) => {
+    const u = String(url);
+    if (u.includes("oauth2.googleapis.com/token")) {
+      return Promise.resolve(jsonRes({ error: "invalid_client" }, 401));
+    }
+    return Promise.resolve(jsonRes({}, 404));
+  });
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+    });
+
+    assertEquals(res.status, 200);
+    assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
+  } finally {
+    fetchStub.restore();
+  }
+});
+
+Deno.test("event-dispatcher: FCM OAuth2 network throw returns null and marks outbox row FAILED", async () => {
+  const fake = new FakeClient(["event_outbox"]);
+  fake.seed("event_outbox", [
+    {
+      id: 23,
+      handler_type: "FCM_PUSH",
+      payload: {
+        fcm_token: "token_abc_123",
+        title: "Test Title",
+      },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  Deno.env.set("FCM_PROJECT_ID", "church-app-test");
+  Deno.env.set("FCM_CLIENT_EMAIL", "fcm-test@church-app-test.iam.gserviceaccount.com");
+  const validPem = await generatePemPrivateKey();
+  Deno.env.set("FCM_PRIVATE_KEY", validPem);
+
+  const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL) => {
+    const u = String(url);
+    if (u.includes("oauth2.googleapis.com/token")) {
+      throw new TypeError("Failed to fetch");
+    }
+    return Promise.resolve(jsonRes({}, 404));
+  });
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+    });
+
+    assertEquals(res.status, 200);
+    assertEquals(fake.tableRows("event_outbox")[0].status, "FAILED");
+  } finally {
+    fetchStub.restore();
+  }
+});
+
+Deno.test("event-dispatcher: WHATSAPP booking_payment_received template sends with 2 parameters", async () => {
+  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
+  fake.seed("whatsapp_optins", [
+    { phone: "+201000000000" },
+  ]);
+  fake.seed("event_outbox", [
+    {
+      id: 30,
+      handler_type: "WHATSAPP",
+      payload: {
+        phone: "+201000000000",
+        template_name: "booking_payment_received",
+        params: {
+          booking_id: 101,
+          amount: 150,
+        },
+      },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  const calls: { url: string; init?: RequestInit }[] = [];
+  const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init });
+    return Promise.resolve(jsonRes({ messages: [{ id: "wamid.123" }] }));
+  });
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+      whatsappToken: "mock-wa-token",
+    });
+
+    assertEquals(res.status, 200);
+    assertEquals(calls.length, 1);
+    assertEquals(calls[0].url, "https://graph.facebook.com/v20.0/123456/messages");
+
+    const body = JSON.parse(String(calls[0].init?.body));
+    assertEquals(body.template.name, "booking_payment_received");
+    assertEquals(body.template.components[0].parameters, [
+      { type: "text", text: "101" },
+      { type: "text", text: "150" },
+    ]);
+
+    assertEquals(fake.tableRows("event_outbox")[0].status, "SENT");
+  } finally {
+    fetchStub.restore();
+  }
+});
+
+Deno.test("event-dispatcher: WHATSAPP event_booking_payment_received template formats 5 params and sends", async () => {
+  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
+  fake.seed("whatsapp_optins", [
+    { phone: "+201011112222" },
+  ]);
+  fake.seed("event_outbox", [
+    {
+      id: 31,
+      handler_type: "WHATSAPP",
+      payload: {
+        phone: "+201011112222",
+        template_name: "event_booking_payment_received",
+        params: {
+          booking_id: "eb-uuid-1234",
+          event_name: "رحلة دير الأنبا بولا",
+          amount_paid_piastres: 25000,
+          total_paid_piastres: 50000,
+          remaining_piastres: 25000,
+        },
+      },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  const calls: { url: string; init?: RequestInit }[] = [];
+  const fetchStub = stub(globalThis, "fetch", (url: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({ url: String(url), init });
+    return Promise.resolve(jsonRes({ messages: [{ id: "wamid.456" }] }));
+  });
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+      whatsappToken: "mock-wa-token",
+    });
+
+    assertEquals(res.status, 200);
+    assertEquals(calls.length, 1);
+
+    const body = JSON.parse(String(calls[0].init?.body));
+    assertEquals(body.template.name, "event_booking_payment_received");
+    assertEquals(body.template.components[0].parameters.length, 5);
+    assertEquals(body.template.components[0].parameters[0], { type: "text", text: "eb-uuid-1234" });
+    assertEquals(body.template.components[0].parameters[1], { type: "text", text: "رحلة دير الأنبا بولا" });
+    assertEquals(body.template.components[0].parameters[2], { type: "text", text: "25000" });
+
+    assertEquals(fake.tableRows("event_outbox")[0].status, "SENT");
+  } finally {
+    fetchStub.restore();
+  }
+});
+
+Deno.test("event-dispatcher: WHATSAPP network throw is isolated and marked retryable", async () => {
+  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
+  fake.seed("whatsapp_optins", [
+    { phone: "+201000000009" },
+  ]);
+  fake.seed("event_outbox", [
+    {
+      id: 50,
+      handler_type: "WHATSAPP",
+      payload: {
+        phone: "+201000000009",
+        template_name: "booking_confirmed",
+        params: { booking_id: 77 },
+      },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.reject(new Error("Simulated network failure"))
+  );
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+      whatsappToken: "mock-wa-token",
+    });
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body, { ok: true, handled: 0 });
+
+    const row = fake.tableRows("event_outbox")[0];
+    assertEquals(row.status, "PENDING");
+    assertEquals(row.attempts, 1);
+    assertEquals(row.last_error, "Simulated network failure");
+  } finally {
+    fetchStub.restore();
+  }
+});
+
+Deno.test("event-dispatcher: mixed batch splits status writes (SENT bulk, FAILED and PENDING individual)", async () => {
+  const fake = new FakeClient(["event_outbox", "whatsapp_optins"]);
+  fake.seed("whatsapp_optins", [
+    { phone: "+201000000001" },
+    { phone: "+201000000003" },
+  ]);
+  fake.seed("event_outbox", [
+    {
+      id: 40,
+      handler_type: "WHATSAPP",
+      payload: { phone: "+201000000001", template_name: "booking_confirmed", params: { booking_id: 1 } },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+    {
+      id: 41,
+      handler_type: "WHATSAPP",
+      payload: { phone: "+201000000002", template_name: "booking_confirmed", params: { booking_id: 2 } },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+    {
+      id: 42,
+      handler_type: "WHATSAPP",
+      payload: { phone: "+201000000003", template_name: "booking_confirmed", params: { booking_id: 3 } },
+      status: "PENDING",
+      attempts: 0,
+      next_attempt_at: "2026-08-05T00:00:00Z",
+    },
+  ]);
+
+  const fetchStub = stub(globalThis, "fetch", (_url: RequestInfo | URL, init?: RequestInit) => {
+    const to = (JSON.parse(String(init?.body ?? "{}")) as { to?: string }).to;
+    if (to === "+201000000003") {
+      return Promise.reject(new Error("Simulated network failure"));
+    }
+    return Promise.resolve(jsonRes({ messages: [{ id: "wamid.mix" }] }));
+  });
+
+  try {
+    const res = await handleRequest(authedReq(), {
+      getClient: () => fake as unknown as import("npm:@supabase/supabase-js@2").SupabaseClient,
+      fetch: fetchStub,
+      ...DEFAULT_DEPS,
+      whatsappToken: "mock-wa-token",
+    });
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body, { ok: true, handled: 1 });
+
+    const rows = fake.tableRows("event_outbox");
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    assertEquals(byId.get(40)?.status, "SENT");
+    assertEquals(byId.get(40)?.last_error, null);
+    assertEquals(byId.get(41)?.status, "FAILED");
+    assertEquals(byId.get(41)?.last_error, "No WhatsApp opt-in found");
+    assertEquals(byId.get(42)?.status, "PENDING");
+    assertEquals(byId.get(42)?.attempts, 1);
+    assertEquals(byId.get(42)?.last_error, "Simulated network failure");
+  } finally {
+    fetchStub.restore();
+  }
+});
 

@@ -1,11 +1,20 @@
+BEGIN;
+
 -- 0024: transition whitelist test
 do $$
 declare v_book public.bookings;
 begin
+  -- Cleanup fixtures if present
+  delete from public.bookings where id = 901;
+  delete from public.service_slots where id = 901;
+  delete from public.services where id = 901;
+
   -- Setup: user with a pending-payment booking
-  insert into auth.users (id, email) values ('cccccccc-0000-0000-0000-000000000001'::uuid, 'user@test.com');
+  insert into auth.users (id, email, phone) values ('cccccccc-0000-0000-0000-000000000001'::uuid, 'user24_wl@test.com', '+201000000244')
+  on conflict (id) do update set email = EXCLUDED.email, phone = EXCLUDED.phone;
   insert into public.users (id, phone, name, role, tenant_id)
-    values ('cccccccc-0000-0000-0000-000000000001'::uuid, '+201000000004', 'User', 'PARISHIONER', 1);
+    values ('cccccccc-0000-0000-0000-000000000001'::uuid, '+201000000244', 'User', 'USER', 1)
+  on conflict (id) do update set role = 'USER', phone = EXCLUDED.phone;
 
   insert into public.services (id, tenant_id, title_ar)
     overriding system value
@@ -36,3 +45,5 @@ begin
 
   raise notice 'OK';
 end $$;
+
+ROLLBACK;

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { SignJWT, importPKCS8 } from "npm:jose@5";
 import { makeServiceClient } from "../_shared/client.ts";
+import { respond, verifyCronOrServiceAuth } from "../_shared/http.ts";
 
 export const TEMPLATES: Record<string, { paramCount: number }> = {
   booking_confirmed: { paramCount: 1 },
@@ -11,9 +12,13 @@ export const TEMPLATES: Record<string, { paramCount: number }> = {
   otp_auth: { paramCount: 1 },
   booking_payment_received: { paramCount: 2 },
   booking_offer: { paramCount: 1 },
+  admin_security_alert: { paramCount: 2 },
+  event_booking_submitted: { paramCount: 2 },
+  event_booking_confirmed: { paramCount: 5 },
+  event_booking_rejected: { paramCount: 2 },
+  event_booking_payment_received: { paramCount: 5 },
 };
 export const MAX_ATTEMPTS = 5;
-export const REFUND_MAX_ATTEMPTS = 3;
 export const BACKOFF_MS = 30_000;
 export const DRAIN_BATCH = 10;
 export const DRAIN_LIMIT = 100;
@@ -22,128 +27,218 @@ export interface Deps {
   getClient(): SupabaseClient;
   fetch: typeof fetch;
   phoneId: string;
-  paymobApiKey: string;
-  amountMultiplier: number;
+  whatsappToken?: string;
+  amountMultiplier?: number;
   fcmProjectId?: string;
   fcmClientEmail?: string;
   fcmPrivateKey?: string;
+  cronSecret?: string;
+  serviceRoleKey?: string;
 }
 
-type Row = { id: number; handler_type: string; payload: Record<string, unknown>; attempts: number };
-type Result = { ok: boolean; retryable: boolean };
+type Row = {
+  id: number;
+  handler_type: string;
+  payload: Record<string, unknown>;
+  attempts: number;
+};
+type Result = { ok: boolean; retryable: boolean; error?: string };
 
-async function setStatus(client: SupabaseClient, id: number, status: string, extra: Record<string, unknown> = {}) {
-  await client.from("event_outbox").update({ status, ...extra }).eq("id", id);
+async function setStatus(
+  client: SupabaseClient,
+  id: number | number[],
+  status: string,
+  extra: Record<string, unknown> = {},
+) {
+  if (Array.isArray(id)) {
+    if (id.length === 0) return;
+    await client.from("event_outbox").update({ status, ...extra }).in("id", id);
+  } else {
+    await client.from("event_outbox").update({ status, ...extra }).eq("id", id);
+  }
 }
 
 export async function sendWhatsApp(row: Row, deps: Deps): Promise<Result> {
   const client = deps.getClient();
-  const { phone, template_name, params } = row.payload as { phone?: string; template_name?: string; params?: Record<string, unknown> };
-  if (!phone || !template_name) return { ok: false, retryable: false };
+  const { phone, template_name, params } = row.payload as {
+    phone?: string;
+    template_name?: string;
+    params?: Record<string, unknown>;
+  };
+  if (!phone || !template_name) return { ok: false, retryable: false, error: "Missing phone or template_name" };
   const tmpl = TEMPLATES[template_name];
-  if (!tmpl) return { ok: false, retryable: false };
-  const { data: optin } = await client.from("whatsapp_optins").select("phone").eq("phone", phone).maybeSingle();
-  if (!optin) return { ok: false, retryable: false };
-  const bodyParams = Array.from({ length: tmpl.paramCount }, (_, idx) => ({
-    type: "text", text: String(Object.values(params ?? {})[idx] ?? ""),
-  }));
-  const res = await deps.fetch(`https://graph.facebook.com/v20.0/${deps.phoneId}/messages`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("WHATSAPP_TOKEN")}` },
-    body: JSON.stringify({
-      messaging_product: "whatsapp", to: phone, type: "template",
-      template: { name: template_name, language: { code: "ar" }, components: [{ type: "body", parameters: bodyParams }] },
-    }),
-  });
-  if (res.ok) return { ok: true, retryable: false };
-  return res.status >= 400 && res.status < 500 ? { ok: false, retryable: false } : { ok: false, retryable: true };
-}
+  if (!tmpl) return { ok: false, retryable: false, error: `Unknown template: ${template_name}` };
+  const { data: optin } = await client
+    .from("whatsapp_optins")
+    .select("phone")
+    .eq("phone", phone)
+    .maybeSingle();
+  if (!optin) return { ok: false, retryable: false, error: "No WhatsApp opt-in found" };
 
-export async function triggerPaymobRefund(row: Row, deps: Deps): Promise<Result> {
-  const client = deps.getClient();
-  const { payment_id, amount } = row.payload as { payment_id?: number; amount?: number };
-  if (!payment_id || !amount) return { ok: false, retryable: false };
-  const { data: pay } = await client.from("payments").select("gateway_ref").eq("id", payment_id).single();
-  if (!pay?.gateway_ref) return { ok: false, retryable: false };
-  const authRes = await deps.fetch("https://accept.paymob.com/api/auth/tokens", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ api_key: deps.paymobApiKey }),
+  const resolvedParams = params;
+
+  const bodyParams = Array.from({ length: tmpl.paramCount }, (_, idx) => {
+    let val = "";
+    if (resolvedParams) {
+      if (Array.isArray(resolvedParams)) {
+        val = String(resolvedParams[idx] ?? "");
+      } else {
+        const key =
+          `param${idx + 1}` in resolvedParams
+            ? `param${idx + 1}`
+            : String(idx + 1) in resolvedParams
+            ? String(idx + 1)
+            : Object.keys(resolvedParams)[idx];
+        val = String(resolvedParams[key] ?? Object.values(resolvedParams)[idx] ?? "");
+      }
+    }
+    return { type: "text", text: val };
   });
-  const authJson = (await authRes.json()) as Record<string, unknown>;
-  const res = await deps.fetch("https://accept.paymob.com/api/acceptance/void_refund/refund", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ auth_token: String(authJson.token ?? ""), transaction_id: pay.gateway_ref, amount_cents: Math.round(Number(amount) * deps.amountMultiplier) }),
-  });
+  const token =
+    deps.whatsappToken ??
+    (typeof Deno !== "undefined" ? Deno.env.get("WHATSAPP_TOKEN") : "") ??
+    "";
+  const res = await deps.fetch(
+    `https://graph.facebook.com/v20.0/${deps.phoneId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: phone,
+        type: "template",
+        template: {
+          name: template_name,
+          language: { code: "ar" },
+          components: [{ type: "body", parameters: bodyParams }],
+        },
+      }),
+    },
+  );
   if (res.ok) {
-    await client.from("payments").update({ status: "REFUNDED" }).eq("id", payment_id);
     return { ok: true, retryable: false };
   }
-  return res.status >= 400 && res.status < 500 ? { ok: false, retryable: false } : { ok: false, retryable: true };
+  return res.status >= 400 && res.status < 500
+    ? { ok: false, retryable: false, error: `WhatsApp API HTTP ${res.status}` }
+    : { ok: false, retryable: true, error: `WhatsApp API HTTP ${res.status}` };
 }
 
-export async function sendFcmPush(row: Row, deps: Deps): Promise<Result> {
-  const payload = row.payload as {
-    fcm_token?: string;
-    title?: string;
-    body?: string;
-    data?: Record<string, unknown>;
-  };
-  const { fcm_token, title, body, data } = payload;
-  const projectId = deps.fcmProjectId ?? Deno.env.get("FCM_PROJECT_ID");
-  const clientEmail = deps.fcmClientEmail ?? Deno.env.get("FCM_CLIENT_EMAIL");
-  const privateKey = deps.fcmPrivateKey ?? Deno.env.get("FCM_PRIVATE_KEY");
+let cachedFcmToken: { token: string; expiresAt: number; key: string } | null =
+  null;
 
-  if (!fcm_token || !projectId || !clientEmail || !privateKey) {
-    return { ok: false, retryable: false };
+async function getFcmAccessToken(deps: Deps): Promise<string | null> {
+  const projectId =
+    deps.fcmProjectId ??
+    (typeof Deno !== "undefined" ? Deno.env.get("FCM_PROJECT_ID") : "");
+  const clientEmail =
+    deps.fcmClientEmail ??
+    (typeof Deno !== "undefined" ? Deno.env.get("FCM_CLIENT_EMAIL") : "");
+  const privateKey =
+    deps.fcmPrivateKey ??
+    (typeof Deno !== "undefined" ? Deno.env.get("FCM_PRIVATE_KEY") : "");
+
+  if (!projectId || !clientEmail || !privateKey) {
+    return null;
   }
 
-  let jwt: string;
+  if (
+    cachedFcmToken &&
+    cachedFcmToken.key === privateKey &&
+    Date.now() < cachedFcmToken.expiresAt - 60_000
+  ) {
+    return cachedFcmToken.token;
+  }
+
   try {
     const formattedKey = privateKey.replace(/\\n/g, "\n");
-    const key = await importPKCS8(formattedKey, "RS256");
-    jwt = await new SignJWT({
+    const pkcs8Key = await importPKCS8(formattedKey, "RS256");
+
+    const now = Math.floor(Date.now() / 1000);
+    const jwt = await new SignJWT({
       scope: "https://www.googleapis.com/auth/firebase.messaging",
     })
       .setProtectedHeader({ alg: "RS256" })
       .setIssuer(clientEmail)
       .setAudience("https://oauth2.googleapis.com/token")
-      .setExpirationTime("1h")
-      .setIssuedAt()
-      .sign(key);
-  } catch (e) {
-    console.error("FCM JWT signing failed:", e);
-    return { ok: false, retryable: false };
+      .setIssuedAt(now)
+      .setExpirationTime(now + 3600)
+      .sign(pkcs8Key);
+
+    const tokenRes = await deps.fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwt,
+      }).toString(),
+    });
+
+    if (!tokenRes.ok) {
+      console.error(
+        "FCM OAuth2 exchange failed:",
+        tokenRes.status,
+        await tokenRes.text(),
+      );
+      return null;
+    }
+
+    const tokenData = await tokenRes.json();
+    cachedFcmToken = {
+      token: tokenData.access_token,
+      expiresAt: Date.now() + (tokenData.expires_in ?? 3600) * 1000,
+      key: privateKey,
+    };
+    return cachedFcmToken.token;
+  } catch (err) {
+    console.error("FCM JWT signing failed:", err);
+    return null;
+  }
+}
+
+export async function sendFcmPush(row: Row, deps: Deps): Promise<Result> {
+  const payload = row.payload as {
+    fcm_token?: string;
+    token?: string;
+    title?: string;
+    body?: string;
+    notification?: { title: string; body: string };
+    data?: Record<string, unknown>;
+  };
+  const token = payload.token ?? payload.fcm_token;
+  const title = payload.notification?.title ?? payload.title;
+  const body = payload.notification?.body ?? payload.body;
+  const projectId =
+    deps.fcmProjectId ??
+    (typeof Deno !== "undefined" ? Deno.env.get("FCM_PROJECT_ID") : "");
+
+  if (!token || !projectId) {
+    return { ok: false, retryable: false, error: "Missing FCM token or FCM_PROJECT_ID" };
   }
 
-  const tokRes = await deps.fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }).toString(),
-  });
-
-  if (!tokRes.ok) {
-    return tokRes.status >= 400 && tokRes.status < 500
-      ? { ok: false, retryable: false }
-      : { ok: false, retryable: true };
-  }
-
-  const tokJson = (await tokRes.json()) as { access_token?: string };
-  if (!tokJson.access_token) {
-    return { ok: false, retryable: false };
+  const accessToken = await getFcmAccessToken(deps);
+  if (!accessToken) {
+    return { ok: false, retryable: false, error: "Failed to obtain FCM access token" };
   }
 
   const notification: Record<string, string> = {};
   if (title) notification.title = title;
   if (body) notification.body = body;
 
+  const stringData: Record<string, string> = {};
+  if (payload.data) {
+    for (const [k, v] of Object.entries(payload.data)) {
+      stringData[k] = v == null ? "" : String(v);
+    }
+  }
+
   const fcmPayload: Record<string, unknown> = {
     message: {
-      token: fcm_token,
+      token,
       ...(Object.keys(notification).length > 0 ? { notification } : {}),
-      ...(data ? { data } : {}),
+      ...(Object.keys(stringData).length > 0 ? { data: stringData } : {}),
     },
   };
 
@@ -153,7 +248,7 @@ export async function sendFcmPush(row: Row, deps: Deps): Promise<Result> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${tokJson.access_token}`,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(fcmPayload),
     },
@@ -161,56 +256,152 @@ export async function sendFcmPush(row: Row, deps: Deps): Promise<Result> {
 
   if (res.ok) return { ok: true, retryable: false };
   return res.status >= 400 && res.status < 500
-    ? { ok: false, retryable: false }
-    : { ok: false, retryable: true };
+    ? { ok: false, retryable: false, error: `FCM API HTTP ${res.status}` }
+    : { ok: false, retryable: true, error: `FCM API HTTP ${res.status}` };
 }
 
 const HANDLERS: Record<string, (row: Row, deps: Deps) => Promise<Result>> = {
   WHATSAPP: sendWhatsApp,
-  PAYMOB_REFUND: triggerPaymobRefund,
   FCM_PUSH: sendFcmPush,
 };
 
-export async function handleRequest(_req: Request, deps: Deps): Promise<Response> {
-  const cors = { "Access-Control-Allow-Origin": "*" };
+export async function handleRequest(
+  req: Request,
+  deps: Deps,
+): Promise<Response> {
+  const authErr = verifyCronOrServiceAuth(req, {
+    cronSecret: deps.cronSecret,
+    serviceRoleKey: deps.serviceRoleKey,
+  });
+  if (authErr) {
+    return authErr;
+  }
+
   try {
     const client = deps.getClient();
-    const { data: queue, error } = await client.from("event_outbox")
-      .select("id, handler_type, payload, attempts")
-      .eq("status", "PENDING").lte("next_attempt_at", new Date().toISOString())
-      .order("created_at", { ascending: true }).limit(DRAIN_LIMIT);
-    if (error) throw error;
-    let handled = 0;
-    const rows = queue ?? [];
-    for (let i = 0; i < rows.length; i += DRAIN_BATCH) {
-      const results = await Promise.all(rows.slice(i, i + DRAIN_BATCH).map(async (row) => {
-        const handler = HANDLERS[row.handler_type];
-        if (!handler) { await setStatus(client, row.id, "FAILED"); return 0; }
-        await setStatus(client, row.id, "PROCESSING");
-        const outcome = await handler(row as Row, deps);
-        if (outcome.ok) { await setStatus(client, row.id, "SENT"); return 1; }
-        if (!outcome.retryable) { await setStatus(client, row.id, "FAILED"); return 0; }
-        const attempts = row.attempts + 1;
-        if (attempts >= (row.handler_type === "PAYMOB_REFUND" ? REFUND_MAX_ATTEMPTS : MAX_ATTEMPTS)) {
-          await setStatus(client, row.id, "FAILED");
-        } else {
-          const backoff = row.handler_type === "PAYMOB_REFUND" ? 0 : BACKOFF_MS * Math.pow(2, attempts);
-          await setStatus(client, row.id, "PENDING", { attempts, next_attempt_at: new Date(Date.now() + backoff).toISOString() });
-        }
-        return 0;
-      }));
-      handled += results.reduce((a: number, b: number) => a + b, 0);
+
+    // Atomic batch claim via RPC
+    const { data: claimed, error: rpcErr } = await client.rpc(
+      "claim_event_outbox_batch",
+      {
+        p_batch_size: DRAIN_LIMIT,
+      },
+    );
+
+    if (rpcErr) {
+      console.error(
+        "claim_event_outbox_batch RPC failed; aborting run",
+        rpcErr,
+      );
+      return respond(500, "INTERNAL", "Failed to claim outbox batch");
     }
-    return new Response(JSON.stringify({ ok: true, handled }), { status: 200, headers: cors });
+
+    const rows: Row[] = Array.isArray(claimed) ? (claimed as Row[]) : [];
+
+    let handled = 0;
+    for (let i = 0; i < rows.length; i += DRAIN_BATCH) {
+      const batch = rows.slice(i, i + DRAIN_BATCH);
+      const validRows = batch.filter((r) => Boolean(HANDLERS[r.handler_type]));
+      if (validRows.length > 0) {
+        await setStatus(client, validRows.map((r) => r.id), "PROCESSING");
+      }
+
+      const outcomes = await Promise.all(
+        batch.map(async (row) => {
+          const handler = HANDLERS[row.handler_type];
+          if (!handler) {
+            return {
+              id: row.id,
+              status: "FAILED",
+              extra: { last_error: `Unknown handler: ${row.handler_type}` },
+              handled: 0,
+            };
+          }
+          let outcome: Result;
+          try {
+            outcome = await handler(row as Row, deps);
+          } catch (err) {
+            outcome = {
+              ok: false,
+              retryable: true,
+              error: err instanceof Error ? err.message : "Handler threw",
+            };
+          }
+          if (outcome.ok) {
+            return {
+              id: row.id,
+              status: "SENT",
+              extra: { last_error: null },
+              handled: 1,
+            };
+          }
+          if (!outcome.retryable) {
+            return {
+              id: row.id,
+              status: "FAILED",
+              extra: { last_error: outcome.error ?? "Non-retryable failure" },
+              handled: 0,
+            };
+          }
+          const attempts = row.attempts + 1;
+          if (attempts >= MAX_ATTEMPTS) {
+            return {
+              id: row.id,
+              status: "FAILED",
+              extra: { attempts, last_error: outcome.error ?? "Max attempts exceeded" },
+              handled: 0,
+            };
+          }
+          const backoff = BACKOFF_MS * Math.pow(2, attempts);
+          return {
+            id: row.id,
+            status: "PENDING",
+            extra: {
+              attempts,
+              next_attempt_at: new Date(Date.now() + backoff).toISOString(),
+              last_error: outcome.error ?? "Retry scheduled",
+            },
+            handled: 0,
+          };
+        }),
+      );
+
+      const sentIds = outcomes
+        .filter((o) => o.status === "SENT")
+        .map((o) => o.id);
+      if (sentIds.length > 0) {
+        await setStatus(client, sentIds, "SENT", { last_error: null });
+      }
+
+      const nonSent = outcomes.filter((o) => o.status !== "SENT");
+      if (nonSent.length > 0) {
+        await Promise.all(
+          nonSent.map((o) => setStatus(client, o.id, o.status, o.extra)),
+        );
+      }
+
+      handled += outcomes.reduce((a, b) => a + b.handled, 0);
+    }
+    return respond(200, { ok: true, handled });
   } catch (e) {
     console.error("event-dispatcher error", e);
-    return new Response(JSON.stringify({ error: "INTERNAL" }), { status: 500, headers: cors });
+    return respond(500, "INTERNAL");
   }
 }
 
 if (import.meta.main && typeof Deno !== "undefined" && Deno.serve) {
-  Deno.serve((req) => handleRequest(req, {
-    getClient: () => makeServiceClient(Deno.env.get("SUPABASE_URL"), Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")),
-    fetch, phoneId: Deno.env.get("WHATSAPP_PHONE_ID")!, paymobApiKey: Deno.env.get("PAYMOB_API_KEY")!, amountMultiplier: 100,
-  }));
+  Deno.serve((req) =>
+    handleRequest(req, {
+      getClient: () =>
+        makeServiceClient(
+          Deno.env.get("SUPABASE_URL"),
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+        ),
+      fetch,
+      phoneId: Deno.env.get("WHATSAPP_PHONE_ID")!,
+      whatsappToken: Deno.env.get("WHATSAPP_TOKEN"),
+      cronSecret: Deno.env.get("CRON_SECRET"),
+      serviceRoleKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
+    }),
+  );
 }

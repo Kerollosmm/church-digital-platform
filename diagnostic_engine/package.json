@@ -1,0 +1,18 @@
+{
+  "name": "supabase-multi-agent-diagnostic-engine",
+  "version": "1.0.0",
+  "description": "Autonomous Multi-Agent Diagnostic & Security Audit Harness for Supabase",
+  "main": "engine.ts",
+  "scripts": {
+    "audit": "tsx engine.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.48.0",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

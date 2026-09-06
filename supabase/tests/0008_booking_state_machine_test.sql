@@ -1,18 +1,39 @@
+BEGIN;
+
 do $$
 declare v_user uuid; v_slot bigint; v_book bigint; v_id bigint;
-       v_slot2 bigint; v_user2 uuid; v_book2 bigint; v_third bigint;
+       v_slot2 bigint; v_user2 uuid; v_book2 bigint; v_book3 bigint; v_third bigint;
 begin
-  select id into v_user from public.users where role = 'PARISHIONER' limit 1;
-  if v_user is null then raise exception 'FAIL: seed must contain a PARISHIONER'; end if;
-  select id into v_slot from public.service_slots where status <> 'CLOSED' and starts_at > now() and capacity = 1 limit 1;
+  -- Setup deterministic users
+  insert into auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values ('44444444-4444-4444-4444-444444444444', '00000000-0000-0000-0000-000000000000',
+          'authenticated', 'authenticated', 'user-bsm1@test.local', '+201000000081', '{}', '{"name":"BSM User 1"}', now(), now()),
+         ('55555555-5555-5555-5555-555555555555', '00000000-0000-0000-0000-000000000000',
+          'authenticated', 'authenticated', 'user-bsm2@test.local', '+201000000082', '{}', '{"name":"BSM User 2"}', now(), now())
+  on conflict (id) do nothing;
+  update public.users set role = 'USER', tenant_id = 1, deleted_at = null where id in ('44444444-4444-4444-4444-444444444444', '55555555-5555-5555-5555-555555555555');
 
-  -- multi-seat fixture (created as postgres: RLS only lets admins insert slots)
-  insert into public.service_slots (service_id, starts_at, ends_at, capacity, price, status, tenant_id)
-  select service_id, now() + interval '3 days', now() + interval '3 days 1 hour', 2, 50, 'OPEN', public.tenant_id()
-  from public.service_slots limit 1
-  returning id into v_slot2;
-  select id into v_user2 from public.users where role = 'PARISHIONER' and id <> v_user limit 1;
-  if v_user2 is null then raise exception 'FAIL: seed needs a second PARISHIONER'; end if;
+  v_user := '44444444-4444-4444-4444-444444444444';
+  v_user2 := '55555555-5555-5555-5555-555555555555';
+
+  insert into public.services (id, title_ar, tenant_id) overriding system value values (99908, 'خدمة 008', 1) on conflict do nothing;
+
+  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
+  overriding system value
+  values (999081, 99908, now() + interval '2 days', now() + interval '2 days 1 hour', 1, 0, 'OPEN', 1)
+  on conflict (id) do update set starts_at = now() + interval '2 days', capacity = 1, status = 'OPEN';
+  v_slot := 999081;
+
+  -- multi-seat fixture
+  insert into public.service_slots (id, service_id, starts_at, ends_at, capacity, price, status, tenant_id)
+  overriding system value
+  values (999082, 99908, now() + interval '3 days', now() + interval '3 days 1 hour', 2, 50, 'OPEN', 1)
+  on conflict (id) do update set starts_at = now() + interval '3 days', capacity = 2, status = 'OPEN';
+  v_slot2 := 999082;
+
+  -- Clean slate
+  delete from public.bookings where slot_id in (v_slot, v_slot2) or user_id in (v_user, v_user2);
+  delete from public.whatsapp_optins where phone in ('+201000000081', '+201000000082');
 
   set local role authenticated;
   perform set_config('request.jwt.claims', json_build_object('sub', v_user, 'role','authenticated')::text, true);
@@ -39,15 +60,15 @@ begin
   if v_book2 is null then raise exception 'FAIL: first seat on capacity=2 slot'; end if;
 
   perform set_config('request.jwt.claims', json_build_object('sub', v_user2, 'role','authenticated')::text, true);
-  if (select id from public.book_slot(v_slot2, false)) is null
+  select id into v_book3 from public.book_slot(v_slot2, false);
+  if v_book3 is null
   then raise exception 'FAIL: second seat on capacity=2 slot'; end if;
 
   begin
     select id into v_third from public.book_slot(v_slot2, false);
     raise exception 'FAIL: third seat must be rejected (SLOT_FULL or ALREADY_BOOKED_SLOT)';
   exception when others then null; end;
-  if (select count(*) from public.bookings where slot_id = v_slot2
-      and status in ('PENDING_PAYMENT','AWAITING_CALL','CONFIRMED')) <> 2
+  if public.active_booking_count(v_slot2) <> 2
   then raise exception 'FAIL: capacity=2 slot must hold exactly 2 active bookings'; end if;
 
   -- restore context for the remaining assertions
@@ -68,3 +89,5 @@ begin
   if (select status from public.bookings where id = v_book) <> 'CANCELLED'
   then raise exception 'FAIL: cancel_booking must set CANCELLED'; end if;
 end $$;
+
+ROLLBACK;

@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0034: admin pins test
 do $$
 declare
@@ -7,11 +9,13 @@ declare
 begin
   -- Fixtures
   insert into auth.users (id, phone, email) values
+    ('00000000-0000-0000-0000-000000000033', '+201000000033', 'superadmin33@test.com'),
     ('00000000-0000-0000-0000-000000000034', '+201000000034', 'admin34@test.com'),
     ('00000000-0000-0000-0000-000000000035', '+201000000035', 'user35@test.com')
   on conflict (id) do nothing;
 
   insert into public.users (id, phone, name, role, tenant_id) values
+    ('00000000-0000-0000-0000-000000000033', '+201000000033', 'super_admin_test', 'SUPER_ADMIN', 1),
     ('00000000-0000-0000-0000-000000000034', '+201000000034', 'admin_test', 'ADMIN', 1),
     ('00000000-0000-0000-0000-000000000035', '+201000000035', 'user_test', 'USER', 1)
   on conflict (id) do update set role = EXCLUDED.role;
@@ -103,9 +107,12 @@ begin
     raise exception 'FAIL: verify_admin_pin while locked should return false';
   end if;
 
-  -- 7. Reset PIN (by admin/super admin)
+  -- 7. Reset PIN (by SUPER_ADMIN)
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000033', 'role', 'authenticated')::text, false);
   perform public.reset_admin_pin('00000000-0000-0000-0000-000000000034');
 
+  -- Verify as admin that status is UNSET
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000034', 'role', 'authenticated')::text, false);
   v_status := public.admin_pin_status();
   if v_status <> 'UNSET' then
     raise exception 'FAIL: admin_pin_status after reset should be UNSET, got %', v_status;
@@ -113,3 +120,5 @@ begin
 
   raise notice 'OK: 0034 admin pins test passed';
 end $$;
+
+ROLLBACK;

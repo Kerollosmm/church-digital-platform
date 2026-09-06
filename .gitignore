@@ -1,0 +1,29 @@
+# Agent skill scaffolding copied into the repo by coding-agent runs — never track
+.agents/
+.claude/
+.windsurf/
+
+# Dependencies
+node_modules/
+
+# OS noise
+.DS_Store
+Thumbs.db
+.agents/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Speckit working artifacts
+.scratch/
+
+# Per-run portal credentials (FR-006)
+test-apps/shared/.local-credentials.json
+
+# Local AI-tool config with embedded API keys
+opencode.json
+
+# agy-delegate operational briefs (never commit)
+.agy-briefs/

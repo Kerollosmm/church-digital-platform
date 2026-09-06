@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>تسجيل الدخول - منصة الكنيسة</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-surface": "#2d3133",
+                    "on-tertiary-fixed": "#331200",
+                    "inverse-primary": "#bec6e0",
+                    "primary-container": "#131b2e",
+                    "on-error": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "surface-container-high": "#e6e8ea",
+                    "surface-variant": "#e0e3e5",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "surface-container-low": "#f2f4f6",
+                    "inverse-on-surface": "#eff1f3",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-tertiary-container": "#cf6721",
+                    "tertiary-fixed": "#ffdbca",
+                    "primary": "#000000",
+                    "on-surface": "#191c1e",
+                    "background": "#f7f9fb",
+                    "on-surface-variant": "#45464d",
+                    "on-secondary": "#ffffff",
+                    "tertiary-fixed-dim": "#ffb68e",
+                    "surface": "#f7f9fb",
+                    "primary-fixed": "#dae2fd",
+                    "on-secondary-fixed": "#2f1500",
+                    "surface-tint": "#565e74",
+                    "error-container": "#ffdad6",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#763300",
+                    "tertiary": "#000000",
+                    "surface-container": "#eceef0",
+                    "primary-fixed-dim": "#bec6e0",
+                    "surface-dim": "#d8dadc",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-container": "#663500",
+                    "secondary-container": "#fe932c",
+                    "on-primary-container": "#7c839b",
+                    "secondary-fixed": "#ffdcc3",
+                    "on-secondary-fixed-variant": "#6e3900",
+                    "on-primary-fixed": "#131b2e",
+                    "surface-bright": "#f7f9fb",
+                    "outline": "#76777d",
+                    "error": "#ba1a1a",
+                    "on-tertiary": "#ffffff",
+                    "secondary": "#904d00",
+                    "secondary-fixed-dim": "#ffb77d",
+                    "tertiary-container": "#331200",
+                    "on-background": "#191c1e",
+                    "outline-variant": "#c6c6cd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "24px",
+                    "sm": "16px",
+                    "base": "4px",
+                    "gutter": "20px",
+                    "xs": "8px",
+                    "xl": "64px",
+                    "margin-mobile": "16px",
+                    "lg": "40px",
+                    "margin-desktop": "80px"
+            },
+            "fontFamily": {
+                    "display-lg": [
+                            "Cairo"
+                    ],
+                    "headline-lg": [
+                            "Cairo"
+                    ],
+                    "headline-lg-mobile": [
+                            "Cairo"
+                    ],
+                    "headline-md": [
+                            "Cairo"
+                    ],
+                    "body-lg": [
+                            "Cairo"
+                    ],
+                    "body-md": [
+                            "Cairo"
+                    ],
+                    "label-md": [
+                            "Cairo"
+                    ]
+            },
+            "fontSize": {
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "60px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "28px",
+                            {
+                                    "lineHeight": "36px",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "letterSpacing": "0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+            box-shadow: 0 4px 30px rgba(15, 23, 42, 0.1);
+        }
+        .deep-navy-bg {
+            background-color: #0F172A; /* Using explicit hex for the deep navy request if primary-container isn't dark enough, but will stick to primary-container per instructions to use tokens */
+        }
+        .bg-pattern {
+             background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+             background-size: 20px 20px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-primary-container text-on-surface h-screen w-full flex items-center justify-center relative overflow-hidden font-display-lg">
+<!-- Decorative Background Elements -->
+<div class="absolute inset-0 bg-pattern opacity-20 pointer-events-none"></div>
+<div class="absolute top-0 right-0 w-[500px] h-[500px] bg-secondary-container rounded-full blur-[120px] opacity-20 transform translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+<div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-tertiary-fixed rounded-full blur-[150px] opacity-10 transform -translate-x-1/3 translate-y-1/3 pointer-events-none"></div>
+<!-- Main Auth Container -->
+<main class="relative z-10 w-full max-w-md px-margin-mobile md:px-0">
+<div class="glass-card rounded-2xl p-lg flex flex-col items-center w-full">
+<!-- Branding / Logo Area -->
+<div class="mb-md flex flex-col items-center">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center mb-sm shadow-sm border border-outline-variant/20">
+<!-- Stylized Coptic Cross Motif -->
+<span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">
+                        church
+                    </span>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary text-center">
+                    الكنيسة القبطية الأرثوذكسية
+                </h1>
+<p class="font-body-md text-body-md text-on-surface-variant text-center mt-base">
+                    أهلاً بك في منصة الكنيسة Digital Platform
+                </p>
+</div>
+<!-- Auth Form State 1: Phone Input -->
+<div class="w-full flex flex-col gap-sm" id="phone-input-section">
+<label class="font-label-md text-label-md text-on-surface text-right" for="phone-number">رقم الهاتف المحمول</label>
+<div class="flex flex-row-reverse w-full h-12 rounded-lg border border-outline-variant bg-surface overflow-hidden focus-within:border-secondary focus-within:ring-1 focus-within:ring-secondary transition-all">
+<!-- Prefix -->
+<div class="flex items-center justify-center bg-surface-container-low px-sm border-l border-outline-variant text-on-surface font-body-md" dir="ltr">
+<span class="text-on-surface-variant ml-1 font-label-md text-label-md">EG</span>
+                        +20
+                    </div>
+<!-- Input -->
+<input class="flex-1 bg-transparent border-none px-sm text-right font-body-lg text-body-lg text-primary focus:ring-0 placeholder:text-outline" dir="ltr" id="phone-number" oninput="this.value = this.value.replace(/[^0-9\s]/g, '')" placeholder="10 0000 0000" type="tel"/>
+</div>
+<button class="w-full h-12 mt-sm bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity flex items-center justify-center gap-xs" onclick="showOtpSection()">
+<span>إرسال رمز التحقق</span>
+<span class="material-symbols-outlined" style="font-size: 18px;">send</span>
+</button>
+</div>
+<!-- Auth Form State 2: OTP Input (Hidden by default) -->
+<div class="w-full flex flex-col gap-sm hidden" id="otp-input-section">
+<div class="flex flex-col items-center mb-sm">
+<p class="font-label-md text-label-md text-on-surface-variant text-center">أدخل الرمز المكون من 6 أرقام المرسل إلى</p>
+<p class="font-body-md text-body-md text-primary font-bold mt-base" dir="ltr" id="display-phone">+20 1X XXXX XXXX</p>
+<button class="text-secondary font-label-md text-label-md mt-xs hover:underline" onclick="showPhoneSection()">تعديل الرقم</button>
+</div>
+<div class="flex flex-row-reverse justify-between gap-2 mb-sm w-full" dir="ltr">
+<input class="w-12 h-14 text-center font-headline-md text-headline-md border border-outline-variant rounded-lg bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary text-primary" id="otp1" maxlength="1" oninput="moveToNext(this, 'otp2')" type="text"/>
+<input class="w-12 h-14 text-center font-headline-md text-headline-md border border-outline-variant rounded-lg bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary text-primary" id="otp2" maxlength="1" oninput="moveToNext(this, 'otp3')" type="text"/>
+<input class="w-12 h-14 text-center font-headline-md text-headline-md border border-outline-variant rounded-lg bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary text-primary" id="otp3" maxlength="1" oninput="moveToNext(this, 'otp4')" type="text"/>
+<input class="w-12 h-14 text-center font-headline-md text-headline-md border border-outline-variant rounded-lg bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary text-primary" id="otp4" maxlength="1" oninput="moveToNext(this, 'otp5')" type="text"/>
+<input class="w-12 h-14 text-center font-headline-md text-headline-md border border-outline-variant rounded-lg bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary text-primary" id="otp5" maxlength="1" oninput="moveToNext(this, 'otp6')" type="text"/>
+<input class="w-12 h-14 text-center font-headline-md text-headline-md border border-outline-variant rounded-lg bg-surface focus:border-secondary focus:ring-1 focus:ring-secondary text-primary" id="otp6" maxlength="1" oninput="verifyOtp()" type="text"/>
+</div>
+<button class="w-full h-12 bg-secondary text-on-secondary rounded-lg font-label-md text-label-md hover:bg-opacity-90 transition-all flex items-center justify-center gap-xs shadow-sm">
+<span>تأكيد الدخول</span>
+</button>
+<div class="text-center mt-sm">
+<p class="font-body-md text-body-md text-on-surface-variant">لم تستلم الرمز؟ <button class="text-secondary font-label-md text-label-md hover:underline">إعادة إرسال</button></p>
+</div>
+</div>
+</div>
+<!-- Footer / Support links -->
+<div class="mt-lg flex justify-center gap-md">
+<a class="font-label-md text-label-md text-inverse-primary hover:text-white transition-colors" href="#">سياسة الخصوصية</a>
+<a class="font-label-md text-label-md text-inverse-primary hover:text-white transition-colors" href="#">الشروط والأحكام</a>
+<a class="font-label-md text-label-md text-inverse-primary hover:text-white transition-colors" href="#">الدعم الفني</a>
+</div>
+</main>
+<script>
+        function showOtpSection() {
+            const phoneVal = document.getElementById('phone-number').value;
+            if(phoneVal.length > 8) {
+                document.getElementById('phone-input-section').classList.add('hidden');
+                document.getElementById('otp-input-section').classList.remove('hidden');
+                document.getElementById('display-phone').innerText = `+20 ${phoneVal}`;
+                document.getElementById('otp1').focus();
+            } else {
+                // simple validation shake or highlight could go here
+                document.getElementById('phone-number').parentElement.classList.add('ring-2', 'ring-error', 'border-error');
+                setTimeout(() => {
+                    document.getElementById('phone-number').parentElement.classList.remove('ring-2', 'ring-error', 'border-error');
+                }, 1000);
+            }
+        }
+
+        function showPhoneSection() {
+            document.getElementById('otp-input-section').classList.add('hidden');
+            document.getElementById('phone-input-section').classList.remove('hidden');
+        }
+
+        function moveToNext(current, nextFieldId) {
+            if (current.value.length === 1) {
+                document.getElementById(nextFieldId).focus();
+            }
+        }
+        
+        function verifyOtp() {
+             // Mock verification action
+        }
+    </script>
+</body></html>

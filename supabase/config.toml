@@ -275,11 +275,13 @@ max_frequency = "1s"
 "+20100000003" = "123456"
 "01000000004" = "123456"
 "+20100000004" = "123456"
+"01000000005" = "123456"
+"+20100000005" = "123456"
 
 [auth.sms.provider.twilio]
-enabled = true
-account_sid = "AC00000000000000000000000000000000"
-auth_token = "dummy_auth_token_32_characters_1"
+enabled = false
+account_sid = "env(TWILIO_ACCOUNT_SID)"
+auth_token = "env(TWILIO_AUTH_TOKEN)"
 message_service_sid = ""
 
 # Multi-factor-authentication is available to Supabase Pro plan.
@@ -375,7 +377,7 @@ deno_version = 2
 # secret_key = "env(SECRET_VALUE)"
 
 [analytics]
-enabled = true
+enabled = false
 port = 54327
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"
@@ -401,3 +403,17 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+[functions.event-dispatcher]
+verify_jwt = false
+
+[functions.otp-sms]
+verify_jwt = false
+
+[functions.diagnostic-engine]
+verify_jwt = false
+
+[functions.analytics-export]
+verify_jwt = false
+
+

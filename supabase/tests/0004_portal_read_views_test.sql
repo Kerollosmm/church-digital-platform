@@ -1,4 +1,13 @@
+BEGIN;
+
 -- supabase/tests/0004_portal_read_views_test.sql
+-- Ensure slot fixture for today exists
+INSERT INTO public.services (id, title_ar, tenant_id) OVERRIDING SYSTEM VALUE VALUES (99904, 'قداس اليوم', 1) ON CONFLICT DO NOTHING;
+INSERT INTO public.service_slots (id, service_id, starts_at, ends_at, capacity, price, tenant_id)
+OVERRIDING SYSTEM VALUE
+VALUES (99904, 99904, date_trunc('day', now()) + interval '10 hours', date_trunc('day', now()) + interval '12 hours', 50, 0, 1)
+ON CONFLICT (id) DO UPDATE SET starts_at = date_trunc('day', now()) + interval '10 hours', ends_at = date_trunc('day', now()) + interval '12 hours';
+
 do $$
 declare v_count int;
 begin
@@ -24,3 +33,5 @@ begin
     json_build_object('sub', (select id from public.users where role='ADMIN' limit 1), 'role','authenticated')::text, true);
   update public.services set title_ar = title_ar where id = (select id from public.services limit 1);
 end $$;
+
+ROLLBACK;

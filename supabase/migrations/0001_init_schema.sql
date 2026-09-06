@@ -8,6 +8,7 @@ create type public.booking_status as enum ('PENDING_PAYMENT','AWAITING_CALL','CO
 create type public.payment_status as enum ('CREATED','PAID','FAILED','REFUNDED','REFUND_PENDING','PENDING');
 create type public.video_privacy as enum ('PUBLIC','UNLISTED','PRIVATE');
 create type public.complaint_status as enum ('NEW','ASSIGNED','RESOLVED');
+create type public.payment_channel as enum ('VODAFONE_CASH','INSTAPAY','CASH');
 do $$
 begin
   if not exists (select 1 from pg_type where typname = 'event_handler_type') then
@@ -236,10 +237,12 @@ language sql stable security definer
 set search_path = ''
 as $$
   select coalesce(
+    (select u.tenant_id::text from public.users u where u.id = auth.uid() and u.deleted_at is null),
     nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'tenant_id',
     '1'
   )::bigint
 $$;
+
 
 create or replace function public.current_user_role()
 returns text

@@ -21,7 +21,7 @@ begin
 
   select count(*) into v_slots_count 
   from public.service_slots 
-  where starts_at > now() and remaining_capacity > 0;
+  where starts_at > now() and greatest(capacity - public.active_booking_count(id), 0) > 0;
   
   if v_slots_count < 6 then
     raise exception 'Expected at least 6 future available service slots, found %', v_slots_count;

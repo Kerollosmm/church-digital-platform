@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>تأكيد الحجز وتذكرة الدخول</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#2d3133",
+                        "on-tertiary-fixed": "#331200",
+                        "inverse-primary": "#bec6e0",
+                        "primary-container": "#131b2e",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-variant": "#e0e3e5",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "surface-container-low": "#f2f4f6",
+                        "inverse-on-surface": "#eff1f3",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary-container": "#cf6721",
+                        "tertiary-fixed": "#ffdbca",
+                        "primary": "#000000",
+                        "on-surface": "#191c1e",
+                        "background": "#f7f9fb",
+                        "on-surface-variant": "#45464d",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb68e",
+                        "surface": "#f7f9fb",
+                        "primary-fixed": "#dae2fd",
+                        "on-secondary-fixed": "#2f1500",
+                        "surface-tint": "#565e74",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#763300",
+                        "tertiary": "#000000",
+                        "surface-container": "#eceef0",
+                        "primary-fixed-dim": "#bec6e0",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#663500",
+                        "secondary-container": "#fe932c",
+                        "on-primary-container": "#7c839b",
+                        "secondary-fixed": "#ffdcc3",
+                        "on-secondary-fixed-variant": "#6e3900",
+                        "on-primary-fixed": "#131b2e",
+                        "surface-bright": "#f7f9fb",
+                        "outline": "#76777d",
+                        "error": "#ba1a1a",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#904d00",
+                        "secondary-fixed-dim": "#ffb77d",
+                        "tertiary-container": "#331200",
+                        "on-background": "#191c1e",
+                        "outline-variant": "#c6c6cd"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "24px",
+                        "sm": "16px",
+                        "base": "4px",
+                        "gutter": "20px",
+                        "xs": "8px",
+                        "xl": "64px",
+                        "margin-mobile": "16px",
+                        "lg": "40px",
+                        "margin-desktop": "80px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Cairo"],
+                        "headline-lg": ["Cairo"],
+                        "headline-lg-mobile": ["Cairo"],
+                        "headline-md": ["Cairo"],
+                        "body-lg": ["Cairo"],
+                        "body-md": ["Cairo"],
+                        "label-md": ["Cairo"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "60px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f7f9fb; }
+        .glass-panel { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid #E2E8F0; }
+        .ticket-shape {
+            mask-image: radial-gradient(circle at top left, transparent 12px, black 13px), 
+                        radial-gradient(circle at top right, transparent 12px, black 13px), 
+                        radial-gradient(circle at bottom left, transparent 12px, black 13px), 
+                        radial-gradient(circle at bottom right, transparent 12px, black 13px);
+            mask-position: top left, top right, bottom left, bottom right;
+            mask-repeat: no-repeat;
+            mask-size: 50% 50%;
+        }
+        .ticket-cutout {
+            position: relative;
+        }
+        .ticket-cutout::before, .ticket-cutout::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 24px;
+            height: 24px;
+            background-color: #f7f9fb;
+            border-radius: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+        }
+        .ticket-cutout::before { right: -12px; }
+        .ticket-cutout::after { left: -12px; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col md:flex-row rtl">
+<!-- Main Content Canvas - Full Width since navigation is suppressed for transactional page -->
+<main class="flex-1 w-full min-h-screen py-xl px-margin-mobile md:px-margin-desktop flex flex-col items-center justify-center">
+<!-- Success Header -->
+<div class="text-center mb-lg">
+<div class="w-16 h-16 bg-surface-container-highest rounded-full flex items-center justify-center mx-auto mb-md shadow-sm border border-outline-variant/20">
+<span class="material-symbols-outlined text-secondary text-3xl">check_circle</span>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary mb-xs">
+                تم تأكيد الحجز بنجاح
+            </h1>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                رقم الحجز: <span class="font-bold">#C-847291</span>
+</p>
+</div>
+<!-- Ticket Card -->
+<div class="w-full max-w-md bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/10 overflow-hidden mb-lg glass-panel relative ticket-cutout">
+<!-- Ticket Header -->
+<div class="bg-primary text-on-primary p-md relative overflow-hidden">
+<div class="absolute -right-4 -top-4 opacity-10">
+<span class="material-symbols-outlined text-9xl">church</span>
+</div>
+<div class="relative z-10 flex justify-between items-start">
+<div>
+<h2 class="font-headline-md text-headline-md mb-base">القداس الإلهي</h2>
+<p class="font-body-md text-body-md opacity-80">كنيسة السيدة العذراء مريم</p>
+</div>
+<div class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full font-label-md text-label-md border border-secondary/20">
+                        مؤكد
+                    </div>
+</div>
+</div>
+<!-- Ticket Body -->
+<div class="p-md border-b border-dashed border-outline-variant/30">
+<div class="grid grid-cols-2 gap-md mb-md">
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant mb-base">التاريخ</p>
+<p class="font-body-md text-body-md text-primary font-semibold">الأحد، ١٥ أكتوبر</p>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant mb-base">الوقت</p>
+<p class="font-body-md text-body-md text-primary font-semibold">٠٨:٠٠ - ١١:٠٠ ص</p>
+</div>
+</div>
+<div class="mb-md">
+<p class="font-label-md text-label-md text-on-surface-variant mb-base">الاسم</p>
+<p class="font-body-md text-body-md text-primary font-semibold">مينا أشرف</p>
+</div>
+<div class="grid grid-cols-2 gap-md">
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant mb-base">عدد الأفراد</p>
+<p class="font-body-md text-body-md text-primary font-semibold">٢ شخص</p>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant mb-base">الباب</p>
+<p class="font-body-md text-body-md text-primary font-semibold">الباب الرئيسي</p>
+</div>
+</div>
+</div>
+<!-- QR Code Section -->
+<div class="p-md flex flex-col items-center bg-surface-container-low">
+<div class="bg-white p-xs rounded-lg border border-outline-variant/20 mb-sm">
+<img class="w-32 h-32 object-cover rounded" data-alt="A clean, minimalist QR code graphic centered on a pristine white background. The QR code should be sharp black lines on white, typical of a digital ticket. No complex background, just the code itself suitable for scanning, bathed in soft, even studio lighting to convey a modern digital UI element." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAF6ciKlh6PZ_gATJNWHhN6tKGoTmGL8AYTKW1WOoubQpxWLmxwg5lASvX1U7o1vm_OhR5q5zSxAh5i3LuNPtpEbs3yEOGqasmG9j5YNXd6AuwbFxEOo89-etyJuXyo738Q5jV1Enut4WTL8Vjz0-De1I7peq1dUeHrnEO-_PbM5IXnKAusUSSGckrpOrt9Jh-y9ZS2PBaHQNN9VcnI6QON8HLNXGM2gCcCVtUxFYQjAjEEPRrQUnI"/>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant text-center">
+                    يرجى إبراز هذا الرمز عند الدخول
+                </p>
+</div>
+</div>
+<!-- Actions -->
+<div class="w-full max-w-md space-y-sm">
+<!-- WhatsApp Button -->
+<button class="w-full min-h-[48px] bg-[#25D366] text-white rounded-lg flex items-center justify-center gap-sm font-label-md text-label-md hover:bg-[#1EBE56] transition-colors shadow-sm">
+<span class="material-symbols-outlined text-xl">forum</span>
+                استلام التذكرة عبر الواتساب
+            </button>
+<!-- Reschedule / Cancel -->
+<div class="flex gap-sm">
+<button class="flex-1 min-h-[48px] bg-transparent border border-outline text-primary rounded-lg flex items-center justify-center gap-sm font-label-md text-label-md hover:bg-surface-variant/30 transition-colors">
+<span class="material-symbols-outlined text-lg">edit_calendar</span>
+                    تعديل
+                </button>
+<button class="flex-1 min-h-[48px] bg-transparent border border-error text-error rounded-lg flex items-center justify-center gap-sm font-label-md text-label-md hover:bg-error-container/30 transition-colors">
+<span class="material-symbols-outlined text-lg">cancel</span>
+                    إلغاء
+                </button>
+</div>
+<a class="block text-center mt-md text-primary font-label-md text-label-md hover:underline underline-offset-4 decoration-outline-variant" href="#">
+                العودة للرئيسية
+            </a>
+</div>
+</main>
+</body></html>

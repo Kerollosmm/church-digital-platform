@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم الإدارية — كنيسة العذراء والشهيد مارجرجس</title>
+  
+  <!-- Shared Design System & Fonts -->
+  <link rel="stylesheet" href="../shared/styles.css">
+  
+  <!-- Supabase JS Client SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Shared Application Helpers -->
+  <script src="../shared/supabase-client.js"></script>
+  <script src="../shared/test-accounts.js"></script>
+  
+  <style>
+    .admin-header-bg {
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .pin-input-group {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      direction: ltr;
+      margin: 16px 0;
+    }
+    .pin-digit {
+      width: 46px;
+      height: 52px;
+      font-size: 1.4rem;
+      font-weight: 700;
+      text-align: center;
+      background: var(--bg-input);
+      border: 2px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      color: var(--gold);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .pin-digit:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px var(--gold-glow);
+      outline: none;
+    }
+    .action-btn-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .outbox-badge-whatsapp { background: rgba(37, 211, 102, 0.15); color: #25d366; border-color: rgba(37, 211, 102, 0.4); }
+    .outbox-badge-refund { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.4); }
+    .outbox-badge-fcm { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4); }
+    .slot-capacity-bar {
+      height: 6px;
+      background: var(--bg-elevated);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .slot-capacity-fill {
+      height: 100%;
+      background: var(--primary);
+      transition: width 0.3s ease;
+    }
+    .code-preview-box {
+      background: #050811;
+      border: 1px solid #1e293b;
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: #38bdf8;
+      max-height: 200px;
+      overflow-y: auto;
+      direction: ltr;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation & Header -->
+  <header class="portal-header admin-header-bg">
+    <div class="container portal-nav">
+      <div class="brand-badge">
+        <div class="brand-icon" style="background: linear-gradient(135deg, var(--gold), #ea580c);">🏛️</div>
+        <div>
+          <div style="font-weight:800; font-size:1.1rem; color:var(--text-primary);">لوحة التحكم الإدارية</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">Church Admin Dashboard &amp; Operations</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a href="../index.html" class="btn btn-sm btn-outline" title="العودة لمركز المنظومة">
+          <span>🏠</span>
+          <span>الرئيسية</span>
+        </a>
+        <div id="top-user-banner"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+    <div class="container">
+
+      <!-- ==================================================================== -->
+      <!-- SECTION 0A: LOGIN REQUIRED SCREEN (When not logged in)              -->
+      <!-- ==================================================================== -->
+      <section id="sec-login" style="display:none; max-width:680px; margin:30px auto;">
+        <div class="card" style="box-shadow:var(--shadow-lg); border-color:var(--border-subtle);">
+          <div class="card-header" style="text-align:center; justify-content:center; flex-direction:column; gap:6px;">
+            <div style="font-size:2.4rem;">🔐</div>
+            <h2 style="font-size:1.4rem;">تسجيل الدخول للوحة الإدارة</h2>
+            <p class="text-sm">هذه البوابة مخصصة للآباء الكهنة والسكرتارية الإدارية فقط</p>
+          </div>
+
+          <div class="card-body">
+            <!-- 1-Click Fast Login Grid -->
+            <div style="margin-bottom:20px;">
+              <div id="login-accounts-grid"></div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:12px; margin:20px 0;">
+              <div style="flex:1; height:1px; background:var(--border-subtle);"></div>
+              <span class="text-xs text-muted">أو تسجيل الدخول بالبريد وكلمة المرور</span>
+              <div style="flex:1; height:1px; background:var(--border-subtle);"></div>
+            </div>
+
+            <!-- Password Form -->
+            <form id="form-login" onsubmit="event.preventDefault(); window.AdminApp.handlePasswordLogin();">
+              <div class="form-group">
+                <label class="form-label" for="login-email">البريد الإلكتروني</label>
+                <input type="email" id="login-email" class="form-input" placeholder="admin@church.test" required dir="ltr">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="login-password">كلمة المرور</label>
+                <input type="password" id="login-password" class="form-input" placeholder="••••••••" required dir="ltr">
+              </div>
+              <button type="submit" id="btn-submit-login" class="btn btn-primary btn-block btn-lg" style="margin-top:10px;">
+                <span>تسجيل الدخول</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================== -->
+      <!-- SECTION 0B: ROLE FORBIDDEN SCREEN (Parishioner User blocked)         -->
+      <!-- ==================================================================== -->
+      <section id="sec-forbidden" style="display:none; max-width:620px; margin:40px auto;">
+        <div class="card" style="border-color:var(--danger-border); background:rgba(239, 68, 68, 0.05); text-align:center; padding:32px 24px;">
+          <div style="font-size:3rem; margin-bottom:12px;">🚫</div>
+          <h2 style="color:var(--danger); margin-bottom:8px;">غير مصرح بالدخول للوحة الإدارة</h2>
+          <p style="color:var(--text-primary); font-size:1rem; margin-bottom:16px; line-height:1.7;">
+            الحساب الحالي مسجل كـ <strong class="badge badge-role-user">مخدوم / رعية (USER)</strong>.<br>
+            لوحة الإدارة تتطلب صلاحية <strong>ADMIN</strong> أو <strong>SUPER_ADMIN</strong>.
+          </p>
+          <div class="alert alert-danger" style="text-align:right; margin-bottom:24px;">
+            <div>ℹ️ <strong>سبب المنع:</strong> تطبق المنظومة قاعدة الأمان الصارمة <code class="font-mono">public.is_admin()</code> لعزل بيانات الحجوزات والشكاوى المشفرة وإدارة المواعيد.</div>
+          </div>
+          <div class="flex justify-center gap-3">
+            <button onclick="window.AdminApp.switchAccount('admin')" class="btn btn-warning">
+              <span>⚡ التبديل لحساب الإدارة (admin@church.test)</span>
+            </button>
+            <button onclick="window.AdminApp.handleLogout()" class="btn btn-outline">
+              <span>تسجيل الخروج</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================== -->
+      <!-- SECTION 0C: ADMIN 2FA PIN CHALLENGE SCREEN                           -->
+      <!-- ==================================================================== -->
+      <section id="sec-pin-gate" style="display:none; max-width:540px; margin:30px auto;">
+        <div class="card" style="border-color:var(--gold); box-shadow:var(--shadow-lg);">
+          <div class="card-header" style="text-align:center; justify-content:center; flex-direction:column; gap:6px;">
+            <div style="font-size:2.2rem; color:var(--gold);">🔑</div>
+            <h2 style="font-size:1.35rem;" id="pin-card-title">تأكيد رمز PIN الإداري (2FA)</h2>
+            <p class="text-sm text-muted" id="pin-card-subtitle">التحقق الإضافي مطلوب للوصول للعمليات الإدارية الحساسة</p>
+          </div>
+
+          <div class="card-body" style="text-align:center;">
+            <div id="pin-status-banner" class="alert alert-info" style="margin-bottom:16px;">
+              <span id="pin-status-text">جاري فحص حالة رمز PIN الإداري...</span>
+            </div>
+
+            <!-- PIN Form: Verification Mode -->
+            <div id="pin-verify-box">
+              <p class="text-sm" style="margin-bottom:12px;">أدخل رمز PIN المكون من 4–6 أرقام (الافتراضي للاختبار: <strong style="color:var(--gold);">1234</strong>):</p>
+              
+              <div class="pin-input-group">
+                <input type="password" id="pin-input" class="form-input" maxlength="6" placeholder="••••" style="width:180px; text-align:center; font-size:1.6rem; letter-spacing:8px; font-family:'JetBrains Mono';" dir="ltr" autofocus>
+              </div>
+
+              <div class="flex justify-center gap-3" style="margin-top:18px;">
+                <button id="btn-verify-pin" onclick="window.AdminApp.handleVerifyPin()" class="btn btn-primary btn-lg" style="background:var(--gold); color:black;">
+                  <span>تأكيد رمز PIN</span>
+                </button>
+                <button onclick="window.AdminApp.handleLogout()" class="btn btn-outline btn-lg">
+                  <span>خروج</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- PIN Form: Setup Mode (If UNSET) -->
+            <div id="pin-setup-box" style="display:none;">
+              <p class="text-sm" style="margin-bottom:12px;">لم يتم تعيين رمز PIN لهذا الحساب بعد. اختر رمزاً مكوناً من 4 إلى 6 أرقام:</p>
+              
+              <div class="pin-input-group">
+                <input type="password" id="pin-new-input" class="form-input" maxlength="6" placeholder="1234" style="width:180px; text-align:center; font-size:1.5rem; letter-spacing:6px; font-family:'JetBrains Mono';" dir="ltr">
+              </div>
+
+              <div class="flex justify-center gap-3" style="margin-top:18px;">
+                <button id="btn-set-pin" onclick="window.AdminApp.handleSetPin()" class="btn btn-success btn-lg">
+                  <span>حفظ وتفعيل PIN</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- PIN Lockout Warning -->
+            <div id="pin-locked-box" style="display:none;">
+              <div class="alert alert-danger" style="text-align:right;">
+                <div>⚠️ <strong>الحساب مقفل مؤقتاً:</strong> تم تجاوز عدد محاولات PIN الخاطئة (5 محاولات). تم قفل الحساب لمدة 15 دقيقة وفقاً لمعايير الأمان.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================================== -->
+      <!-- SECTION 1: AUTHENTICATED & VERIFIED ADMIN DASHBOARD                  -->
+      <!-- ==================================================================== -->
+      <section id="sec-dashboard" style="display:none;">
+        
+        <!-- Live Stats Metric Tiles Bar -->
+        <div class="grid grid-4" style="margin-bottom:24px;">
+          <div class="stat-tile">
+            <span class="stat-label">📋 إجمالي الحجوزات المسجلة</span>
+            <span class="stat-value text-primary" id="stat-total-bookings">--</span>
+          </div>
+          <div class="stat-tile" style="border-color:rgba(56, 189, 248, 0.4);">
+            <span class="stat-label">📞 قيد الاتصال (AWAITING_CALL)</span>
+            <span class="stat-value text-info" id="stat-awaiting-call">--</span>
+          </div>
+          <div class="stat-tile" style="border-color:rgba(52, 211, 153, 0.4);">
+            <span class="stat-label">✅ الحجوزات المؤكدة</span>
+            <span class="stat-value text-success" id="stat-confirmed-bookings">--</span>
+          </div>
+          <div class="stat-tile" style="border-color:rgba(248, 113, 113, 0.4);">
+            <span class="stat-label">📤 أحداث الإرسال المعلقة/الفاشلة</span>
+            <span class="stat-value text-danger" id="stat-outbox-failed">--</span>
+          </div>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="flex items-center justify-between flex-wrap gap-3" style="margin-bottom:16px;">
+          <!-- Tabs Navigation -->
+          <div class="tabs" style="margin-bottom:0; flex:1;">
+            <button class="tab-btn active" data-tab="tab-queue" onclick="window.AdminApp.switchTab('tab-queue')">
+              <span>📋 مراجعة الحجوزات والاتصال</span>
+              <span class="badge badge-awaiting-call" id="tab-badge-awaiting" style="margin-right:6px; display:none;">0</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-manual-book" onclick="window.AdminApp.switchTab('tab-manual-book')">
+              <span>✍️ حجز يدوي ونقدي</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-slots" onclick="window.AdminApp.switchTab('tab-slots')">
+              <span>⚙️ السعة والمواعيد والإعلانات</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-complaints" onclick="window.AdminApp.switchTab('tab-complaints')">
+              <span>🔒 شكاوى واستفسارات الرعية</span>
+              <span class="badge badge-pending" id="tab-badge-complaints" style="margin-right:6px; display:none;">0</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-proofs" onclick="window.AdminApp.switchTab('tab-proofs')">
+              <span>💳 مراجعة إثباتات الدفع</span>
+              <span class="badge badge-pending" id="tab-badge-proofs" style="margin-right:6px; display:none;">0</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-outbox" onclick="window.AdminApp.switchTab('tab-outbox')">
+              <span>📤 مراقبة صندوق الإرسال (Outbox)</span>
+            </button>
+          </div>
+
+          <!-- Refresh & Auto-Sync -->
+          <div class="flex items-center gap-2">
+            <button onclick="window.AdminApp.refreshAllData()" class="btn btn-sm btn-secondary" title="تحديث البيانات">
+              <span>🔄</span>
+              <span>تحديث</span>
+            </button>
+            <label class="text-xs text-muted flex items-center gap-1" style="cursor:pointer;">
+              <input type="checkbox" id="chk-auto-refresh" onchange="window.AdminApp.toggleAutoRefresh(this.checked)" checked>
+              <span>مزامنة حية</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- TAB 1: BOOKINGS REVIEW & CONFIRMATION QUEUE                      -->
+        <!-- ================================================================ -->
+        <div id="tab-queue" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>📋 قائمة مراجعة الحجوزات وطلبات الاتصال</span>
+              </div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <!-- Status Filter -->
+                <select id="filter-booking-status" class="form-select" style="width:auto; padding:6px 12px; font-size:0.85rem;" onchange="window.AdminApp.filterBookings()">
+                  <option value="AWAITING_CALL">قيد الاتصال فقط (AWAITING_CALL)</option>
+                  <option value="ALL">جميع الحالات</option>
+                  <option value="CONFIRMED">مؤكدة (CONFIRMED)</option>
+                  <option value="PENDING_PAYMENT">قيد الدفع (PENDING_PAYMENT)</option>
+                  <option value="COMPLETED">مكتملة الحضور (COMPLETED)</option>
+                  <option value="CANCELLED">ملغاة (CANCELLED)</option>
+                  <option value="RESCHEDULED">معاد جدولتها (RESCHEDULED)</option>
+                </select>
+
+                <!-- Search Input -->
+                <input type="text" id="search-booking" class="form-input" placeholder="بحث بالاسم أو الهاتف أو المعرف..." style="width:220px; padding:6px 12px; font-size:0.85rem;" oninput="window.AdminApp.filterBookings()">
+              </div>
+            </div>
+
+            <div class="card-body" style="padding:0;">
+              <div class="table-responsive">
+                <table class="table table-hover table-striped" id="tbl-bookings">
+                  <thead>
+                    <tr>
+                      <th style="width:70px;"># المعرف</th>
+                      <th>المخدوم / الرعية</th>
+                      <th>رقم الهاتف والاتصال</th>
+                      <th>الخدمة / المناسبة</th>
+                      <th>الموعد والمكان</th>
+                      <th>المبلغ</th>
+                      <th>الحالة</th>
+                      <th style="text-align:center; min-width:210px;">إجراءات الإدارة</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-bookings">
+                    <tr>
+                      <td colspan="8" style="text-align:center; padding:30px;" class="text-muted">
+                        <div class="spinner"></div>
+                        <div style="margin-top:8px;">جاري تحميل الحجوزات...</div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- TAB 2: MANUAL / CASH BOOKING IN-PERSON FORM                      -->
+        <!-- ================================================================ -->
+        <div id="tab-manual-book" class="tab-content" style="display:none;">
+          <div class="grid grid-2">
+            <!-- Booking Form Card -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <span>✍️ حجز يدوي مباشر / نقدي (In-Person Booking)</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <p class="text-sm text-muted" style="margin-bottom:16px;">
+                  استخدم هذا النموذج لتسجيل حجز مباشر لمخدوم حضر للكنيسة أو اتصل هاتفياً، ويتم تأكيد الحجز فوراً وتخطي مرحلة انتظار الدفع.
+                </p>
+
+                <form id="form-manual-book" onsubmit="event.preventDefault(); window.AdminApp.handleManualBooking();">
+                  <!-- Service Selector -->
+                  <div class="form-group">
+                    <label class="form-label" for="manual-service-select">الخدمة الكنسية</label>
+                    <select id="manual-service-select" class="form-select" required onchange="window.AdminApp.loadSlotsForService(this.value)">
+                      <option value="">-- اختر الخدمة --</option>
+                    </select>
+                  </div>
+
+                  <!-- Slot Selector -->
+                  <div class="form-group">
+                    <label class="form-label" for="manual-slot-select">الموعد المتاح</label>
+                    <select id="manual-slot-select" class="form-select" required onchange="window.AdminApp.onSlotSelected(this.value)">
+                      <option value="">-- اختر الخدمة أولاً --</option>
+                    </select>
+                  </div>
+
+                  <!-- Parishioner Phone -->
+                  <div class="form-group">
+                    <label class="form-label" for="manual-phone">رقم هاتف المخدوم (المسجل بالنظام)</label>
+                    <input type="text" id="manual-phone" class="form-input" placeholder="+201000000002" required dir="ltr">
+                    <div class="flex items-center gap-1 flex-wrap" style="margin-top:6px;">
+                      <span class="text-xs text-muted">اختيار سريع:</span>
+                      <button type="button" class="btn btn-xs btn-outline" style="font-size:0.72rem; padding:2px 6px;" onclick="document.getElementById('manual-phone').value='+201000000002'">مريم (+201000000002)</button>
+                      <button type="button" class="btn btn-xs btn-outline" style="font-size:0.72rem; padding:2px 6px;" onclick="document.getElementById('manual-phone').value='+201000000003'">بيتر (+201000000003)</button>
+                    </div>
+                  </div>
+
+                  <!-- Notes -->
+                  <div class="form-group">
+                    <label class="form-label" for="manual-notes">ملاحظات الحجز الإداري</label>
+                    <input type="text" id="manual-notes" class="form-input" placeholder="حجز يدوي نقدي من مكتب السكرتارية">
+                  </div>
+
+                  <!-- WhatsApp Opt-In Checkbox -->
+                  <div class="form-group">
+                    <label class="form-check">
+                      <input type="checkbox" id="manual-opt-in" checked>
+                      <span class="text-sm">إرسال إشعار تأكيد الحجز عبر WhatsApp للمخدوم (<code class="font-mono">whatsapp_optins</code>)</span>
+                    </label>
+                  </div>
+
+                  <button type="submit" id="btn-submit-manual-book" class="btn btn-primary btn-block btn-lg" style="margin-top:12px;">
+                    <span>⚡ تسجيل وتأكيد الحجز فوراً (manual_book)</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Slot Info & Confirmation Result Card -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <span>ℹ️ تفاصيل الموعد ونتيجة الحجز</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div id="manual-slot-preview" class="alert alert-info" style="display:none; margin-bottom:16px;">
+                  <div id="manual-slot-preview-content"></div>
+                </div>
+
+                <div id="manual-book-result" style="display:none;">
+                  <div class="alert alert-success">
+                    <div>
+                      <strong style="font-size:1.05rem;">🎉 تم تسجيل الحجز بنجاح!</strong>
+                      <div id="manual-result-details" style="margin-top:8px; line-height:1.7;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card" style="background:var(--bg-elevated); padding:14px; margin-top:16px;">
+                  <h4 style="font-size:0.9rem; margin-bottom:6px;">🔒 القواعد والضوابط المنفذة تلقائياً عبر RPC:</h4>
+                  <ul class="text-xs text-muted" style="padding-right:16px; line-height:1.8;">
+                    <li>تنفيذ إجراء <code class="font-mono">manual_book()</code> داخل معاملة موصدة <code class="font-mono">FOR UPDATE</code> لمنع التنافس.</li>
+                    <li>التحقق من سعة الموعد وعدم تجاوز الحد الأقصى للمقاعد المتاحة.</li>
+                    <li>تعيين حالة الحجز فوراً إلى <strong class="badge badge-confirmed">مؤكد (CONFIRMED)</strong>.</li>
+                    <li>تسجيل حركة تدقيق أمني في جدول <code class="font-mono">audit_log</code>.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- TAB 3: CAPACITY, SLOTS & ANNOUNCEMENTS                           -->
+        <!-- ================================================================ -->
+        <div id="tab-slots" class="tab-content" style="display:none;">
+          <div class="flex flex-col gap-4">
+            
+            <!-- 3A. Service Slots Manager -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <span>⚙️ إدارة مواعيد الخدمات وسعة المقاعد (Service Slots)</span>
+                </div>
+                <button onclick="window.AdminApp.openCreateSlotModal()" class="btn btn-sm btn-primary">
+                  <span>➕ إضافة موعد جديد</span>
+                </button>
+              </div>
+
+              <div class="card-body" style="padding:0;">
+                <div class="table-responsive">
+                  <table class="table table-hover table-striped" id="tbl-slots">
+                    <thead>
+                      <tr>
+                        <th style="width:70px;"># المعرف</th>
+                        <th>الخدمة</th>
+                        <th>المكان / القاعة</th>
+                        <th>توقيت البدء</th>
+                        <th>توقيت الانتهاء</th>
+                        <th>السعة والحجوزات</th>
+                        <th>السعر</th>
+                        <th>الحالة</th>
+                        <th style="text-align:center;">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-slots">
+                      <tr>
+                        <td colspan="9" style="text-align:center; padding:30px;" class="text-muted">جاري تحميل المواعيد...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3B. Announcements Manager with Alt-Text Validation -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">
+                  <span>📢 لوحة الإعلانات الكنسية والتحقق من إتاحة الصور (Accessibility Guard)</span>
+                </div>
+                <button onclick="window.AdminApp.toggleAnnouncementForm()" class="btn btn-sm btn-outline">
+                  <span>✍️ كتابة إعلان جديد</span>
+                </button>
+              </div>
+
+              <div class="card-body">
+                <!-- Announcement Form -->
+                <div id="announcement-form-box" style="display:none; background:var(--bg-elevated); padding:16px; border-radius:var(--radius-md); margin-bottom:20px;">
+                  <h4 style="margin-bottom:12px;">إضافة إعلان كنسي جديد</h4>
+                  <form id="form-create-announcement" onsubmit="event.preventDefault(); window.AdminApp.handleCreateAnnouncement();">
+                    <div class="grid grid-2">
+                      <div class="form-group">
+                        <label class="form-label" for="ann-title">عنوان الإعلان</label>
+                        <input type="text" id="ann-title" class="form-input" placeholder="اجتماع الصلاة الأسبوعي" required>
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label" for="ann-role">الفئة المستهدفة</label>
+                        <select id="ann-role" class="form-select">
+                          <option value="">جميع الفئات (العامة)</option>
+                          <option value="USER">المخدومين (USER)</option>
+                          <option value="ADMIN">السكرتارية والإدارة (ADMIN)</option>
+                          <option value="SUPER_ADMIN">الإدارة العليا (SUPER_ADMIN)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label" for="ann-body">نص الإعلان</label>
+                      <textarea id="ann-body" class="form-textarea" placeholder="تفاصيل الإعلان الكنسي والموعد والمكان..." required></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                      <button type="button" onclick="window.AdminApp.toggleAnnouncementForm()" class="btn btn-outline btn-sm">إلغاء</button>
+                      <button type="submit" class="btn btn-primary btn-sm">حفظ الإعلان (مسودة)</button>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- Announcements Table -->
+                <div class="table-responsive">
+                  <table class="table table-hover" id="tbl-announcements">
+                    <thead>
+                      <tr>
+                        <th style="width:70px;"># المعرف</th>
+                        <th>عنوان الإعلان</th>
+                        <th>نص الإعلان</th>
+                        <th>الفئة المستهدفة</th>
+                        <th>تاريخ النشر</th>
+                        <th>الحالة</th>
+                        <th style="text-align:center;">إجراء النشر</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-announcements">
+                      <tr>
+                        <td colspan="7" style="text-align:center; padding:20px;" class="text-muted">جاري تحميل الإعلانات...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- TAB 4: ENCRYPTED COMPLAINTS & DECRYPTION                         -->
+        <!-- ================================================================ -->
+        <div id="tab-complaints" class="tab-content" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">
+                <span>🔒 صندوق الشكاوى والاستفسارات المشفرة (PGP Decryption)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <select id="filter-complaint-status" class="form-select" style="width:auto; padding:6px 12px; font-size:0.85rem;" onchange="window.AdminApp.filterComplaints()">
+                  <option value="ALL">جميع الحالات</option>
+                  <option value="NEW">جديدة (NEW)</option>
+                  <option value="ASSIGNED">مُسندة للمتابعة (ASSIGNED)</option>
+                  <option value="RESOLVED">تم الحل (RESOLVED)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <div class="alert alert-info" style="margin-bottom:16px;">
+                <div>
+                  🔒 <strong>الأمان والتشفير:</strong> نصوص الشكاوى مشفرة بالكامل في قاعدة البيانات عبر <code class="font-mono">pgp_sym_encrypt()</code> باستخدام مفتاح Vault السري <code class="font-mono">COMPLAINTS_KEY</code>. لا تظهر الشكوى إلا بعد الضغط على زر <strong>فك التشفير وقراءة الشكوى</strong> واستدعاء الإجراء الآمن <code class="font-mono">decrypt_complaint()</code>.
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-hover table-striped" id="tbl-complaints">
+                  <thead>
+                    <tr>
+                      <th style="width:70px;"># المعرف</th>
+                      <th>تصنيف الشكوى</th>
+                      <th>معرف المخدوم</th>
+                      <th>الحالة</th>
+                      <th>مُسند إلى</th>
+                      <th>تاريخ التقديم</th>
+                      <th style="text-align:center; min-width:200px;">إجراءات الإدارة</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-complaints">
+                    <tr>
+                      <td colspan="7" style="text-align:center; padding:30px;" class="text-muted">جاري تحميل الشكاوى...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- TAB 6: PAYMENT PROOFS REVIEW QUEUE                              -->
+        <!-- ================================================================ -->
+        <div id="tab-proofs" class="tab-content" style="display:none;">
+          <div class="card">
+            <div class="card-header flex-wrap gap-3">
+              <div>
+                <div class="card-title">
+                  <span>💳 طابور مراجعة إثباتات الدفع والتحويل (Payment Proofs Review)</span>
+                </div>
+                <p class="text-xs text-muted" style="margin-top:2px;">
+                  مراجعة إيصالات فودافون كاش وإنستاباي والنقدية واعتمادها لتأكيد الحجز وتوليد إشعارات WhatsApp
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <select id="filter-proof-status" class="form-select" style="width:auto; padding:6px 12px; font-size:0.85rem;" onchange="window.AdminApp.filterProofs()">
+                  <option value="PENDING">قيد المراجعة فقط (PENDING)</option>
+                  <option value="ALL">جميع الحالات</option>
+                  <option value="APPROVED">المقبولة (APPROVED)</option>
+                  <option value="REJECTED">المرفوضة (REJECTED)</option>
+                </select>
+                <button onclick="window.AdminApp.loadPendingProofs()" class="btn btn-sm btn-secondary">
+                  <span>🔄 تحديث الإثباتات</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body" style="padding:0;">
+              <div class="table-responsive">
+                <table class="table table-hover table-striped" id="tbl-proofs">
+                  <thead>
+                    <tr>
+                      <th style="width:70px;"># المعرف</th>
+                      <th>رقم الحجز</th>
+                      <th>القناة والوسيلة</th>
+                      <th>الهاتف المحول منه</th>
+                      <th>رقم العملية / المرجع</th>
+                      <th>المبلغ المطالب به</th>
+                      <th>صورة الإشعار</th>
+                      <th>تاريخ الإرسال</th>
+                      <th>الحالة</th>
+                      <th style="text-align:center; min-width:180px;">إجراءات القرار</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-proofs">
+                    <tr>
+                      <td colspan="10" style="text-align:center; padding:30px;" class="text-muted">جاري تحميل إثباتات الدفع...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- TAB 5: OUTBOX QUEUE INSPECTOR                                    -->
+        <!-- ================================================================ -->
+        <div id="tab-outbox" class="tab-content" style="display:none;">
+          <div class="card">
+            <div class="card-header flex-wrap gap-3">
+              <div>
+                <div class="card-title">
+                  <span>📤 مراقبة صندوق الرسائل والأحداث الخارجية (Transactional Outbox)</span>
+                </div>
+                <p class="text-xs text-muted" style="margin-top:2px;">
+                  مراقبة طابور رسائل WhatsApp وبوابات الدفع Paymob والإشعارات التلقائية
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button id="btn-trigger-dispatcher" onclick="window.AdminApp.handleTriggerEventDispatcher()" class="btn btn-sm btn-primary" style="background:#0284c7; box-shadow:0 0 12px rgba(2,132,199,0.3);">
+                  <span>⚡ تشغيل موزع الأحداث (Trigger Dispatcher)</span>
+                </button>
+                <button onclick="window.AdminApp.loadOutboxEvents()" class="btn btn-sm btn-outline">
+                  <span>🔄 تحديث الصندوق</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <!-- Failed Events Alert Box (if any) -->
+              <div id="failed-outbox-section" style="display:none; margin-bottom:20px;">
+                <div class="alert alert-danger">
+                  <div style="width:100%;">
+                    <div class="flex items-center justify-between" style="margin-bottom:8px;">
+                      <strong style="font-size:0.95rem;">⚠️ يوجد رسائل فاشلة في الصندوق (<code class="font-mono">v_failed_outbox_events</code>):</strong>
+                    </div>
+                    <div class="table-responsive" style="background:rgba(0,0,0,0.3);">
+                      <table class="table" style="font-size:0.82rem;">
+                        <thead>
+                          <tr>
+                            <th># المعرف</th>
+                            <th>المعالج</th>
+                            <th>الهاتف المستلم</th>
+                            <th>القالب</th>
+                            <th>الخطأ الأخير</th>
+                            <th>المحاولات</th>
+                            <th>إعادة الإرسال</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tbody-failed-outbox"></tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Full Outbox Events Stream -->
+              <div class="table-responsive">
+                <table class="table table-hover table-striped" id="tbl-outbox">
+                  <thead>
+                    <tr>
+                      <th style="width:70px;"># المعرف</th>
+                      <th>نوع المعالج (Handler)</th>
+                      <th>بيانات الحمولة (Payload)</th>
+                      <th>الحالة</th>
+                      <th>المحاولات</th>
+                      <th>تاريخ الإنشاء</th>
+                      <th>آخر خطأ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-outbox">
+                    <tr>
+                      <td colspan="7" style="text-align:center; padding:30px;" class="text-muted">جاري تحميل أحداث الصندوق...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ====================================================================== -->
+  <!-- MODALS                                                                 -->
+  <!-- ====================================================================== -->
+
+  <!-- Modal 1: Cancel / Reject Booking -->
+  <div id="modal-cancel-booking" class="modal-backdrop">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 class="modal-title">❌ إلغاء / رفض الحجز</h3>
+        <button class="modal-close" onclick="window.AdminApp.closeModal('modal-cancel-booking')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm" style="margin-bottom:12px;">
+          هل أنت متأكد من إلغاء الحجز رقم <strong id="cancel-booking-id-text" style="color:var(--danger);">#--</strong>؟
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="cancel-reason">سبب الإلغاء (اختياري)</label>
+          <input type="text" id="cancel-reason" class="form-input" placeholder="اعتذار من المخدوم / عدم الرد على الاتصال">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="window.AdminApp.closeModal('modal-cancel-booking')">تراجع</button>
+        <button id="btn-confirm-cancel" class="btn btn-danger" onclick="window.AdminApp.executeCancelBooking()">
+          <span>تأكيد الإلغاء</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Emergency Reschedule Override -->
+  <div id="modal-emergency-override" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width:600px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🔄 إعادة جدولة طارئة (Emergency Override)</h3>
+        <button class="modal-close" onclick="window.AdminApp.closeModal('modal-emergency-override')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm text-muted" style="margin-bottom:12px;">
+          إعادة جدولة فورية للحجز رقم <strong id="override-booking-id-text" style="color:var(--gold);">#--</strong> مع إرسال إشعار اعتذار للمخدوم وإصدار استرداد مالي تلقائي إذا لزم.
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="override-new-slot-select">اختر الموعد الجديد البديل</label>
+          <select id="override-new-slot-select" class="form-select" required>
+            <option value="">-- جاري تحميل المواعيد البديلة المتاحة --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-check">
+            <input type="checkbox" id="override-refund-check">
+            <span class="text-sm">إصدار طلب استرداد مالي (<code class="font-mono">PAYMOB_REFUND</code>) للمبالغ المدفوعة</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="window.AdminApp.closeModal('modal-emergency-override')">إلغاء</button>
+        <button id="btn-confirm-override" class="btn btn-warning" onclick="window.AdminApp.executeEmergencyOverride()">
+          <span>تنفيذ الإعادة الجدولة الطارئة</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Decrypted Complaint Reader -->
+  <div id="modal-decrypt-complaint" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width:580px;">
+      <div class="modal-header">
+        <h3 class="modal-title">🔓 تفاصيل الشكوى بعد فك التشفير</h3>
+        <button class="modal-close" onclick="window.AdminApp.closeModal('modal-decrypt-complaint')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="flex items-center justify-between" style="margin-bottom:12px;">
+          <span class="text-sm text-muted">رقم الشكوى: <strong id="dec-complaint-id" style="color:var(--text-primary);">#--</strong></span>
+          <span class="badge badge-info" id="dec-complaint-category">--</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">نص الشكوى الأصلي المفكوك تشفيره:</label>
+          <div id="dec-complaint-text" class="card" style="background:#070b14; border-color:var(--border-subtle); padding:14px; font-size:0.95rem; line-height:1.8; color:var(--text-primary); min-height:100px;">
+            --
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="window.AdminApp.closeModal('modal-decrypt-complaint')">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Create Service Slot -->
+  <div id="modal-create-slot" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width:580px;">
+      <div class="modal-header">
+        <h3 class="modal-title">➕ إضافة موعد قداس / خدمة جديد</h3>
+        <button class="modal-close" onclick="window.AdminApp.closeModal('modal-create-slot')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="form-create-slot" onsubmit="event.preventDefault(); window.AdminApp.handleCreateSlot();">
+          <div class="form-group">
+            <label class="form-label" for="slot-service-select">الخدمة الكنسية</label>
+            <select id="slot-service-select" class="form-select" required>
+              <option value="">-- اختر الخدمة --</option>
+            </select>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="form-group">
+              <label class="form-label" for="slot-starts-at">وقت البدء</label>
+              <input type="datetime-local" id="slot-starts-at" class="form-input" required dir="ltr">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="slot-ends-at">وقت الانتهاء</label>
+              <input type="datetime-local" id="slot-ends-at" class="form-input" required dir="ltr">
+            </div>
+          </div>
+
+          <div class="grid grid-2">
+            <div class="form-group">
+              <label class="form-label" for="slot-capacity">السعة الإجمالية (عدد المقاعد)</label>
+              <input type="number" id="slot-capacity" class="form-input" min="1" max="1000" value="50" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="slot-price">السعر بالجنيه (0 للخدمات المجانية)</label>
+              <input type="number" id="slot-price" class="form-input" min="0" value="0" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="slot-location">المكان / القاعة / المذبح</label>
+            <input type="text" id="slot-location" class="form-input" placeholder="الكنيسة الرئيسية" value="الكنيسة الرئيسية" required>
+            <span class="form-help">⚠️ تخضع القاعات لقيد الاستبعاد GiST لمنع تداخل المواعيد المتزامنة في نفس المكان.</span>
+          </div>
+
+          <div class="modal-footer" style="padding:12px 0 0 0; margin-top:16px;">
+            <button type="button" class="btn btn-outline" onclick="window.AdminApp.closeModal('modal-create-slot')">إلغاء</button>
+            <button type="submit" id="btn-save-slot" class="btn btn-success">
+              <span>حفظ الموعد</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Reject Payment Proof -->
+  <div id="modal-reject-proof" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width:540px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--danger);">❌ رفض إثبات الدفع</h3>
+        <button class="modal-close" onclick="window.AdminApp.closeModal('modal-reject-proof')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm" style="margin-bottom:12px;">
+          أنت على وشك رفض إثبات الدفع رقم <strong id="reject-proof-id-text" style="color:var(--gold);">#--</strong> للحجز رقم <strong id="reject-proof-booking-id-text">#--</strong> بمبلغ <strong id="reject-proof-amount-text">--</strong> ج.م.
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="reject-proof-reason-select">سبب الرفض (من كتالوج رسائل الخطأ العربي المعتمد):</label>
+          <select id="reject-proof-reason-select" class="form-select" required>
+            <option value="BAD_REQUEST">البيانات غير مطابقة لكشف الحساب / الرقم المرجعي خاطئ (BAD_REQUEST)</option>
+            <option value="FALLBACK">صورة الإيصال غير واضحة أو مقصوصة (FALLBACK)</option>
+            <option value="UPSTREAM_ERROR">لم يتم العثور على العملية في المحفظة (UPSTREAM_ERROR)</option>
+          </select>
+        </div>
+        <p class="text-xs text-muted">
+          ℹ️ سيتمكن المخدوم من إعادة إرسال إثبات جديد صحيح فوراً عبر تطبيقه دون إلغاء الحجز.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="window.AdminApp.closeModal('modal-reject-proof')">تراجع</button>
+        <button id="btn-confirm-reject-proof" class="btn btn-danger" onclick="window.AdminApp.executeRejectProof()">
+          <span>تأكيد رفض الإثبات</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: Approve Cash Proof Note -->
+  <div id="modal-approve-cash" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width:540px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--success);">💵 تأكيد استلام النقدية</h3>
+        <button class="modal-close" onclick="window.AdminApp.closeModal('modal-approve-cash')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm" style="margin-bottom:12px;">
+          تأكيد استلام المبلغ نقداً في الخزينة لإثبات الدفع <strong id="cash-proof-id-text">#--</strong>:
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="cash-collector-note">ملاحظة التحصيل / اسم المستلم:</label>
+          <input type="text" id="cash-collector-note" class="form-input" placeholder="استلمها بالخزينة: دياكون يوسف">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="window.AdminApp.closeModal('modal-approve-cash')">إلغاء</button>
+        <button id="btn-confirm-approve-cash" class="btn btn-success" onclick="window.AdminApp.executeApproveCashProof()">
+          <span>تأكيد الاستلام والاعتماد</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 7: Mark Cash Received Directly on Booking -->
+  <div id="modal-direct-cash" class="modal-backdrop">
+    <div class="modal-dialog" style="max-width:540px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color:var(--success);">💵 تحصيل نقدي مباشر في الخزينة</h3>
+        <button class="modal-close" onclick="window.AdminApp.closeModal('modal-direct-cash')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm" style="margin-bottom:12px;">
+          تسجيل تحصيل نقدي مباشر للحجز رقم <strong id="direct-cash-booking-id-text" style="color:var(--gold);">#--</strong>:
+        </p>
+        <div class="form-group">
+          <label class="form-label" for="direct-cash-amount">المبلغ المحصل (ج.م):</label>
+          <input type="number" id="direct-cash-amount" class="form-input" min="1" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="direct-cash-note">ملاحظة التحصيل / اسم المستلم:</label>
+          <input type="text" id="direct-cash-note" class="form-input" placeholder="استلام نقدي بالخزينة">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="window.AdminApp.closeModal('modal-direct-cash')">إلغاء</button>
+        <button id="btn-confirm-direct-cash" class="btn btn-success" onclick="window.AdminApp.executeDirectCashBooking()">
+          <span>تأكيد استلام النقدية (mark_cash_received)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Footer -->
+  <footer class="portal-footer">
+    <div class="container">
+      <div>منظومة الكنيسة الرقمية — لوحة إدارة الرعية والحجوزات</div>
+      <div style="margin-top:4px; font-size:0.75rem; color:var(--text-muted);">
+        Supabase PostgreSQL 16 &bull; RLS Security &bull; PGP Crypto &bull; Deno Edge Runtime
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

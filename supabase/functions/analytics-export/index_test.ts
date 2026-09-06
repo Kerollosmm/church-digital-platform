@@ -21,9 +21,13 @@ Deno.test("builds CSV from rows with BOM + formula-char guard", () => {
   assertEquals(csv, "\uFEFFmonth,rate_pct\n2026-08-01,50.00\n2026-09-01,66.67\n'=1+1,'-0.50\n");
 });
 
-Deno.test("denies non-admin role", () => {
-  assertEquals(exportAllowed("USER"), false);
+Deno.test("exportAllowed permits admins and super admins only", () => {
   assertEquals(exportAllowed("ADMIN"), true);
+  assertEquals(exportAllowed("admin"), true);
+  assertEquals(exportAllowed("SUPER_ADMIN"), true);
+  assertEquals(exportAllowed("super_admin"), true);
+  assertEquals(exportAllowed("USER"), false);
+  assertEquals(exportAllowed(undefined), false);
 });
 
 function createDeps(overrides: Partial<Deps> = {}): { deps: Deps; fakeAnon: FakeClient; fakeService: FakeClient } {
@@ -39,35 +43,41 @@ function createDeps(overrides: Partial<Deps> = {}): { deps: Deps; fakeAnon: Fake
       if (token === "valid-token") {
         return { data: { user: { id: "user-1" } as User }, error: null };
       }
-      return { data: { user: null }, error: null };
+      return { data: { user: null }, error: { message: "Invalid token" } };
     },
     ...overrides,
   };
   return { deps, fakeAnon, fakeService };
 }
 
-Deno.test("analytics-export: non-GET -> 405", async () => {
+Deno.test("analytics-export: non-GET -> 400 BAD_REQUEST JSON", async () => {
   const { deps } = createDeps();
   const res = await handleRequest(new Request("https://x/analytics-export", { method: "POST" }), deps);
-  assertEquals(res.status, 405);
-  assertEquals(await res.text(), "method not allowed");
-});
-
-Deno.test("analytics-export: unknown report -> 400", async () => {
-  const { deps } = createDeps();
-  const res = await handleRequest(new Request("https://x/analytics-export?report=invalid", { method: "GET" }), deps);
   assertEquals(res.status, 400);
-  assertEquals(await res.text(), "unknown report");
+  const body = await res.json();
+  assertEquals(body.error, "BAD_REQUEST");
 });
 
-Deno.test("analytics-export: no token -> 401", async () => {
+Deno.test("analytics-export: unknown report -> 400 BAD_REQUEST JSON", async () => {
+  const { deps } = createDeps();
+  const res = await handleRequest(new Request("https://x/analytics-export?report=invalid", {
+    method: "GET",
+    headers: { Authorization: "Bearer valid-token" },
+  }), deps);
+  assertEquals(res.status, 400);
+  const body = await res.json();
+  assertEquals(body.error, "BAD_REQUEST");
+});
+
+Deno.test("analytics-export: no token -> 401 UNAUTHORIZED JSON", async () => {
   const { deps } = createDeps();
   const res = await handleRequest(new Request("https://x/analytics-export?report=utilization", { method: "GET" }), deps);
   assertEquals(res.status, 401);
-  assertEquals(await res.text(), "unauthorized");
+  const body = await res.json();
+  assertEquals(body.error, "UNAUTHORIZED");
 });
 
-Deno.test("analytics-export: garbage token -> 401", async () => {
+Deno.test("analytics-export: garbage token -> 401 UNAUTHORIZED JSON", async () => {
   const { deps } = createDeps();
   const req = new Request("https://x/analytics-export?report=utilization", {
     method: "GET",
@@ -75,10 +85,11 @@ Deno.test("analytics-export: garbage token -> 401", async () => {
   });
   const res = await handleRequest(req, deps);
   assertEquals(res.status, 401);
-  assertEquals(await res.text(), "unauthorized");
+  const body = await res.json();
+  assertEquals(body.error, "UNAUTHORIZED");
 });
 
-Deno.test("analytics-export: role USER -> 403", async () => {
+Deno.test("analytics-export: role USER -> 403 FORBIDDEN JSON", async () => {
   const { deps, fakeAnon } = createDeps();
   fakeAnon.seed("users", [{ id: "user-1", role: "USER" }]);
   const req = new Request("https://x/analytics-export?report=utilization", {
@@ -87,7 +98,8 @@ Deno.test("analytics-export: role USER -> 403", async () => {
   });
   const res = await handleRequest(req, deps);
   assertEquals(res.status, 403);
-  assertEquals(await res.text(), "forbidden");
+  const body = await res.json();
+  assertEquals(body.error, "FORBIDDEN");
 });
 
 Deno.test("analytics-export: role ADMIN -> 200 CSV", async () => {
@@ -147,4 +159,16 @@ Deno.test("analytics-export: date range filtering with from and to query params"
   assertEquals(res.status, 200);
   const text = await res.text();
   assertEquals(text, "\uFEFFmonth,count\n2026-01-01,5\n2026-03-15,10\n");
+});
+
+Deno.test("analytics-export: CSV response reflects allowed request origin (dynamic CORS)", async () => {
+  const { deps } = createDeps();
+  const req = new Request("https://x/analytics-export?report=utilization", {
+    method: "GET",
+    headers: { Authorization: "Bearer valid-token", Origin: "http://localhost:54321" },
+  });
+  const res = await handleRequest(req, deps);
+  assertEquals(res.status, 200);
+  assertEquals(res.headers.get("Access-Control-Allow-Origin"), "http://localhost:54321");
+  assertEquals(res.headers.get("Vary"), "Origin");
 });

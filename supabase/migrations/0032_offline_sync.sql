@@ -63,10 +63,10 @@ begin
     v_action := v_item->>'action';
     v_payload := coalesce(v_item->'payload', '{}'::jsonb);
 
-    -- Idempotency check: skip if client_mutation_id already processed for this user
+    -- Idempotency check: skip only if client_mutation_id already succeeded for this user
     if exists (
       select 1 from public.offline_sync_log 
-      where user_id = v_user_id and client_mutation_id = v_mutation_id
+      where user_id = v_user_id and client_mutation_id = v_mutation_id and status = 'SUCCESS'
     ) then
       v_results := v_results || jsonb_build_object(
         'client_mutation_id', v_mutation_id,
@@ -75,32 +75,69 @@ begin
       continue;
     end if;
 
-    begin
-      -- Record successful processing log
-      insert into public.offline_sync_log (
-        user_id, client_mutation_id, entity_name, action, status, payload
-      ) values (
-        v_user_id, v_mutation_id, v_entity, v_action, 'SUCCESS', v_payload
-      );
+    -- Validate and dispatch supported offline mutations
+    if v_entity = 'complaints' and v_action = 'INSERT' then
+      begin
+        perform public.submit_complaint_secure(
+          v_payload->>'category',
+          v_payload->>'body'
+        );
 
-      v_processed := v_processed + 1;
-      v_results := v_results || jsonb_build_object(
-        'client_mutation_id', v_mutation_id,
-        'status', 'SUCCESS'
-      );
-    exception when others then
+        insert into public.offline_sync_log (
+          user_id, client_mutation_id, entity_name, action, status, payload, error_message, synced_at
+        ) values (
+          v_user_id, v_mutation_id, v_entity, v_action, 'SUCCESS', v_payload, null, now()
+        )
+        on conflict (user_id, client_mutation_id) do update set
+          status = 'SUCCESS',
+          payload = excluded.payload,
+          error_message = null,
+          synced_at = now();
+
+        v_processed := v_processed + 1;
+        v_results := v_results || jsonb_build_object(
+          'client_mutation_id', v_mutation_id,
+          'status', 'SUCCESS'
+        );
+      exception when others then
+        v_errors := v_errors + 1;
+        insert into public.offline_sync_log (
+          user_id, client_mutation_id, entity_name, action, status, payload, error_message, synced_at
+        ) values (
+          v_user_id, v_mutation_id, v_entity, v_action, 'ERROR', v_payload, SQLERRM, now()
+        )
+        on conflict (user_id, client_mutation_id) do update set
+          status = 'ERROR',
+          payload = excluded.payload,
+          error_message = excluded.error_message,
+          synced_at = now();
+
+        v_results := v_results || jsonb_build_object(
+          'client_mutation_id', v_mutation_id,
+          'status', 'ERROR',
+          'error', 'SYNC_FAILED'
+        );
+      end;
+    else
       v_errors := v_errors + 1;
       insert into public.offline_sync_log (
-        user_id, client_mutation_id, entity_name, action, status, payload, error_message
+        user_id, client_mutation_id, entity_name, action, status, payload, error_message, synced_at
       ) values (
-        v_user_id, v_mutation_id, v_entity, v_action, 'ERROR', v_payload, SQLERRM
-      );
+        v_user_id, v_mutation_id, v_entity, v_action, 'ERROR', v_payload, 'UNSUPPORTED_MUTATION', now()
+      )
+      on conflict (user_id, client_mutation_id) do update set
+        status = 'ERROR',
+        payload = excluded.payload,
+        error_message = excluded.error_message,
+        synced_at = now();
+
       v_results := v_results || jsonb_build_object(
         'client_mutation_id', v_mutation_id,
         'status', 'ERROR',
-        'error', SQLERRM
+        'error', 'UNSUPPORTED_MUTATION'
       );
-    end;
+    end if;
+
   end loop;
 
   return jsonb_build_object(
@@ -111,5 +148,6 @@ begin
   );
 end;
 $$;
+
 
 grant execute on function public.sync_offline_mutations(jsonb) to authenticated;

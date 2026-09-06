@@ -1,0 +1,7 @@
+# Example key.properties for Android release signing
+# Copy this file to apps/mobile/android/key.properties and fill in your actual credentials.
+# DO NOT commit the real key.properties or keystore files to version control!
+storePassword=YOUR_STORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=YOUR_KEY_ALIAS
+storeFile=../keystores/release.keystore

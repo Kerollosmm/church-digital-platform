@@ -1,3 +1,5 @@
+BEGIN;
+
 -- 0029: FCM token update RPC + FCM push outbox trigger test
 do $$
 declare
@@ -11,11 +13,12 @@ declare
   v_payload jsonb;
 begin
   -- Fixtures
-  insert into public.users (id, phone, name, role, fcm_token, tenant_id)
-  values (v_user, '+201029292929', 'FCM User', 'PARISHIONER', null, 1);
-
-  insert into public.users (id, phone, name, role, fcm_token, tenant_id)
-  values (v_user_no_fcm, '+201030303030', 'No FCM User', 'PARISHIONER', null, 1);
+  insert into auth.users (id, instance_id, aud, role, email, phone, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values (v_user, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fcm1@test.local', '+201029292929', '{}', '{}', now(), now()),
+         (v_user_no_fcm, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fcm2@test.local', '+201030303030', '{}', '{}', now(), now())
+  on conflict (id) do nothing;
+  update public.users set role = 'USER', tenant_id = 1, deleted_at = null, fcm_token = null where id in (v_user, v_user_no_fcm);
+  delete from public.bookings where user_id in (v_user, v_user_no_fcm);
 
   insert into public.service_slots (service_id, starts_at, ends_at, capacity, price, status, tenant_id)
   select id, now() + interval '3 days', now() + interval '3 days 1 hour', 10, 0, 'OPEN', 1
@@ -35,6 +38,8 @@ begin
   end if;
 
   -- 2. Test booking status transitions enqueue FCM_PUSH to event_outbox
+  delete from public.event_outbox where handler_type = 'FCM_PUSH';
+
   -- Create booking as PENDING_PAYMENT -> should NOT enqueue FCM_PUSH
   insert into public.bookings (slot_id, user_id, status, tenant_id)
   values (v_slot, v_user, 'PENDING_PAYMENT', 1)
@@ -98,3 +103,5 @@ begin
 
   raise notice 'FCM triggers test OK';
 end $$;
+
+ROLLBACK;

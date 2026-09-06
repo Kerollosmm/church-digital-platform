@@ -1,3 +1,5 @@
+BEGIN;
+
 do $$
 begin
   -- registry CHECK exists
@@ -17,9 +19,12 @@ begin
   if exists (select 1 from cron.job where jobname in ('whatsapp-sender', 'refund-drain'))
   then raise exception 'FAIL: legacy crons must be unscheduled'; end if;
   -- optins PK + source check
+  delete from public.whatsapp_optins where phone = '+201000000001';
   insert into public.whatsapp_optins (phone, source) values ('+201000000001', 'MANUAL');
   begin
     insert into public.whatsapp_optins (phone, source) values ('+201000000001', 'MANUAL');
     raise exception 'FAIL: duplicate optin phone must violate PK';
   exception when unique_violation then null; end;
 end $$;
+
+ROLLBACK;
