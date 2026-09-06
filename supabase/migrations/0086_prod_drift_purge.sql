@@ -47,8 +47,10 @@ with check (
 );
 
 -- ---------------------------------------------------------------------------
--- 3. Drop drift functions (17 = 15 functions + 2 bigint-keyed overloads).
+-- 3. Drop drift functions (16 = 14 functions + 2 bigint-keyed overloads).
 --    KEEP: public.admin_record_cash_payment(uuid, bigint, text) — repo-clean.
+--    set_updated_at() is dropped in step 5 AFTER the drift tables, because
+--    triggers on those tables depend on it (first push attempt: 2BP01).
 -- ---------------------------------------------------------------------------
 drop function if exists public.admin_apply_pastoral_fee_waiver(bigint, bigint, text, text);
 drop function if exists public.assign_clergy_to_event(bigint, bigint);
@@ -58,7 +60,6 @@ drop function if exists public.get_clergy_daily_itinerary(bigint, date);
 drop function if exists public.manage_family_members(text, bigint, text, text, text, date, text);
 drop function if exists public.rapid_emergency_funeral_booking(text, text, bigint, bigint, timestamptz, integer, text);
 drop function if exists public.record_cash_payment(bigint, integer, text);
-drop function if exists public.set_updated_at();
 drop function if exists public.superadmin_create_extra_service(text, text, text, text, text, bigint, boolean, integer);
 drop function if exists public.superadmin_link_service_to_event_type(bigint, bigint, boolean);
 drop function if exists public.superadmin_toggle_extra_service_status(bigint, boolean);
@@ -85,6 +86,9 @@ alter table public.payments
 --    Single statement so inter-table dependencies resolve atomically.
 --    whatsapp_outbox/refund_requests rows were already migrated by 0027;
 --    venues rows were rescued into venues_resources by 0085.
+--    Then drop set_updated_at() — its remaining callers were triggers on
+--    the drift tables just dropped (trg_venues/whatsapp_outbox/
+--    refund_requests_updated_at), so it can only go now.
 -- ---------------------------------------------------------------------------
 drop table if exists
   public.alerts,
@@ -97,6 +101,8 @@ drop table if exists
   public.refund_requests,
   public.venues,
   public.whatsapp_outbox;
+
+drop function if exists public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
 -- 6. Drop drift enums (no remaining users after steps 3-5).
